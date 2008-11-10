@@ -1,0 +1,12 @@
+/*
+ * $FreeBSD: src/sys/boot/pc98/boot0.5/ldscript,v 1.1 2007/04/07 08:37:04 kato Exp $
+ */
+
+SECTIONS
+{
+	.text : { *(.text) }
+	.data : { *(.data) }
+	. = 0x1243;
+	.putssjis : { *(.putssjis) }
+	.bss : { *(.bss) }
+}

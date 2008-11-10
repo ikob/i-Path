@@ -1,0 +1,6 @@
+#GW2348-4 board configuration
+#$FreeBSD: src/sys/arm/xscale/ixp425/std.avila,v 1.1 2006/11/19 23:55:23 sam Exp $
+include		"../xscale/ixp425/std.ixp425"
+files		"../xscale/ixp425/files.avila"
+makeoptions	KERNPHYSADDR=0x10200000
+makeoptions	KERNVIRTADDR=0xc0200000
