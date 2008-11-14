@@ -156,6 +156,10 @@ struct	ipstat {
 #define IP_ROUTETOIF		SO_DONTROUTE	/* 0x10 bypass routing tables */
 #define IP_ALLOWBROADCAST	SO_BROADCAST	/* 0x20 can send broadcast packets */
 
+#ifdef IPSIRENS
+#define IP_SIRENS		0x80		/* require SIRENS end host manipulation */
+#endif /* IPSIRENS */
+
 /*
  * mbuf flag used by ip_fastfwd
  */

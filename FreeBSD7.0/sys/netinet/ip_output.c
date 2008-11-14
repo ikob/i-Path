@@ -36,6 +36,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/ip_output.c,v 1.276 2007/10/07 20:44:23 silb
 #include "opt_ipsec.h"
 #include "opt_mac.h"
 #include "opt_mbuf_stress_test.h"
+#include "opt_ipsirens.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -65,6 +66,10 @@ __FBSDID("$FreeBSD: src/sys/netinet/ip_output.c,v 1.276 2007/10/07 20:44:23 silb
 #include <netinet/ip_ipsec.h>
 #include <netipsec/ipsec.h>
 #endif /* IPSEC*/
+
+#ifdef IPSIRENS
+#include <netinet/ip_sirens.h>
+#endif /* SIRENS */
 
 #include <machine/in_cksum.h>
 
@@ -116,6 +121,9 @@ ip_output(struct mbuf *m, struct mbuf *opt, struct route *ro, int flags,
 #ifdef IPFIREWALL_FORWARD
 	struct m_tag *fwd_tag = NULL;
 #endif
+#ifdef IPSIRENS
+	struct srhdr *srh = NULL;
+#endif
 	M_ASSERTPKTHDR(m);
 
 	if (ro == NULL) {
@@ -153,6 +161,24 @@ ip_output(struct mbuf *m, struct mbuf *opt, struct route *ro, int flags,
 	} else {
 		hlen = ip->ip_hl << 2;
 	}
+
+#ifdef IPSIRENS
+	if (((flags & IP_SIRENS) != 0) ||
+	     (ip->ip_p == IPPROTO_SIRENS)){
+		if((m = m_pullup(m, hlen + sizeof(*srh))) == NULL){
+			error = ENOBUFS;
+			ipstat.ips_odropped++;
+			goto bad;
+		}
+		srh = (struct srhdr *)(((caddr_t)ip + hlen));
+/* chack protocol id to SIRENS header */
+		if(ip->ip_p != IPPROTO_SIRENS){
+			error = EPROTOTYPE;
+			ipstat.ips_odropped++;
+			goto bad;
+		}
+	}
+#endif
 
 	dst = (struct sockaddr_in *)&ro->ro_dst;
 again:
@@ -509,6 +535,27 @@ passout:
 	}
 	m->m_pkthdr.csum_flags &= ifp->if_hwassist;
 
+#ifdef IPSIRENS
+/* getting sirens data here, incoming/outgoing i/f should be determined to collect info */
+	if ((flags & IP_SIRENS) != 0) {
+/*
+getting incoming if data
+rifp = m->m_pkthdr.rcvif
+if rifp != NULL
+if((rifp->if_flags & IFF_LOOPBACK != NULL))......
+IF_AFDATA_LOCK(rifp);
+IF_AFDATA_UNLOCK(rifp);
+*/
+
+/*
+getting outgoing if data
+if ifp != NULL
+IF_AFDATA_LOCK(ifp);
+IF_AFDATA_UNLOCK(ifp);
+*/
+
+	}
+#endif
 	/*
 	 * If small enough for interface, or the interface will take
 	 * care of the fragmentation for us, we can just send directly.

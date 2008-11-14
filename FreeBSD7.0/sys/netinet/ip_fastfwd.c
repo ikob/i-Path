@@ -78,6 +78,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/ip_fastfwd.c,v 1.41 2007/10/07 20:44:23 silb
 
 #include "opt_ipfw.h"
 #include "opt_ipstealth.h"
+#include "opt_ipsirens.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -321,6 +322,10 @@ ip_fastforward(struct mbuf *m)
 	    IN_MULTICAST(ntohl(ip->ip_dst.s_addr)) ||
 	    IN_LINKLOCAL(ntohl(ip->ip_src.s_addr)) ||
 	    IN_LINKLOCAL(ntohl(ip->ip_dst.s_addr)) ||
+#ifdef IPSIRENS
+/* withdraw fastforward */
+	    ip->ip_p == IPPROTO_SIRENS ||
+#endif
 	    ip->ip_src.s_addr == INADDR_ANY ||
 	    ip->ip_dst.s_addr == INADDR_ANY )
 		return m;
