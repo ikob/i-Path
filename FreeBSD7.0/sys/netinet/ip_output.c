@@ -537,24 +537,18 @@ passout:
 
 #ifdef IPSIRENS
 /* getting sirens data here, incoming/outgoing i/f should be determined to collect info */
-	if ((flags & IP_SIRENS) != 0) {
-/*
-getting incoming if data
-rifp = m->m_pkthdr.rcvif
-if rifp != NULL
-if((rifp->if_flags & IFF_LOOPBACK != NULL))......
-IF_AFDATA_LOCK(rifp);
-IF_AFDATA_UNLOCK(rifp);
-*/
-
-/*
-getting outgoing if data
-if ifp != NULL
-IF_AFDATA_LOCK(ifp);
-IF_AFDATA_UNLOCK(ifp);
-*/
-
+	if (ip->ip_p == IPPROTO_SIRENS) {
+		if((srh->req_mode == SIRENS_TTL) &&
+			(srh->req_ttl != ip->ip_ttl)){
+			goto skip_sirens;
+		}
+		if(sr_setparam(srh, ifp, m->m_pkthdr.rcvif) != 0 ){
+			error = EOPNOTSUPP;
+			ipstat.ips_odropped++;
+			goto bad;
+		}
 	}
+skip_sirens:
 #endif
 	/*
 	 * If small enough for interface, or the interface will take

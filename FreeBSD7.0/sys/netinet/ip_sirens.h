@@ -12,6 +12,7 @@
 
 enum SIRENS_MODE { SIRENS_DISABLE, SIRENS_MIN, SIRENS_MAX, SIRENS_TTL};
 enum SIRENS_PROBE { SIRENS_LINK, SIRENS_LOSS, SIRENS_QUEUE, SIRENS_MTU, SIRENS_PMAX};
+#define SIRENS_DIR_IN	0x80
 
 union u_sr_data {
 	struct {
@@ -73,4 +74,5 @@ struct sr_options * sr_allocoptions __P((void));
 void sr_freeoptions __P((struct sr_options *));
 void sr_update __P((struct sr_options *, struct srhdr*));
 void sr_tick __P((struct inpcb *));
+int sr_setparam __P((struct srhdr *, struct ifnet *, struct ifnet *));
 #endif

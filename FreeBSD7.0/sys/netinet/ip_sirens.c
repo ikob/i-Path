@@ -111,6 +111,74 @@ struct sr_ip6 {
 	u_char			oip6_init_done : 1;
 } udp_ip6;
 #endif /* INET6 */
+int sr_setparam (struct srhdr *srh, struct ifnet *rifp, struct ifnet *sifp) {
+	struct ifnet *tifp;
+	int error = 0;
+	u_int16_t e1 = 0, e2 = 0;
+	switch(srh->req_probe){
+	default:
+		break;
+	}
+/* getting if info */
+	if((srh->req_probe & SIRENS_DIR_IN) == 0){
+		tifp = sifp;
+	}else{
+		tifp = rifp;
+	}
+	if(tifp == NULL){
+		e1 = 0xffff;
+		e2 = 0xffff;
+		goto update;
+	}
+	IF_AFDATA_LOCK(tifp);
+	switch ((srh->req_probe) & ~SIRENS_DIR_IN){
+	case SIRENS_LINK:
+		e1 = (u_int16_t) (tifp->if_baudrate / 1000000);
+		e2 = 0xffff;
+		break;
+	case SIRENS_LOSS:
+		e1 = (u_int16_t) (tifp->if_snd.ifq_drops);
+		e2 = (u_int16_t) (tifp->if_oerrors);
+		break;
+	case SIRENS_QUEUE:
+		e1 = (u_int16_t) (tifp->if_snd.ifq_maxlen);
+		e2 = (u_int16_t) (tifp->if_snd.ifq_len);
+		break;
+	case SIRENS_MTU:
+		e1 = (u_int16_t) (tifp->if_mtu);
+		e2 = 0xffff;
+		break;
+	case SIRENS_PMAX:
+		break;
+	default:
+		break;
+	}
+	IF_AFDATA_UNLOCK(tifp);
+update:
+	switch(srh->req_mode){
+	case SIRENS_TTL:
+		break;
+	case SIRENS_MIN:
+		srh->req_ttl = srh->req_ttl == 0 ? 0xff : srh->req_ttl - 1;
+		if((e1 == 0xffff) && (e2 == 0xffff)) return error;
+		if( e1 < srh->req.data.set.e1 ){
+			srh->req.data.set.e1 = e1;
+			srh->req.data.set.e2 = e2;
+		}
+		break;
+	case SIRENS_MAX:
+		srh->req_ttl = srh->req_ttl == 0 ? 0xff : srh->req_ttl - 1;
+		if((e1 == 0xffff) && (e2 == 0xffff)) return error;
+		if( e1 >  srh->req.data.set.e1 ){
+			srh->req.data.set.e1 = e1;
+			srh->req.data.set.e2 = e2;
+		}
+		break;
+	default:
+		break;
+	}
+	return error;
+}
 void sr_tick(struct inpcb *inp){
 	struct sr_lst *srl = &inp->sro->sr_lst;
 	u_char i, j;

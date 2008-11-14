@@ -393,6 +393,8 @@ DEV_VLAN		opt_vlan.h
 VLAN_ARRAY		opt_vlan.h
 XBONEHACK
 
+IPSIRENS		opt_ipsirens.h
+
 #
 # SCTP
 #
