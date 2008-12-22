@@ -31,29 +31,38 @@ struct	srstat {
 
 /*
  */
-#define SIRENSCTL_STATS		1	/* statistics (read-only) */
-#define SIRENSCTL_MAXID		2
+#define SIRENSCTL_ENABLE	1
+#if 0
+#define SIRENSCTL_INPKTS	2	/* statistics (read-only) */
+#define SIRENSCTL_HDROP		3
+#define SIRENSCTL_OUTPKTS	4
+#define SIRENSCTL_MAXID		5
+#else
+#define SIRENSCTL_STATS		2
+#define SIRENSCTL_MAXID		3
+#endif
 
+#if 0
 #define SIRENSCTL_NAMES { \
-	{ 0, 0 }, \
-	{ "stats", CTLTYPE_STRUCT }, \
+        { 0, 0 }, \
+        { "sirens", CTLTYPE_INT }, \
+        { "inpkts", CTLTYPE_INT }, \
+        { "hdrop", CTLTYPE_INT }, \
+        { "outpkts", CTLTYPE_INT }, \
+        { "maxid", CTLTYPE_INT }, \
 }
-
-#if (defined(__NetBSD__))
-/*
- * Names for SIRENS sysctl objects
- */
-#define	SIRENSSCTL_IPACKETS		1
-#define	SIRENSSCTL_HDROP		2
-#define	SIRENSSCTL_OPACKETS		3
-#define	SIRENSSCTL_MAXID		4
-
-#define SIRENSSCTL_NAMES { \
-	{ 0, 0 }, \
-	{ "ipackets", CTLTYPE_INT }, \
-	{ "hdrop", CTLTYPE_INT }, \
-	{ "opackets", CTLTYPE_INT }, \
+#else
+#define SIRENSCTL_NAMES { \
+        { 0, 0 }, \
+        { "sirens", CTLTYPE_INT }, \
+        { "stats", CTLTYPE_STRUCT }, \
+        { "maxid", CTLTYPE_INT }, \
 }
+#endif
+ 
+ 
+#ifdef _KERNEL
+SYSCTL_DECL(_net_inet_sirens);
 #endif
 
 extern struct	pr_usrreqs sr_usrreqs;

@@ -114,7 +114,11 @@ struct sr_ip6 {
 int sr_setparam (struct srhdr *srh, struct ifnet *rifp, struct ifnet *sifp) {
 	struct ifnet *tifp;
 	int error = 0;
+#if SIRENS_DSIZE > 16
+	uint32_t data = 0;
+#else
 	u_int16_t e1 = 0, e2 = 0;
+#endif
 	switch(srh->req_probe){
 	default:
 		break;
@@ -126,52 +130,57 @@ int sr_setparam (struct srhdr *srh, struct ifnet *rifp, struct ifnet *sifp) {
 		tifp = rifp;
 	}
 	if(tifp == NULL){
-		e1 = 0xffff;
-		e2 = 0xffff;
+		data = ~0;
 		goto update;
 	}
 	IF_AFDATA_LOCK(tifp);
 	switch ((srh->req_probe) & ~SIRENS_DIR_IN){
 	case SIRENS_LINK:
-		e1 = (u_int16_t) (tifp->if_baudrate / 1000000);
-		e2 = 0xffff;
+		data = (u_int32_t) (tifp->if_baudrate);
 		break;
-	case SIRENS_LOSS:
-		e1 = (u_int16_t) (tifp->if_snd.ifq_drops);
-		e2 = (u_int16_t) (tifp->if_oerrors);
+	case SIRENS_OBYTES:
+		data = (u_int32_t) (tifp->if_obytes);
 		break;
-	case SIRENS_QUEUE:
-		e1 = (u_int16_t) (tifp->if_snd.ifq_maxlen);
-		e2 = (u_int16_t) (tifp->if_snd.ifq_len);
+	case SIRENS_IBYTES:
+		data = (u_int32_t) (tifp->if_ibytes);
+		break;
+	case SIRENS_DROPS:
+		data = (u_int32_t) (tifp->if_snd.ifq_drops);
+		break;
+	case SIRENS_ERRORS:
+		data = (u_int32_t) (tifp->if_oerrors);
+		break;
+	case SIRENS_QMAX:
+		data = (u_int32_t) (tifp->if_snd.ifq_maxlen);
+		break;
+	case SIRENS_QLEN:
+		data = (u_int32_t) (tifp->if_snd.ifq_len);
 		break;
 	case SIRENS_MTU:
-		e1 = (u_int16_t) (tifp->if_mtu);
-		e2 = 0xffff;
-		break;
-	case SIRENS_PMAX:
+		data = (u_int32_t) (tifp->if_mtu);
 		break;
 	default:
+		data = ~0;
 		break;
 	}
 	IF_AFDATA_UNLOCK(tifp);
 update:
 	switch(srh->req_mode){
 	case SIRENS_TTL:
+		srh->req.data.set = htonl(data);
 		break;
 	case SIRENS_MIN:
 		srh->req_ttl = srh->req_ttl == 0 ? 0xff : srh->req_ttl - 1;
-		if((e1 == 0xffff) && (e2 == 0xffff)) return error;
-		if( e1 < srh->req.data.set.e1 ){
-			srh->req.data.set.e1 = e1;
-			srh->req.data.set.e2 = e2;
+		if(data == ~0) return error;
+		if( data < srh->req.data.set ){
+			srh->req.data.set = htonl(data);
 		}
 		break;
 	case SIRENS_MAX:
 		srh->req_ttl = srh->req_ttl == 0 ? 0xff : srh->req_ttl - 1;
-		if((e1 == 0xffff) && (e2 == 0xffff)) return error;
-		if( e1 >  srh->req.data.set.e1 ){
-			srh->req.data.set.e1 = e1;
-			srh->req.data.set.e2 = e2;
+		if(data == ~0) return error;
+		if( data >  srh->req.data.set ){
+			srh->req.data.set = htonl(data);
 		}
 		break;
 	default:
@@ -179,6 +188,7 @@ update:
 	}
 	return error;
 }
+#if 0
 void sr_tick(struct inpcb *inp){
 	struct sr_lst *srl = &inp->sro->sr_lst;
 	u_char i, j;
@@ -347,7 +357,8 @@ void sr_tick(struct inpcb *inp){
 #endif /* SR_DEBUG */
 	}
 }
-
+#endif 
+#if 0
 void sirens_update( struct sr_options *sro, struct srhdr *srh)
 {
 	struct sr_lst *srl = &sro->sr_lst;
@@ -556,6 +567,7 @@ struct sr_options *sirens_allocoptions()
 	}
 	return sro;
 }
+#endif
 void
 sirens_init()
 {
@@ -595,7 +607,9 @@ sirens_input(struct mbuf *m, ...)
 		srstat.srs_hdrops++;
 		return;
 	}
+#if 0
 	m->m_pkthdr.csum_flags |= M_CSUM_BORROW_SR;
+#endif
 	off +=  sizeof(struct srhdr);
        	(*inetsw[ip_protox[srh->sr_p]].pr_input)((struct mbuf *)m, off, srh->sr_p);
         return;
@@ -603,11 +617,12 @@ sirens_input(struct mbuf *m, ...)
 /* 
 * Sysctl for sr variables.
 */
-int     ipsirens = 0;
+int     sirens_enable = 0;
 #if (defined(__FreeBSD__))
-SYSCTL_INT(_net_inet_ip, IPCTL_SIRENS, sirens, CTLFLAG_RW,
-    &ipsirens, 0, "Enable IP sirens");
-SYSCTL_STRUCT(_net_inet_sr, SRCTL_STATS, stats, CTLFLAG_RW,
+SYSCTL_NODE(_net_inet, IPPROTO_SIRENS, sirens, CTLFLAG_RW, 0, "sirens");
+SYSCTL_INT(_net_inet_sirens, SIRENSCTL_ENABLE, sirens_enable, CTLFLAG_RW,
+    &sirens_enable, 0, "Enable IP sirens");
+SYSCTL_STRUCT(_net_inet_sirens, SIRENSCTL_STATS, stats, CTLFLAG_RW,
     &srstat, srstat, "SR statistics (struct srstat, netinet/sirens_var.h)");
 #endif
 #if (defined(__NetBSD__))

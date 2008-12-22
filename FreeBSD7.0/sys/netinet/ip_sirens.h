@@ -11,9 +11,28 @@
  */
 
 enum SIRENS_MODE { SIRENS_DISABLE, SIRENS_MIN, SIRENS_MAX, SIRENS_TTL};
-enum SIRENS_PROBE { SIRENS_LINK, SIRENS_LOSS, SIRENS_QUEUE, SIRENS_MTU, SIRENS_PMAX};
+enum SIRENS_PROBE {
+	SIRENS_LINK,
+	SIRENS_OBYTES,
+	SIRENS_IBYTES,
+	SIRENS_DROPS,
+	SIRENS_ERRORS,
+	SIRENS_QMAX,
+	SIRENS_QLEN,
+	SIRENS_MTU,
+	SIRENS_PMAX
+};
 #define SIRENS_DIR_IN	0x80
-
+#define SIRENS_DSIZE	32
+#if SIRENS_DSIZE > 16
+union u_sr_data {
+	uint32_t link;
+	uint32_t loss;
+	uint32_t queue;
+	uint32_t mtu;
+	uint32_t set;
+};
+#else
 union u_sr_data {
 	struct {
 		u_int16_t bw;
@@ -36,6 +55,7 @@ union u_sr_data {
 		int e2;
 	} set;
 };
+#endif
 struct srhdr {
 	u_char req_mode;
 	u_char req_probe;

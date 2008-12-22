@@ -261,9 +261,9 @@ __END_DECLS
 #define	IPPROTO_CARP		112		/* CARP */
 #define	IPPROTO_PGM		113		/* PGM */
 #define	IPPROTO_PFSYNC		240		/* PFSYNC */
-#ifdef IPSIRENS
+/* #ifdef IPSIRENS */
 #define	IPPROTO_SIRENS		250		/* SIRENS ikob@ni.aist.go.jp, draft-kobayashi-sirens... */
-#endif
+/* #endif */
 /* 255: Reserved */
 /* BSD Private, local use, namespace incursion, no longer used */
 #define	IPPROTO_OLD_DIVERT	254		/* OLD divert pseudo-proto */
