@@ -10,7 +10,7 @@
 main()
 {
 	int s;
-	const char *ipstr = "10.0.1.1";
+	const char *ipstr = "192.50.74.68";
 	char data[1500];
 	struct sockaddr_in dest_addr;
 	struct in_addr ip;
@@ -26,6 +26,14 @@ main()
 	}
 	bzero((char *) &dest_addr, sizeof(dest_addr));
 	bzero(data, 1500);
+	{
+		int i;
+		long *p = (long *)data;
+		for( i = 0 ; i < 100 ; i++){
+			*p = htonl(i);
+			p++;
+		}
+	}
 	dest_addr.sin_family = AF_INET;
 	if (!inet_aton(ipstr, &dest_addr.sin_addr))
 		errx(1, "can't parse IP address %s", ipstr);
