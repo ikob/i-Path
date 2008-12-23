@@ -39,6 +39,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/in_proto.c,v 1.87 2007/10/07 20:44:22 silby 
 #include "opt_pf.h"
 #include "opt_carp.h"
 #include "opt_sctp.h"
+#include "opt_ipsirens.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -64,6 +65,11 @@ __FBSDID("$FreeBSD: src/sys/netinet/in_proto.c,v 1.87 2007/10/07 20:44:22 silby 
 #include <netinet/udp.h>
 #include <netinet/udp_var.h>
 #include <netinet/ip_encap.h>
+
+#ifdef IPSIRENS
+#include <netinet/ip_sirens.h>
+#include <netinet/ip_sirens_var.h>
+#endif
 
 /*
  * TCP/IP protocol family: IP, ICMP, UDP, TCP.
@@ -324,6 +330,20 @@ struct protosw inetsw[] = {
 	.pr_usrreqs =		&rip_usrreqs
 },
 #endif /* DEV_CARP */
+#ifdef IPSIRENS
+{
+	.pr_type =		SOCK_RAW,
+	.pr_domain =		&inetdomain,
+	.pr_protocol =		IPPROTO_SIRENS,
+	.pr_flags =		PR_ATOMIC,
+	.pr_input =		sirens_input,
+	.pr_ctlinput =		rip_ctlinput,
+	.pr_ctloutput =		rip_ctloutput,
+	.pr_output =		(pr_output_t*)rip_output,
+	.pr_init =		sirens_init,
+	.pr_usrreqs =		&rip_usrreqs
+},
+#endif /* IPSIRENS */
 /* Spacer n-times for loadable protocols. */
 IPPROTOSPACER,
 IPPROTOSPACER,

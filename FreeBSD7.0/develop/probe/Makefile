@@ -16,15 +16,15 @@ LIBS	      =
 
 MAKEFILE      = Makefile
 
-OBJS	      = prove.o
+OBJS	      = probe.o
 
 PRINT	      = pr
 
-PROGRAM       = prove
+PROGRAM       = probe
 
 SHELL	      = /bin/sh
 
-SRCS	      = prove.c
+SRCS	      = probe.c
 
 SYSHDRS	      = /usr/include/machine/_limits.h \
 		/usr/include/machine/_types.h \
@@ -84,7 +84,7 @@ print:;		@$(PRINT) $(HDRS) $(SRCS)
 
 tags:           $(HDRS) $(SRCS); @ctags $(HDRS) $(SRCS)
 ###
-prove.o: /usr/include/stdlib.h /usr/include/sys/cdefs.h \
+probe.o: /usr/include/stdlib.h /usr/include/sys/cdefs.h \
 	/usr/include/sys/_null.h /usr/include/sys/_types.h \
 	/usr/include/machine/_types.h /usr/include/strings.h \
 	/usr/include/sys/types.h /usr/include/machine/endian.h \

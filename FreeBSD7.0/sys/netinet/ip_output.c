@@ -170,13 +170,9 @@ ip_output(struct mbuf *m, struct mbuf *opt, struct route *ro, int flags,
 			ipstat.ips_odropped++;
 			goto bad;
 		}
-		srh = (struct srhdr *)(((caddr_t)ip + hlen));
-/* chack protocol id to SIRENS header */
-		if(ip->ip_p != IPPROTO_SIRENS){
-			error = EPROTOTYPE;
-			ipstat.ips_odropped++;
-			goto bad;
-		}
+		ip = mtod(m, struct ip *);
+		ip->ip_p = IPPROTO_SIRENS;
+		srh = (struct srhdr *)(((caddr_t)ip) + hlen);
 	}
 #endif
 
@@ -542,7 +538,7 @@ passout:
 			(srh->req_ttl != ip->ip_ttl)){
 			goto skip_sirens;
 		}
-		if(sr_setparam(srh, ifp, m->m_pkthdr.rcvif) != 0 ){
+		if(sr_setparam(srh, m->m_pkthdr.rcvif, ifp) != 0 ){
 			error = EOPNOTSUPP;
 			ipstat.ips_odropped++;
 			goto bad;

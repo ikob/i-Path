@@ -23,6 +23,7 @@ enum SIRENS_PROBE {
 	SIRENS_PMAX
 };
 #define SIRENS_DIR_IN	0x80
+#define SIRENS_DIR_OUT	0x00
 #define SIRENS_DSIZE	32
 #if SIRENS_DSIZE > 16
 union u_sr_data {

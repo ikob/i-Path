@@ -95,7 +95,10 @@ struct	inpcbinfo srdbinfo;
 
 char sr_str [][25] = {"link bw, util", "loss drop, error", "queue limit, delay", ""};
 
-struct	srstat srstat;
+int	srs_ipackets = 0;
+int	srs_hdrops = 0;
+int	srs_update = 0;
+int	srs_through = 0;
 
 static struct	sockaddr_in sr_in = { sizeof(sr_in), AF_INET };
 #ifdef INET6
@@ -133,6 +136,7 @@ int sr_setparam (struct srhdr *srh, struct ifnet *rifp, struct ifnet *sifp) {
 		data = ~0;
 		goto update;
 	}
+	srs_update ++;
 	IF_AFDATA_LOCK(tifp);
 	switch ((srh->req_probe) & ~SIRENS_DIR_IN){
 	case SIRENS_LINK:
@@ -574,28 +578,21 @@ sirens_init()
 	return;
 }
 void
-sirens_input(struct mbuf *m, ...)
+sirens_input(struct mbuf *m, int off)
 {
 	register struct ip* ip;
 	register struct srhdr* srh;
-	va_list ap;
-	int off, proto;
-		 
-	va_start(ap, m); 
-	off = va_arg(ap, int);
-	proto = va_arg(ap, int); 
-	va_end(ap);
 
 	int iphlen = off;
 
         /*
          * Get IP and SR header together in first mbuf.
          */
-       	srstat.srs_ipackets++;
+       	srs_ipackets++;
         ip = mtod(m, struct ip *);
         if (m->m_len < iphlen + sizeof(struct srhdr)) {
                 if ((m = m_pullup(m, iphlen + sizeof(struct srhdr))) == 0) {
-                        srstat.srs_hdrops++;
+                        srs_hdrops++;
                         return;
                 }
                 ip = mtod(m, struct ip *);
@@ -604,7 +601,7 @@ sirens_input(struct mbuf *m, ...)
 	if( srh->sr_p != IPPROTO_TCP && srh->sr_p != IPPROTO_UDP) {
 /* XXX: bad protocol */
 		printf("SR bad protocol %d %d %d\n", srh->sr_p, IPPROTO_TCP, IPPROTO_UDP);
-		srstat.srs_hdrops++;
+		srs_hdrops++;
 		return;
 	}
 #if 0
@@ -620,10 +617,16 @@ sirens_input(struct mbuf *m, ...)
 int     sirens_enable = 0;
 #if (defined(__FreeBSD__))
 SYSCTL_NODE(_net_inet, IPPROTO_SIRENS, sirens, CTLFLAG_RW, 0, "sirens");
-SYSCTL_INT(_net_inet_sirens, SIRENSCTL_ENABLE, sirens_enable, CTLFLAG_RW,
+SYSCTL_INT(_net_inet_sirens, SIRENSCTL_ENABLE, enable, CTLFLAG_RW,
     &sirens_enable, 0, "Enable IP sirens");
-SYSCTL_STRUCT(_net_inet_sirens, SIRENSCTL_STATS, stats, CTLFLAG_RW,
-    &srstat, srstat, "SR statistics (struct srstat, netinet/sirens_var.h)");
+SYSCTL_INT(_net_inet_sirens, SIRENSCTL_INPKTS, ipackets, CTLFLAG_RW,
+    &srs_ipackets, 0, "SIRENS INPUTS");
+SYSCTL_INT(_net_inet_sirens, SIRENSCTL_HDROP, hdrops, CTLFLAG_RW,
+    &srs_hdrops, 0, "SIRENS drop count");
+SYSCTL_INT(_net_inet_sirens, SIRENSCTL_UPDATE, update, CTLFLAG_RW,
+    &srs_update, 0, "SIRENS header update");
+SYSCTL_INT(_net_inet_sirens, SIRENSCTL_THROUGH, through, CTLFLAG_RW,
+    &srs_through, 0, "SIRENS header through");
 #endif
 #if (defined(__NetBSD__))
 SYSCTL_SETUP(sysctl_net_inet_sr_setup, "sysctl net.inet.sr subtree setup")

@@ -32,11 +32,13 @@ struct	srstat {
 /*
  */
 #define SIRENSCTL_ENABLE	1
-#if 0
+#if 1
 #define SIRENSCTL_INPKTS	2	/* statistics (read-only) */
 #define SIRENSCTL_HDROP		3
 #define SIRENSCTL_OUTPKTS	4
-#define SIRENSCTL_MAXID		5
+#define SIRENSCTL_UPDATE	5
+#define SIRENSCTL_THROUGH	6
+#define SIRENSCTL_MAXID		7
 #else
 #define SIRENSCTL_STATS		2
 #define SIRENSCTL_MAXID		3
@@ -73,7 +75,7 @@ extern u_long	srp_recvspace;
 extern struct	udpstat srpstat;
 
 void	sirens_init __P((void));
-void	sirens_input __P((struct mbuf *, ...));
+void	sirens_input __P((struct mbuf *, int));
 void	sirens_ctlinput __P((int, struct sockaddr *, void *));
 
 void	sirens_notify __P((struct inpcb *inp, int errno));
