@@ -19,7 +19,7 @@
 main()
 {
 	int s;
-	const char *ipstr = "192.50.74.65";
+	const char *ipstr = "192.50.74.76";
 	char data[1500];
 	struct sockaddr_in dest_addr;
 	struct in_addr ip;
@@ -53,28 +53,28 @@ main()
 	srh->req_probe = SIRENS_LINK;
 	for( sr_ttl = IPDEFTTL ; sr_ttl > IPDEFTTL - 2 ; sr_ttl--){ 
 		srh->req_ttl = sr_ttl; 
-		sendto(s, data, sizeof(srh),0, &dest_addr, sizeof(dest_addr));
+		sendto(s, data, sizeof(*srh),0, &dest_addr, sizeof(dest_addr));
 		usleep(100000);
 	}
 
 	srh->req_probe = SIRENS_OBYTES;
 	for( sr_ttl = IPDEFTTL ; sr_ttl > IPDEFTTL - 2 ; sr_ttl--){ 
 		srh->req_ttl = sr_ttl; 
-		sendto(s, data, sizeof(srh),0, &dest_addr, sizeof(dest_addr));
+		sendto(s, data, sizeof(*srh),0, &dest_addr, sizeof(dest_addr));
 		usleep(100000);
 	}
 
 	srh->req_probe = SIRENS_IBYTES;
 	for( sr_ttl = IPDEFTTL ; sr_ttl > IPDEFTTL - 2 ; sr_ttl--){ 
 		srh->req_ttl = sr_ttl; 
-		sendto(s, data, sizeof(srh),0, &dest_addr, sizeof(dest_addr));
+		sendto(s, data, sizeof(*srh),0, &dest_addr, sizeof(dest_addr));
 		usleep(100000);
 	}
 
 	srh->req_probe = SIRENS_QMAX;
 	for( sr_ttl = IPDEFTTL ; sr_ttl > IPDEFTTL - 2 ; sr_ttl--){ 
 		srh->req_ttl = sr_ttl; 
-		sendto(s, data, sizeof(srh),0, &dest_addr, sizeof(dest_addr));
+		sendto(s, data, sizeof(*srh),0, &dest_addr, sizeof(dest_addr));
 		usleep(100000);
 	}
 #endif

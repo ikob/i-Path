@@ -165,7 +165,7 @@ ip_output(struct mbuf *m, struct mbuf *opt, struct route *ro, int flags,
 #ifdef IPSIRENS
 	if (((flags & IP_SIRENS) != 0) ||
 	     (ip->ip_p == IPPROTO_SIRENS)){
-		if((m = m_pullup(m, hlen + sizeof(*srh))) == NULL){
+		if((m = m_pullup(m, hlen + sizeof(*srh) - sizeof(union u_sr_data) * SIRENSRESLEN )) == NULL){
 			error = ENOBUFS;
 			ipstat.ips_odropped++;
 			goto bad;
