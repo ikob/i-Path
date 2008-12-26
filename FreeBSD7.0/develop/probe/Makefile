@@ -20,7 +20,7 @@ OBJS	      = probe.o
 
 PRINT	      = pr
 
-PROGRAM       = probe
+PROGRAM       = send
 
 SHELL	      = /bin/sh
 
