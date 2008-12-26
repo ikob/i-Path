@@ -22,6 +22,8 @@ PRINT	      = pr
 
 PROGRAM       = send
 
+RECVALIAS       = recv
+
 SHELL	      = /bin/sh
 
 SRCS	      = probe.c
@@ -60,13 +62,15 @@ SYSHDRS	      = /usr/include/machine/_limits.h \
 all:		$(PROGRAM)
 
 $(PROGRAM):     $(OBJS) $(LIBS)
+		@rm -f $(RECVALIAS)
 		@echo "Linking $(PROGRAM) ..."
 		@$(LD) $(LDFLAGS) $(OBJS) $(LIBS) -o $(PROGRAM)
+		@ln -s $(PROGRAM) $(RECVALIAS)
 		@echo "done"
 
-clean:;		@rm -f $(OBJS) core
+clean:;		@rm -f $(OBJS) *core
 
-clobber:;	@rm -f $(OBJS) $(PROGRAM) core tags
+clobber:;	@rm -f $(OBJS) $(PROGRAM) $(RECVALIAS) *core tags
 
 depend:;	@mkmf -f $(MAKEFILE)
 

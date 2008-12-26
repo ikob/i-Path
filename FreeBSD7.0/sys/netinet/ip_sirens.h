@@ -11,6 +11,12 @@
  */
 
 enum SIRENS_MODE { SIRENS_DISABLE, SIRENS_MIN, SIRENS_MAX, SIRENS_TTL};
+char *sirens_mode_s[] = {
+	"disable",
+	"minimal",
+	"maximum",
+	"ttl",
+};
 enum SIRENS_PROBE {
 	SIRENS_LINK,
 	SIRENS_OBYTES,
@@ -21,6 +27,17 @@ enum SIRENS_PROBE {
 	SIRENS_QLEN,
 	SIRENS_MTU,
 	SIRENS_PMAX
+};
+char *sirens_probe_s[] = {
+	"link",
+	"obytes",
+	"ibytes",
+	"drops",
+	"errors",
+	"qmax",
+	"qlen",
+	"qmtu",
+	"dummy",
 };
 #define SIRENS_DIR_IN	0x80
 #define SIRENS_DIR_OUT	0x00
