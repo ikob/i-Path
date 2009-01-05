@@ -11,12 +11,14 @@
  */
 
 enum SIRENS_MODE { SIRENS_DISABLE, SIRENS_MIN, SIRENS_MAX, SIRENS_TTL};
+#ifndef _KERNEL
 char *sirens_mode_s[] = {
 	"disable",
 	"minimal",
 	"maximum",
 	"ttl",
 };
+#endif
 enum SIRENS_PROBE {
 	SIRENS_LINK,
 	SIRENS_OBYTES,
@@ -28,6 +30,7 @@ enum SIRENS_PROBE {
 	SIRENS_MTU,
 	SIRENS_PMAX
 };
+#ifndef _KERNEL
 char *sirens_probe_s[] = {
 	"link",
 	"obytes",
@@ -39,6 +42,7 @@ char *sirens_probe_s[] = {
 	"qmtu",
 	"dummy",
 };
+#endif
 #define SIRENS_DIR_IN	0x80
 #define SIRENS_DIR_OUT	0x00
 #define SIRENS_DSIZE	32
