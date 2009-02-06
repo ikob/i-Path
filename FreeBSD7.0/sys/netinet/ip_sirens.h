@@ -20,7 +20,6 @@ char *sirens_mode_s[] = {
 };
 #endif
 enum SIRENS_PROBE {
-	SIRENS_DUMMY,
 	SIRENS_LINK,
 	SIRENS_OBYTES,
 	SIRENS_IBYTES,
@@ -32,8 +31,7 @@ enum SIRENS_PROBE {
 	SIRENS_PMAX
 };
 #ifndef _KERNEL
-char *sirens_probe_s[] = {
-	"dummy",
+static char *sirens_probe_s[] = {
 	"link",
 	"obytes",
 	"ibytes",
@@ -52,7 +50,7 @@ struct sr_storage {
 	struct sr_var{
 		uint32_t flag;
        		uint32_t data;
-	}array[SIRENS_PMAX];
+	}array[SIRENS_PMAX + 1];
 };
 struct if_srvarreq {
 	char    ifr_name[IFNAMSIZ];             /* if name, e.g. "en0" */
