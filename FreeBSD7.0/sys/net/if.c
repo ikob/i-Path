@@ -1858,7 +1858,9 @@ ifhwioctl(u_long cmd, struct ifnet *ifp, caddr_t data, struct thread *td)
 		case IPSR_VAR_VALID:
 			srp->array[ifsrr->sr_probe].data = ifsrr->sr_var.data;
 			srp->array[ifsrr->sr_probe].flag = ifsrr->sr_var.flag;
+/*
 printf("SIOCSSRVAR %08x %d %d\n", ifsrr->sr_probe, srp->array[ifsrr->sr_probe].data, srp->array[ifsrr->sr_probe].flag);
+*/
 			break;
 		case IPSR_VAR_INVAL:
 			srp->array[ifsrr->sr_probe].flag = ifsrr->sr_var.flag;
@@ -1879,7 +1881,9 @@ printf("SIOCSSRVAR %08x %d %d\n", ifsrr->sr_probe, srp->array[ifsrr->sr_probe].d
 		}else{
 			srp = (struct sr_storage *)(ifp->if_sr_out);
 		}
+/*
 printf("SIOCGSRVAR %08x %d %d\n", ifsrr->sr_probe, srp->array[ifsrr->sr_probe].data, srp->array[ifsrr->sr_probe].flag);
+*/
 		ifsrr->sr_var.data = srp->array[ifsrr->sr_probe].data;
 		ifsrr->sr_var.flag = srp->array[ifsrr->sr_probe].flag;
 		return(0);

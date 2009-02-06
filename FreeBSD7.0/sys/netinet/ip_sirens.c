@@ -144,7 +144,9 @@ int sr_setparam (struct srhdr *srh, struct ifnet *rifp, struct ifnet *sifp) {
 	}else{
 		srp = (struct sr_storage *)(tifp->if_sr_out);
 	}
+#ifdef SR_DEBUG
 printf("probe%d %d %d\n", srh->req_probe, srp->array[srh->req_probe].flag, srp->array[srh->req_probe].data);
+#endif
 	switch ((srh->req_probe) & ~SIRENS_DIR_IN){
 	case SIRENS_LINK:
 		if(srp->array[srh->req_probe].flag == IPSR_VAR_VALID){
