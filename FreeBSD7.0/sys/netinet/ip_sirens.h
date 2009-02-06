@@ -20,6 +20,7 @@ char *sirens_mode_s[] = {
 };
 #endif
 enum SIRENS_PROBE {
+	SIRENS_DUMMY,
 	SIRENS_LINK,
 	SIRENS_OBYTES,
 	SIRENS_IBYTES,
@@ -32,6 +33,7 @@ enum SIRENS_PROBE {
 };
 #ifndef _KERNEL
 char *sirens_probe_s[] = {
+	"dummy",
 	"link",
 	"obytes",
 	"ibytes",
@@ -39,10 +41,25 @@ char *sirens_probe_s[] = {
 	"errors",
 	"qmax",
 	"qlen",
-	"qmtu",
+	"mtu",
 	"dummy",
 };
 #endif
+#define		IPSR_VAR_VALID 0x00000001
+#define		IPSR_VAR_INVAL 0x00000000
+/* SIRENS STORAGE */
+struct sr_storage {
+	struct sr_var{
+		uint32_t flag;
+       		uint32_t data;
+	}array[SIRENS_PMAX];
+};
+struct if_srvarreq {
+	char    ifr_name[IFNAMSIZ];             /* if name, e.g. "en0" */
+	int	sr_probe;
+	struct sr_var sr_var;
+};
+
 #define SIRENS_DIR_IN	0x80
 #define SIRENS_DIR_OUT	0x00
 #define SIRENS_DSIZE	32
@@ -117,4 +134,7 @@ void sr_freeoptions __P((struct sr_options *));
 void sr_update __P((struct sr_options *, struct srhdr*));
 void sr_tick __P((struct inpcb *));
 int sr_setparam __P((struct srhdr *, struct ifnet *, struct ifnet *));
+#define SIOCSSRVAR _IOWR('i', 222, struct if_srvarreq)
+#define SIOCGSRVAR _IOWR('i', 223, struct if_srvarreq)
+
 #endif

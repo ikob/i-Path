@@ -475,7 +475,6 @@ in_control(struct socket *so, u_long cmd, caddr_t data, struct ifnet *ifp,
 		EVENTHANDLER_INVOKE(ifaddr_event, ifp);
 		error = 0;
 		break;
-
 	default:
 		if (ifp == 0 || ifp->if_ioctl == 0)
 			return (EOPNOTSUPP);

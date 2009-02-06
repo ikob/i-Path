@@ -117,6 +117,7 @@ struct sr_ip6 {
 int sr_setparam (struct srhdr *srh, struct ifnet *rifp, struct ifnet *sifp) {
 	struct ifnet *tifp;
 	int error = 0;
+	struct sr_storage *srp;
 #if SIRENS_DSIZE > 16
 	uint32_t data = 0;
 #else
@@ -138,30 +139,68 @@ int sr_setparam (struct srhdr *srh, struct ifnet *rifp, struct ifnet *sifp) {
 	}
 	srs_update ++;
 	IF_AFDATA_LOCK(tifp);
+	if(srh->req_probe & SIRENS_DIR_IN){
+		srp = (struct sr_storage *)(tifp->if_sr_in);
+	}else{
+		srp = (struct sr_storage *)(tifp->if_sr_out);
+	}
+printf("probe%d %d %d\n", srh->req_probe, srp->array[srh->req_probe].flag, srp->array[srh->req_probe].data);
 	switch ((srh->req_probe) & ~SIRENS_DIR_IN){
 	case SIRENS_LINK:
-		data = (u_int32_t) (tifp->if_baudrate);
+		if(srp->array[srh->req_probe].flag == IPSR_VAR_VALID){
+			data = (u_int32_t) srp->array[srh->req_probe].data;
+		}else{
+			data = (u_int32_t) (tifp->if_baudrate);
+		}
 		break;
 	case SIRENS_OBYTES:
-		data = (u_int32_t) (tifp->if_obytes);
+		if(srp->array[srh->req_probe].flag == IPSR_VAR_VALID){
+			data = (u_int32_t) srp->array[srh->req_probe].data;
+		}else{
+			data = (u_int32_t) (tifp->if_obytes);
+		}
 		break;
 	case SIRENS_IBYTES:
-		data = (u_int32_t) (tifp->if_ibytes);
+		if(srp->array[srh->req_probe].flag == IPSR_VAR_VALID){
+			data = (u_int32_t) srp->array[srh->req_probe].data;
+		}else{
+			data = (u_int32_t) (tifp->if_ibytes);
+		}
 		break;
 	case SIRENS_DROPS:
-		data = (u_int32_t) (tifp->if_snd.ifq_drops);
+		if(srp->array[srh->req_probe].flag == IPSR_VAR_VALID){
+			data = (u_int32_t) srp->array[srh->req_probe].data;
+		}else{
+			data = (u_int32_t) (tifp->if_snd.ifq_drops);
+		}
 		break;
 	case SIRENS_ERRORS:
-		data = (u_int32_t) (tifp->if_oerrors);
+		if(srp->array[srh->req_probe].flag == IPSR_VAR_VALID){
+			data = (u_int32_t) srp->array[srh->req_probe].data;
+		}else{
+			data = (u_int32_t) (tifp->if_oerrors);
+		}
 		break;
 	case SIRENS_QMAX:
-		data = (u_int32_t) (tifp->if_snd.ifq_maxlen);
+		if(srp->array[srh->req_probe].flag == IPSR_VAR_VALID){
+			data = (u_int32_t) srp->array[srh->req_probe].data;
+		}else{
+			data = (u_int32_t) (tifp->if_snd.ifq_maxlen);
+		}
 		break;
 	case SIRENS_QLEN:
-		data = (u_int32_t) (tifp->if_snd.ifq_len);
+		if(srp->array[srh->req_probe].flag == IPSR_VAR_VALID){
+			data = (u_int32_t) srp->array[srh->req_probe].data;
+		}else{
+			data = (u_int32_t) (tifp->if_snd.ifq_len);
+		}
 		break;
 	case SIRENS_MTU:
-		data = (u_int32_t) (tifp->if_mtu);
+		if(srp->array[srh->req_probe].flag == IPSR_VAR_VALID){
+			data = (u_int32_t) srp->array[srh->req_probe].data;
+		}else{
+			data = (u_int32_t) (tifp->if_mtu);
+		}
 		break;
 	default:
 		data = ~0;

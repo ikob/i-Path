@@ -14,14 +14,7 @@
 #include <sys/ioctl.h>
 
 #include <net/if.h>
-/*
-#include <net/if_var.h>
 
-#include <netinet/in.h>
-#include <netinet/in_systm.h>
-#include <netinet/in_var.h>
-#include <netinet/ip.h>
-*/
 #include <netinet/in_pcb.h>
 #include <netinet/ip_sirens.h>
 
@@ -69,6 +62,9 @@ main(int argc, char *argv[])
 	int status;
 	int count=1;
 
+	int fd;
+	struct if_srvarreq ifsrr;
+
 	int i, j;
 
 	while((ch = getopt(argc, argv, "c:")) != -1){
@@ -115,8 +111,6 @@ main(int argc, char *argv[])
 	for( nif = 0, noid = 0 ; nif < MAX_IF ; nif ++){
 		config_setting_t *oidcfsp;
 		char tstr[256], *iftok;
-		int fd;
-		struct ifreq ifr;
 
 		tcfsp = config_setting_get_elem(ifsp, nif);
 		if(tcfsp == NULL) break;
@@ -128,10 +122,11 @@ main(int argc, char *argv[])
 		}
 
 		fd = socket(PF_INET, SOCK_DGRAM, 0);
-		bzero(&ifr, sizeof(struct ifreq));
-		strncpy(ifr.ifr_name, qtbl[nif].ifname, IFNAMSIZ);
-		if(ioctl(fd, SIOCGIFFLAGS, &ifr) < 0){
-			printf("No interface %s\n", qtbl[nif].ifname);
+
+		bzero(&ifsrr, sizeof(struct if_srvarreq));
+		strncpy(ifsrr.ifr_name, qtbl[nif].ifname, IFNAMSIZ);
+		if(ioctl(fd, SIOCGSRVAR, &ifsrr) < 0){
+			printf("failed in %s\n", qtbl[nif].ifname);
 		}
 
 		if((ttcfsp = config_setting_get_member(tcfsp, "host")) == NULL){
@@ -210,148 +205,55 @@ main(int argc, char *argv[])
 		}
 		for( j = 0 ; j < SIRENS_PMAX ; j++){
 			if(qtbl[i].in[j].flag != 0) {
-			oid = strdup(qtbl[i].in[j].oid);
-			pdu = snmp_pdu_create(SNMP_MSG_GET);
-			anOID_len = MAX_OID_LEN;
-			if (!snmp_parse_oid(oid, anOID, &anOID_len)) {
-				snmp_perror(oid);
-				SOCK_CLEANUP;
-				exit(1);
-			}
-			snmp_add_null_var(pdu, anOID, anOID_len);
-			status = snmp_synch_response(ss, pdu, &response);
-			if (status == STAT_SUCCESS && response->errstat == SNMP_ERR_NOERROR) {
-      /*
-       * SUCCESS: Print the result variables
-       */
-				for(vars = response->variables; vars; vars = vars->next_variable)
-					print_variable(vars->name, vars->name_length, vars);
-
-				/* manipuate the information ourselves */
-				for(vars = response->variables; vars; vars = vars->next_variable) {
-					switch(vars->type){
-					case ASN_GAUGE:
-						{
-							u_int gauge;
-							gauge = *vars->val.integer;
-							printf("gauge %10d\n", gauge);
-						}
-						break;
-					case ASN_COUNTER64:
-						{
-							struct counter64 data64;
-							memcpy(&data64, vars->val.counter64, vars->val_len);
-							printf("counter64 %08x%08x\n", data64.high, data64.low);
-						}
-						break;
-					case ASN_OCTET_STR:
-						{
-		 					char *sp = (char *)malloc(1 + vars->val_len);
-							memcpy(sp, vars->val.string, vars->val_len);
-							sp[vars->val_len] = '\0';
-      							printf("value #%d is a string: %s\n", count++, sp);
-							free(sp);
-						}
-						break;
-					default:
-       						printf("%x value #%d is NOT support Ack!\n", vars->type, count++);
-						break;
-					}
-      				}
-			} else {
-      /*
-       * FAILURE: print what went wrong!
-       */
-				if (status == STAT_SUCCESS)
-					fprintf(stderr, "Error in packet\nReason: %s\n",
-						snmp_errstring(response->errstat));
-				else if (status == STAT_TIMEOUT)
-					fprintf(stderr, "Timeout: No response from %s.\n",
-						session.peername);
-				else
-					snmp_sess_perror("viftest", ss);
-    			}
-
-    /*
-     * Clean up:
-     *  1) free the response.
-     *  2) close the session.
-     */
-			if (response)
-				snmp_free_pdu(response);
+				int val;
+				oid = strdup(qtbl[i].in[j].oid);
+				vid_get(ss, oid, &val);
+				printf("val = %08x\n", val);
+				bzero(&ifsrr, sizeof(struct if_srvarreq));
+				strncpy(ifsrr.ifr_name, qtbl[i].ifname, IFNAMSIZ);
+				ifsrr.sr_probe = j | SIRENS_DIR_IN;
+				ifsrr.sr_var.flag = 1;
+				ifsrr.sr_var.data = val;
+				printf("request in : P:%d V:%d D:%d\n", ifsrr.sr_probe, ifsrr.sr_var.flag, ifsrr.sr_var.data);
+				if(ioctl(fd, SIOCSSRVAR, &ifsrr) < 0){
+					printf("failed in %s\n", qtbl[i].ifname);
+				}
+				bzero(&ifsrr, sizeof(struct if_srvarreq));
+				strncpy(ifsrr.ifr_name, qtbl[i].ifname, IFNAMSIZ);
+				ifsrr.sr_probe = j | SIRENS_DIR_IN;
+				if(ioctl(fd, SIOCGSRVAR, &ifsrr) < 0){
+					printf("failed in %s\n", qtbl[i].ifname);
+				}
+				printf("result in : P:%d V:%d D:%d\n", ifsrr.sr_probe, ifsrr.sr_var.flag, ifsrr.sr_var.data);
 			}
 		}
 		for( j = 0 ; j < SIRENS_PMAX ; j++){
 			if(qtbl[i].out[j].flag != 0){
-			oid = strdup(qtbl[i].out[j].oid);
-			pdu = snmp_pdu_create(SNMP_MSG_GET);
-			anOID_len = MAX_OID_LEN;
-			if (!snmp_parse_oid(oid, anOID, &anOID_len)) {
-				snmp_perror(oid);
-				SOCK_CLEANUP;
-				exit(1);
-			}
-			snmp_add_null_var(pdu, anOID, anOID_len);
-			status = snmp_synch_response(ss, pdu, &response);
-			if (status == STAT_SUCCESS && response->errstat == SNMP_ERR_NOERROR) {
-      /*
-       * SUCCESS: Print the result variables
-       */
-			for(vars = response->variables; vars; vars = vars->next_variable)
-				print_variable(vars->name, vars->name_length, vars);
-
-				/* manipuate the information ourselves */
-				for(vars = response->variables; vars; vars = vars->next_variable) {
-					switch(vars->type){
-					case ASN_GAUGE:
-						{
-							u_int gauge;
-							gauge = *vars->val.integer;
-							printf("gauge %10d\n", gauge);
-						}
-						break;
-					case ASN_COUNTER64:
-						{
-							struct counter64 data64;
-							memcpy(&data64, vars->val.counter64, vars->val_len);
-							printf("counter64 %08x%08x\n", data64.high, data64.low);
-						}
-						break;
-					case ASN_OCTET_STR:
-						{
-	 						char *sp = (char *)malloc(1 + vars->val_len);
-							memcpy(sp, vars->val.string, vars->val_len);
-							sp[vars->val_len] = '\0';
-      							printf("value #%d is a string: %s\n", count++, sp);
-							free(sp);
-						}
-						break;
-					default:
-       						printf("%x value #%d is NOT support Ack!\n", vars->type, count++);
-						break;
-					}
-      				}
-			} else {
-      /*
-       * FAILURE: print what went wrong!
-       */
-				if (status == STAT_SUCCESS)
-					fprintf(stderr, "Error in packet\nReason: %s\n",
-						snmp_errstring(response->errstat));
-				else if (status == STAT_TIMEOUT)
-					fprintf(stderr, "Timeout: No response from %s.\n",
-						session.peername);
-				else
-					snmp_sess_perror("viftest", ss);
-    			}
-
-    /*
-     * Clean up:
-     *  1) free the response.
-     *  2) close the session.
-     */
-			if (response)
-				snmp_free_pdu(response);
+				int val;
+				oid = strdup(qtbl[i].out[j].oid);
+				vid_get(ss, oid, &val);
+				printf("val = %08x\n", val);
+				bzero(&ifsrr, sizeof(struct if_srvarreq));
+				strncpy(ifsrr.ifr_name, qtbl[i].ifname, IFNAMSIZ);
+				ifsrr.sr_probe = j | SIRENS_DIR_OUT;
+				ifsrr.sr_var.flag = 1;
+				ifsrr.sr_var.data = val;
+				printf("request out: P:%d V:%d D:%d\n", ifsrr.sr_probe, ifsrr.sr_var.flag, ifsrr.sr_var.data);
+				if(ioctl(fd, SIOCSSRVAR, &ifsrr) < 0){
+					printf("failed in %s\n", qtbl[i].ifname);
+				}
+				bzero(&ifsrr, sizeof(struct if_srvarreq));
+				strncpy(ifsrr.ifr_name, qtbl[i].ifname, IFNAMSIZ);
+				if(ioctl(fd, SIOCSSRVAR, &ifsrr) < 0){
+					printf("failed in %s\n", qtbl[i].ifname);
+				}
+				bzero(&ifsrr, sizeof(struct if_srvarreq));
+				strncpy(ifsrr.ifr_name, qtbl[i].ifname, IFNAMSIZ);
+				ifsrr.sr_probe = j | SIRENS_DIR_OUT;
+				if(ioctl(fd, SIOCGSRVAR, &ifsrr) < 0){
+					printf("failed in %s\n", qtbl[i].ifname);
+				}
+				printf("result out: P:%d V:%d D:%d\n", ifsrr.sr_probe, ifsrr.sr_var.flag, ifsrr.sr_var.data);
 			}
 		}
 		snmp_close(ss);
@@ -360,7 +262,90 @@ main(int argc, char *argv[])
 
 	return (0);
 }
-
-vid_get(struct snmp_session *ss, char *oid)
+int
+vid_get(struct snmp_session *ss, char *oid, int *val)
 {
+	netsnmp_pdu *pdu;
+	netsnmp_pdu *response;
+	size_t anOID_len;
+	long anOID[MAX_OID_LEN];
+	int status;
+	int count=1;
+	netsnmp_variable_list *vars;
+	pdu = snmp_pdu_create(SNMP_MSG_GET);
+	anOID_len = MAX_OID_LEN;
+	int err = 0;
+	*val = 0;
+	if (!snmp_parse_oid(oid, anOID, &anOID_len)) {
+		snmp_perror(oid);
+		SOCK_CLEANUP;
+		exit (1);
+	}
+	snmp_add_null_var(pdu, anOID, anOID_len);
+	status = snmp_synch_response(ss, pdu, &response);
+	if (status == STAT_SUCCESS && response->errstat == SNMP_ERR_NOERROR) {
+      /*
+       * SUCCESS: Print the result variables
+       */
+/*
+		for(vars = response->variables; vars; vars = vars->next_variable)
+			print_variable(vars->name, vars->name_length, vars);
+*/
+
+	/* manipuate the information ourselves */
+		for(vars = response->variables; vars; vars = vars->next_variable) {
+			switch(vars->type){
+			case ASN_GAUGE:
+				{
+					u_int gauge;
+					gauge = *vars->val.integer;
+//					printf("gauge %10d\n", gauge);
+					*val = gauge;
+				}
+				break;
+			case ASN_COUNTER64:
+				{
+					struct counter64 data64;
+					memcpy(&data64, vars->val.counter64, vars->val_len);
+//					printf("counter64 %08x%08x\n", data64.high, data64.low);
+					*val = data64.low;
+				}
+				break;
+			case ASN_OCTET_STR:
+				{
+ 					char *sp = (char *)malloc(1 + vars->val_len);
+					memcpy(sp, vars->val.string, vars->val_len);
+					sp[vars->val_len] = '\0';
+//      					printf("value #%d is a string: %s\n", count++, sp);
+					free(sp);
+				}
+				break;
+			default:
+//     				printf("%x value #%d is NOT support Ack!\n", vars->type, count++);
+				break;
+			}
+      		}
+	} else {
+      /*
+       * FAILURE: print what went wrong!
+       */
+		if (status == STAT_SUCCESS)
+			fprintf(stderr, "Error in packet\nReason: %s\n",
+				snmp_errstring(response->errstat));
+		else if (status == STAT_TIMEOUT)
+			fprintf(stderr, "Timeout: No response from %s.\n",
+				ss->peername);
+		else
+			snmp_sess_perror("viftest", ss);
+		err = -1;
+    	}
+
+    /*
+     * Clean up:
+     *  1) free the response.
+     *  2) close the session.
+     */
+	if (response)
+		snmp_free_pdu(response);
+	return err;
 }

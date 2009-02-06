@@ -35,6 +35,7 @@
 #include "opt_inet.h"
 #include "opt_mac.h"
 #include "opt_carp.h"
+#include "opt_ipsirens.h"
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -70,9 +71,16 @@
 /*XXX*/
 #include <netinet/in.h>
 #include <netinet/in_var.h>
+#ifdef IPSIRENS
+#include <netinet/ip_sirens.h>
+#endif
 #ifdef INET6
 #include <netinet6/in6_var.h>
 #include <netinet6/in6_ifattach.h>
+#endif
+#else
+#ifdef IPSIRENS
+#undef IPSIRENS
 #endif
 #endif
 #ifdef INET
@@ -532,6 +540,13 @@ if_attach(struct ifnet *ifp)
 	ifp->if_snd.altq_tbr  = NULL;
 	ifp->if_snd.altq_ifp  = ifp;
 
+#ifdef IPSIRENS
+	ifp->if_sr_in  = malloc(sizeof(struct sr_storage), M_TEMP, M_WAITOK | M_ZERO);
+	bzero(ifp->if_sr_in, sizeof(struct sr_storage));
+	ifp->if_sr_out  = malloc(sizeof(struct sr_storage), M_TEMP, M_WAITOK | M_ZERO);
+	bzero(ifp->if_sr_out, sizeof(struct sr_storage));
+#endif
+
 	IFNET_WLOCK();
 	TAILQ_INSERT_TAIL(&ifnet, ifp, if_link);
 	IFNET_WUNLOCK();
@@ -743,6 +758,10 @@ if_detach(struct ifnet *ifp)
 		(void) rnh->rnh_walktree(rnh, if_rtdel, ifp);
 		RADIX_NODE_HEAD_UNLOCK(rnh);
 	}
+#ifdef IPSIRENS
+	free(ifp->if_sr_in, M_TEMP);
+	free(ifp->if_sr_out, M_TEMP);
+#endif
 
 	/* Announce that the interface is gone. */
 	rt_ifannouncemsg(ifp, IFAN_DEPARTURE);
@@ -1824,6 +1843,49 @@ ifhwioctl(u_long cmd, struct ifnet *ifp, caddr_t data, struct thread *td)
 			return (error);
 		break;
 	}
+#ifdef IPSIRENS
+	case SIOCSSRVAR:
+	{
+		struct if_srvarreq *ifsrr = (struct if_srvarreq *)ifr;
+		struct sr_storage *srp;
+		if(ifp == 0) return (EOPNOTSUPP);
+		if(ifsrr->sr_probe & SIRENS_DIR_IN){
+			srp = (struct sr_storage *)(ifp->if_sr_in);
+		}else{
+			srp = (struct sr_storage *)(ifp->if_sr_out);
+		}
+		switch(ifsrr->sr_var.flag){
+		case IPSR_VAR_VALID:
+			srp->array[ifsrr->sr_probe].data = ifsrr->sr_var.data;
+			srp->array[ifsrr->sr_probe].flag = ifsrr->sr_var.flag;
+printf("SIOCSSRVAR %08x %d %d\n", ifsrr->sr_probe, srp->array[ifsrr->sr_probe].data, srp->array[ifsrr->sr_probe].flag);
+			break;
+		case IPSR_VAR_INVAL:
+			srp->array[ifsrr->sr_probe].flag = ifsrr->sr_var.flag;
+			break;
+		default:
+			return(EINVAL);
+		}
+		return(0);
+		break;
+	}
+	case SIOCGSRVAR:
+	{
+		struct if_srvarreq *ifsrr = (struct if_srvarreq *)ifr;
+		struct sr_storage *srp;
+		if(ifp == 0) return (EOPNOTSUPP);
+		if(ifsrr->sr_probe & SIRENS_DIR_IN){
+			srp = (struct sr_storage *)(ifp->if_sr_in);
+		}else{
+			srp = (struct sr_storage *)(ifp->if_sr_out);
+		}
+printf("SIOCGSRVAR %08x %d %d\n", ifsrr->sr_probe, srp->array[ifsrr->sr_probe].data, srp->array[ifsrr->sr_probe].flag);
+		ifsrr->sr_var.data = srp->array[ifsrr->sr_probe].data;
+		ifsrr->sr_var.flag = srp->array[ifsrr->sr_probe].flag;
+		return(0);
+		break;
+	}
+#endif
 
 	default:
 		error = ENOIOCTL;
