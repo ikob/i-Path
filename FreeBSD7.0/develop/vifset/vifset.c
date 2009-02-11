@@ -18,14 +18,24 @@
 #include <netinet/in_pcb.h>
 #include <netinet/ip_sirens.h>
 
-
 #define CONFIG_FILE "sample.cfg"
 #define MAX_IF 32
+
+struct qtbl_t{
+	struct {
+		int flag;
+		char oid[MAX_OID_LEN];
+	}in[SIRENS_PMAX], out[SIRENS_PMAX];
+	char community[128];
+	char host[128];
+	char ifname[IFNAMSIZ];
+};
 
 void usage(){
 	fprintf(stderr, "Usage .....\n");
 	exit(1);
 }
+int fd;
 
 main(int argc, char *argv[])
 {
@@ -33,36 +43,15 @@ main(int argc, char *argv[])
 	extern char *optarg;
 	extern int optind, opterr;
 
+	int duration = 4;
+	struct qtbl_t qtbl[MAX_IF];
+
 	char config_file[64] = CONFIG_FILE;
 	config_t cf;
-	config_setting_t *ifsp, *tcfsp, *ttcfsp;
-	FILE *FP;
-	char *oid;
-	char elem[256];
-	int nif, noid;
-	struct {
-		struct {
-			int flag;
-			char oid[MAX_OID_LEN];
-		}in[SIRENS_PMAX], out[SIRENS_PMAX];
-		char community[128];
-		char host[128];
-		char ifname[IFNAMSIZ];
-	} qtbl[MAX_IF];
-	char dcomm[256] = "public";
+	int nif;
 
-	netsnmp_session session, *ss;
-	netsnmp_pdu *pdu;
-	netsnmp_pdu *response;
-
-	long anOID[MAX_OID_LEN];
-	size_t anOID_len;
-
-	netsnmp_variable_list *vars;
-	int status;
 	int count=1;
 
-	int fd;
 	struct if_srvarreq ifsrr;
 
 	int i, j;
@@ -78,186 +67,15 @@ main(int argc, char *argv[])
 		}
 	}
 
-	for (i = 0 ; i < MAX_IF ; i++){
-		for( j = 0 ; j < SIRENS_PMAX ; j++){ 
-			qtbl[i].in[j].flag = 0;
-			qtbl[i].out[j].flag = 0;
-		}
-		strcpy(qtbl[i].community, "");
-	}
-
-	if((FP = fopen(config_file, "r")) == NULL){
-		printf("file read error \"%s\"\n", config_file);
-		exit(1);
-	}
-
-	config_init(&cf);
-	
-	if(CONFIG_TRUE != config_read(&cf, FP) ){
-		printf("config error line:%d %s\n", config_error_line(&cf), config_error_text(&cf));
-		return(1);
-	}
-	if((ifsp = config_lookup(&cf, "default")) != NULL){
-		if((tcfsp = config_setting_get_member(ifsp, "community")) != NULL){
-			strncpy(dcomm, config_setting_get_string(tcfsp), 128);
-		}
-	}
-
-	if((ifsp = config_lookup(&cf, "interface")) == NULL){
-		printf("config error not defined any interface\n");
-		exit(1);
-	}
-
-	for( nif = 0, noid = 0 ; nif < MAX_IF ; nif ++){
-		config_setting_t *oidcfsp;
-		char tstr[256], *iftok;
-
-		tcfsp = config_setting_get_elem(ifsp, nif);
-		if(tcfsp == NULL) break;
-
-/* replace '_' with '.', due to libconfig restrictuon */
-		strncpy(qtbl[nif].ifname, config_setting_name(tcfsp), IFNAMSIZ);
-		if((iftok = strchr(qtbl[nif].ifname, '_')) != NULL){
-			*iftok ='.';
-		}
-
-		fd = socket(PF_INET, SOCK_DGRAM, 0);
-
-		bzero(&ifsrr, sizeof(struct if_srvarreq));
-		strncpy(ifsrr.ifr_name, qtbl[nif].ifname, IFNAMSIZ);
-		if(ioctl(fd, SIOCGSRVAR, &ifsrr) < 0){
-			printf("failed in %s\n", qtbl[nif].ifname);
-		}
-
-		if((ttcfsp = config_setting_get_member(tcfsp, "host")) == NULL){
-			printf("not found community in %s\n", qtbl[nif].ifname);
-			exit(1);
-		}
-		strncpy(qtbl[nif].host, config_setting_get_string(ttcfsp), 128);
-		if((ttcfsp = config_setting_get_member(tcfsp, "community")) == NULL){
-			strncpy(qtbl[nif].community, dcomm, 128);
-		}else{
-			strncpy(qtbl[nif].community, config_setting_get_string(ttcfsp), 128);
-		}
-		if((ttcfsp = config_setting_get_member(tcfsp, "in")) != NULL){
-			if((oidcfsp = config_setting_get_member(ttcfsp, "bw")) != NULL){
-				noid ++;
-				qtbl[nif].in[SIRENS_LINK].flag = 1;
-				strncpy(qtbl[nif].in[SIRENS_LINK].oid, config_setting_get_string(oidcfsp), MAX_OID_LEN);
-			}
-			if((oidcfsp = config_setting_get_member(ttcfsp, "octets")) != NULL){
-				noid ++;
-				qtbl[nif].in[SIRENS_OBYTES].flag = 1;
-				strncpy(qtbl[nif].in[SIRENS_OBYTES].oid, config_setting_get_string(oidcfsp), MAX_OID_LEN);
-			}
-			if((oidcfsp = config_setting_get_member(ttcfsp, "queue")) != NULL){
-				noid ++;
-				qtbl[nif].in[SIRENS_QLEN].flag = 1;
-				strncpy(qtbl[nif].in[SIRENS_QLEN].oid, config_setting_get_string(oidcfsp), MAX_OID_LEN);
-			}
-		}
-		if((ttcfsp = config_setting_get_member(tcfsp, "out")) != NULL){
-			if((oidcfsp = config_setting_get_member(ttcfsp, "bw")) != NULL){
-				noid ++;
-				qtbl[nif].out[SIRENS_LINK].flag = 1;
-				strncpy(qtbl[nif].out[SIRENS_LINK].oid, config_setting_get_string(oidcfsp), MAX_OID_LEN);
-			}
-			if((oidcfsp = config_setting_get_member(ttcfsp, "octets")) != NULL){
-				noid ++;
-				qtbl[nif].out[SIRENS_OBYTES].flag = 1;
-				strncpy(qtbl[nif].out[SIRENS_OBYTES].oid, config_setting_get_string(oidcfsp), MAX_OID_LEN);
-			}
-			if((oidcfsp = config_setting_get_member(ttcfsp, "queue")) != NULL){
-				noid ++;
-				qtbl[nif].out[SIRENS_QLEN].flag = 1;
-				strncpy(qtbl[nif].out[SIRENS_QLEN].oid, config_setting_get_string(oidcfsp), MAX_OID_LEN);
-			}
-		}
-	}
-	if(nif == MAX_IF){
-		fprintf(stderr, "Too much if's %d >  %d\n", nif, MAX_IF);
-		exit(1);
-	}
-	printf("total if %d oid %d\n", nif, noid);
-	if(nif == 0){
-		printf("no if is defined\n");
-		exit(0);
-	}
-	if(noid == 0){
-		printf("no oid is defined\n");
-		exit(0);
-	}
+	fd = socket(PF_INET, SOCK_DGRAM, 0);
+	nif = MAX_IF;
+	qtbl_init(config_file, &qtbl, &nif);
 
 	init_snmp("vifset");
 
-	for( i = 0 ; i < nif ; i++ ){
-		snmp_sess_init( &session);
-		session.version = SNMP_VERSION_2c;
-		session.peername = strdup(qtbl[i].host);
-		session.community = strdup(qtbl[i].community);
-		session.community_len = strlen(session.community);
-		SOCK_STARTUP;
-		ss = snmp_open(&session);
-		if (!ss) {
-			snmp_sess_perror("ack", &session);
-			SOCK_CLEANUP;
-			exit(1);
-		}
-		for( j = 0 ; j < SIRENS_PMAX ; j++){
-			if(qtbl[i].in[j].flag != 0) {
-				int val;
-				oid = strdup(qtbl[i].in[j].oid);
-				vid_get(ss, oid, &val);
-				printf("val = %08x\n", val);
-				bzero(&ifsrr, sizeof(struct if_srvarreq));
-				strncpy(ifsrr.ifr_name, qtbl[i].ifname, IFNAMSIZ);
-				ifsrr.sr_probe = j | SIRENS_DIR_IN;
-				ifsrr.sr_var.flag = 1;
-				ifsrr.sr_var.data = val;
-				printf("request in : P:%d V:%d D:%d\n", ifsrr.sr_probe, ifsrr.sr_var.flag, ifsrr.sr_var.data);
-				if(ioctl(fd, SIOCSSRVAR, &ifsrr) < 0){
-					printf("failed in %s\n", qtbl[i].ifname);
-				}
-				bzero(&ifsrr, sizeof(struct if_srvarreq));
-				strncpy(ifsrr.ifr_name, qtbl[i].ifname, IFNAMSIZ);
-				ifsrr.sr_probe = j | SIRENS_DIR_IN;
-				if(ioctl(fd, SIOCGSRVAR, &ifsrr) < 0){
-					printf("failed in %s\n", qtbl[i].ifname);
-				}
-				printf("result in : P:%d V:%d D:%d\n", ifsrr.sr_probe, ifsrr.sr_var.flag, ifsrr.sr_var.data);
-			}
-		}
-		for( j = 0 ; j < SIRENS_PMAX ; j++){
-			if(qtbl[i].out[j].flag != 0){
-				int val;
-				oid = strdup(qtbl[i].out[j].oid);
-				vid_get(ss, oid, &val);
-				printf("val = %08x\n", val);
-				bzero(&ifsrr, sizeof(struct if_srvarreq));
-				strncpy(ifsrr.ifr_name, qtbl[i].ifname, IFNAMSIZ);
-				ifsrr.sr_probe = j | SIRENS_DIR_OUT;
-				ifsrr.sr_var.flag = 1;
-				ifsrr.sr_var.data = val;
-				printf("request out: P:%d V:%d D:%d\n", ifsrr.sr_probe, ifsrr.sr_var.flag, ifsrr.sr_var.data);
-				if(ioctl(fd, SIOCSSRVAR, &ifsrr) < 0){
-					printf("failed in %s\n", qtbl[i].ifname);
-				}
-				bzero(&ifsrr, sizeof(struct if_srvarreq));
-				strncpy(ifsrr.ifr_name, qtbl[i].ifname, IFNAMSIZ);
-				if(ioctl(fd, SIOCSSRVAR, &ifsrr) < 0){
-					printf("failed in %s\n", qtbl[i].ifname);
-				}
-				bzero(&ifsrr, sizeof(struct if_srvarreq));
-				strncpy(ifsrr.ifr_name, qtbl[i].ifname, IFNAMSIZ);
-				ifsrr.sr_probe = j | SIRENS_DIR_OUT;
-				if(ioctl(fd, SIOCGSRVAR, &ifsrr) < 0){
-					printf("failed in %s\n", qtbl[i].ifname);
-				}
-				printf("result out: P:%d V:%d D:%d\n", ifsrr.sr_probe, ifsrr.sr_var.flag, ifsrr.sr_var.data);
-			}
-		}
-		snmp_close(ss);
-		SOCK_CLEANUP;
+	while(1){
+		vid_query(&qtbl, nif);
+		sleep(duration);
 	}
 
 	return (0);
@@ -270,7 +88,6 @@ vid_get(struct snmp_session *ss, char *oid, int *val)
 	size_t anOID_len;
 	long anOID[MAX_OID_LEN];
 	int status;
-	int count=1;
 	netsnmp_variable_list *vars;
 	pdu = snmp_pdu_create(SNMP_MSG_GET);
 	anOID_len = MAX_OID_LEN;
@@ -348,4 +165,207 @@ vid_get(struct snmp_session *ss, char *oid, int *val)
 	if (response)
 		snmp_free_pdu(response);
 	return err;
+}
+int qtbl_init(char *file, struct qtbl_t *qtbl, int *nif)
+{
+	int i, j;
+	int iif;
+	config_t cf;
+	config_setting_t *ifsp, *tcfsp, *ttcfsp;
+	FILE *FP;
+	char dcomm[256] = "public";
+	int noid;
+	struct if_srvarreq ifsrr;
+	
+	for (i = 0 ; i < MAX_IF ; i++){
+		for( j = 0 ; j < SIRENS_PMAX ; j++){ 
+			qtbl[i].in[j].flag = 0;
+			qtbl[i].out[j].flag = 0;
+		}
+		strcpy(qtbl[i].community, "");
+	}
+
+	if((FP = fopen(file, "r")) == NULL){
+		printf("file read error \"%s\"\n", file);
+		exit(1);
+	}
+
+	config_init(&cf);
+	
+	if(CONFIG_TRUE != config_read(&cf, FP) ){
+		printf("config error line:%d %s\n", config_error_line(&cf), config_error_text(&cf));
+		return(1);
+	}
+
+	fclose(FP);
+
+	if((ifsp = config_lookup(&cf, "default")) != NULL){
+		if((tcfsp = config_setting_get_member(ifsp, "community")) != NULL){
+			strncpy(dcomm, config_setting_get_string(tcfsp), 128);
+		}
+	}
+
+	if((ifsp = config_lookup(&cf, "interface")) == NULL){
+		printf("config error not defined any interface\n");
+		exit(1);
+	}
+
+	for( iif = 0, noid = 0 ; iif < *nif ; iif++){
+		config_setting_t *oidcfsp;
+		char tstr[256], *iftok;
+
+		tcfsp = config_setting_get_elem(ifsp, iif);
+		if(tcfsp == NULL) break;
+
+/* replace '_' with '.', due to libconfig restrictuon */
+		strncpy(qtbl[iif].ifname, config_setting_name(tcfsp), IFNAMSIZ);
+		if((iftok = strchr(qtbl[iif].ifname, '_')) != NULL){
+			*iftok ='.';
+		}
+
+
+		bzero(&ifsrr, sizeof(struct if_srvarreq));
+		strncpy(ifsrr.ifr_name, qtbl[iif].ifname, IFNAMSIZ);
+		if(ioctl(fd, SIOCGSRVAR, &ifsrr) < 0){
+			printf("failed in %s\n", qtbl[iif].ifname);
+		}
+
+		if((ttcfsp = config_setting_get_member(tcfsp, "host")) == NULL){
+			printf("not found community in %s\n", qtbl[iif].ifname);
+			exit(1);
+		}
+		strncpy(qtbl[iif].host, config_setting_get_string(ttcfsp), 128);
+		if((ttcfsp = config_setting_get_member(tcfsp, "community")) == NULL){
+			strncpy(qtbl[iif].community, dcomm, 128);
+		}else{
+			strncpy(qtbl[iif].community, config_setting_get_string(ttcfsp), 128);
+		}
+		if((ttcfsp = config_setting_get_member(tcfsp, "in")) != NULL){
+			if((oidcfsp = config_setting_get_member(ttcfsp, "bw")) != NULL){
+				noid ++;
+				qtbl[iif].in[SIRENS_LINK].flag = 1;
+				strncpy(qtbl[iif].in[SIRENS_LINK].oid, config_setting_get_string(oidcfsp), MAX_OID_LEN);
+			}
+			if((oidcfsp = config_setting_get_member(ttcfsp, "octets")) != NULL){
+				noid ++;
+				qtbl[iif].in[SIRENS_OBYTES].flag = 1;
+				strncpy(qtbl[iif].in[SIRENS_OBYTES].oid, config_setting_get_string(oidcfsp), MAX_OID_LEN);
+			}
+			if((oidcfsp = config_setting_get_member(ttcfsp, "queue")) != NULL){
+				noid ++;
+				qtbl[iif].in[SIRENS_QLEN].flag = 1;
+				strncpy(qtbl[iif].in[SIRENS_QLEN].oid, config_setting_get_string(oidcfsp), MAX_OID_LEN);
+			}
+		}
+		if((ttcfsp = config_setting_get_member(tcfsp, "out")) != NULL){
+			if((oidcfsp = config_setting_get_member(ttcfsp, "bw")) != NULL){
+				noid ++;
+				qtbl[iif].out[SIRENS_LINK].flag = 1;
+				strncpy(qtbl[iif].out[SIRENS_LINK].oid, config_setting_get_string(oidcfsp), MAX_OID_LEN);
+			}
+			if((oidcfsp = config_setting_get_member(ttcfsp, "octets")) != NULL){
+				noid ++;
+				qtbl[iif].out[SIRENS_OBYTES].flag = 1;
+				strncpy(qtbl[iif].out[SIRENS_OBYTES].oid, config_setting_get_string(oidcfsp), MAX_OID_LEN);
+			}
+			if((oidcfsp = config_setting_get_member(ttcfsp, "queue")) != NULL){
+				noid ++;
+				qtbl[iif].out[SIRENS_QLEN].flag = 1;
+				strncpy(qtbl[iif].out[SIRENS_QLEN].oid, config_setting_get_string(oidcfsp), MAX_OID_LEN);
+			}
+		}
+	}
+	if(iif == MAX_IF){
+		fprintf(stderr, "Too much if's %d >  %d\n", iif, MAX_IF);
+		exit(1);
+	}
+	printf("total if %d oid %d\n", iif, noid);
+	if(iif == 0){
+		printf("no if is defined\n");
+		exit(0);
+	}
+	if(noid == 0){
+		printf("no oid is defined\n");
+		exit(0);
+	}
+	*nif = iif;
+	return (0);
+}
+int vid_query( struct qtbl_t *qtbl, int nif){
+	int i, j;
+	netsnmp_session session, *ss;
+	netsnmp_pdu *pdu;
+	netsnmp_pdu *response;
+	char *oid;
+	struct if_srvarreq ifsrr;
+
+	for( i = 0 ; i < nif ; i++ ){
+		snmp_sess_init( &session);
+		session.version = SNMP_VERSION_2c;
+		session.peername = strdup(qtbl[i].host);
+		session.community = strdup(qtbl[i].community);
+		session.community_len = strlen(session.community);
+		SOCK_STARTUP;
+		ss = snmp_open(&session);
+		if (!ss) {
+			snmp_sess_perror("ack", &session);
+			SOCK_CLEANUP;
+			exit(1);
+		}
+		for( j = 0 ; j < SIRENS_PMAX ; j++){
+			if(qtbl[i].in[j].flag != 0) {
+				int val;
+				oid = strdup(qtbl[i].in[j].oid);
+				vid_get(ss, oid, &val);
+				printf("val = %08x\n", val);
+				bzero(&ifsrr, sizeof(struct if_srvarreq));
+				strncpy(ifsrr.ifr_name, qtbl[i].ifname, IFNAMSIZ);
+				ifsrr.sr_probe = j | SIRENS_DIR_IN;
+				ifsrr.sr_var.flag = 1;
+				ifsrr.sr_var.data = val;
+				printf("request in : P:%d V:%d D:%d\n", ifsrr.sr_probe, ifsrr.sr_var.flag, ifsrr.sr_var.data);
+				if(ioctl(fd, SIOCSSRVAR, &ifsrr) < 0){
+					printf("failed in %s\n", qtbl[i].ifname);
+				}
+				bzero(&ifsrr, sizeof(struct if_srvarreq));
+				strncpy(ifsrr.ifr_name, qtbl[i].ifname, IFNAMSIZ);
+				ifsrr.sr_probe = j | SIRENS_DIR_IN;
+				if(ioctl(fd, SIOCGSRVAR, &ifsrr) < 0){
+					printf("failed in %s\n", qtbl[i].ifname);
+				}
+				printf("result in : P:%d V:%d D:%d\n", ifsrr.sr_probe, ifsrr.sr_var.flag, ifsrr.sr_var.data);
+			}
+		}
+		for( j = 0 ; j < SIRENS_PMAX ; j++){
+			if(qtbl[i].out[j].flag != 0){
+				int val;
+				oid = strdup(qtbl[i].out[j].oid);
+				vid_get(ss, oid, &val);
+				printf("val = %08x\n", val);
+				bzero(&ifsrr, sizeof(struct if_srvarreq));
+				strncpy(ifsrr.ifr_name, qtbl[i].ifname, IFNAMSIZ);
+				ifsrr.sr_probe = j | SIRENS_DIR_OUT;
+				ifsrr.sr_var.flag = 1;
+				ifsrr.sr_var.data = val;
+				printf("request out: P:%d V:%d D:%d\n", ifsrr.sr_probe, ifsrr.sr_var.flag, ifsrr.sr_var.data);
+				if(ioctl(fd, SIOCSSRVAR, &ifsrr) < 0){
+					printf("failed in %s\n", qtbl[i].ifname);
+				}
+				bzero(&ifsrr, sizeof(struct if_srvarreq));
+				strncpy(ifsrr.ifr_name, qtbl[i].ifname, IFNAMSIZ);
+				if(ioctl(fd, SIOCSSRVAR, &ifsrr) < 0){
+					printf("failed in %s\n", qtbl[i].ifname);
+				}
+				bzero(&ifsrr, sizeof(struct if_srvarreq));
+				strncpy(ifsrr.ifr_name, qtbl[i].ifname, IFNAMSIZ);
+				ifsrr.sr_probe = j | SIRENS_DIR_OUT;
+				if(ioctl(fd, SIOCGSRVAR, &ifsrr) < 0){
+					printf("failed in %s\n", qtbl[i].ifname);
+				}
+				printf("result out: P:%d V:%d D:%d\n", ifsrr.sr_probe, ifsrr.sr_var.flag, ifsrr.sr_var.data);
+			}
+		}
+		snmp_close(ss);
+		SOCK_CLEANUP;
+	}
 }

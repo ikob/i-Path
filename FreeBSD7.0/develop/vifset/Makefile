@@ -16,15 +16,15 @@ LIBS	      = -lconfig -lnetsnmp -lssl
 
 MAKEFILE      = Makefile
 
-OBJS	      = main.o
+OBJS	      = vifset.o
 
 PRINT	      = pr
 
-PROGRAM       = a.out
+PROGRAM       = vifset
 
 SHELL	      = /bin/sh
 
-SRCS	      = main.c
+SRCS	      = vifset.c
 
 SYSHDRS	      = 
 
