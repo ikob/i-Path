@@ -20,6 +20,7 @@ char *sirens_mode_s[] = {
 };
 #endif
 enum SIRENS_PROBE {
+	SIRENS_DUMMY,
 	SIRENS_LINK,
 	SIRENS_OBYTES,
 	SIRENS_IBYTES,
@@ -28,10 +29,14 @@ enum SIRENS_PROBE {
 	SIRENS_QMAX,
 	SIRENS_QLEN,
 	SIRENS_MTU,
+/*
 	SIRENS_PMAX
+*/
 };
+#define SIRENS_PMAX 256
 #ifndef _KERNEL
 static char *sirens_probe_s[] = {
+	"dummy",
 	"link",
 	"obytes",
 	"ibytes",
@@ -40,7 +45,6 @@ static char *sirens_probe_s[] = {
 	"qmax",
 	"qlen",
 	"mtu",
-	"dummy",
 };
 #endif
 #define		IPSR_VAR_VALID 0x00000001
@@ -50,7 +54,7 @@ struct sr_storage {
 	struct sr_var{
 		uint32_t flag;
        		uint32_t data;
-	}array[SIRENS_PMAX + 1];
+	}array[SIRENS_PMAX];
 };
 struct if_srvarreq {
 	char    ifr_name[IFNAMSIZ];             /* if name, e.g. "en0" */
@@ -62,6 +66,9 @@ struct if_srvarreq {
 #define SIRENS_DIR_OUT	0x00
 #define SIRENS_DSIZE	32
 #if SIRENS_DSIZE > 16
+/*
+ * ext. SIRENS data
+ */
 union u_sr_data {
 	uint32_t link;
 	uint32_t loss;

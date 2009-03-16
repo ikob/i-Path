@@ -139,11 +139,7 @@ int sr_setparam (struct srhdr *srh, struct ifnet *rifp, struct ifnet *sifp) {
 	}
 	srs_update ++;
 	IF_AFDATA_LOCK(tifp);
-	if(srh->req_probe & SIRENS_DIR_IN){
-		srp = (struct sr_storage *)(tifp->if_sr_in);
-	}else{
-		srp = (struct sr_storage *)(tifp->if_sr_out);
-	}
+	srp = (struct sr_storage *)(tifp->if_sr);
 #ifdef SR_DEBUG
 printf("probe%d %d %d\n", srh->req_probe, srp->array[srh->req_probe].flag, srp->array[srh->req_probe].data);
 #endif
