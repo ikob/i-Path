@@ -541,10 +541,8 @@ if_attach(struct ifnet *ifp)
 	ifp->if_snd.altq_ifp  = ifp;
 
 #ifdef IPSIRENS
-	ifp->if_sr_in  = malloc(sizeof(struct sr_storage), M_TEMP, M_WAITOK | M_ZERO);
-	bzero(ifp->if_sr_in, sizeof(struct sr_storage));
-	ifp->if_sr_out  = malloc(sizeof(struct sr_storage), M_TEMP, M_WAITOK | M_ZERO);
-	bzero(ifp->if_sr_out, sizeof(struct sr_storage));
+	ifp->if_sr = malloc(sizeof(struct sr_storage), M_TEMP, M_NOWAIT);
+	bzero(ifp->if_sr, sizeof(struct sr_storage));
 #endif
 
 	IFNET_WLOCK();
@@ -759,8 +757,7 @@ if_detach(struct ifnet *ifp)
 		RADIX_NODE_HEAD_UNLOCK(rnh);
 	}
 #ifdef IPSIRENS
-	free(ifp->if_sr_in, M_TEMP);
-	free(ifp->if_sr_out, M_TEMP);
+	free(ifp->if_sr, M_TEMP);
 #endif
 
 	/* Announce that the interface is gone. */
@@ -1848,22 +1845,19 @@ ifhwioctl(u_long cmd, struct ifnet *ifp, caddr_t data, struct thread *td)
 	{
 		struct if_srvarreq *ifsrr = (struct if_srvarreq *)ifr;
 		struct sr_storage *srp;
+		int idx = ifsrr->sr_probe &0xFF;
 		if(ifp == 0) return (EOPNOTSUPP);
-		if(ifsrr->sr_probe & SIRENS_DIR_IN){
-			srp = (struct sr_storage *)(ifp->if_sr_in);
-		}else{
-			srp = (struct sr_storage *)(ifp->if_sr_out);
-		}
+		srp = (struct sr_storage *)(ifp->if_sr);
 		switch(ifsrr->sr_var.flag){
 		case IPSR_VAR_VALID:
-			srp->array[ifsrr->sr_probe].data = ifsrr->sr_var.data;
-			srp->array[ifsrr->sr_probe].flag = ifsrr->sr_var.flag;
+			srp->array[idx].data = ifsrr->sr_var.data;
+			srp->array[idx].flag = ifsrr->sr_var.flag;
 /*
-printf("SIOCSSRVAR %08x %d %d\n", ifsrr->sr_probe, srp->array[ifsrr->sr_probe].data, srp->array[ifsrr->sr_probe].flag);
+printf("SIOCSSRVAR %d %d %d %d\n", ifsrr->sr_probe, idx, srp->array[idx].data, srp->array[idx].flag);
 */
 			break;
 		case IPSR_VAR_INVAL:
-			srp->array[ifsrr->sr_probe].flag = ifsrr->sr_var.flag;
+			srp->array[idx].flag = ifsrr->sr_var.flag;
 			break;
 		default:
 			return(EINVAL);
@@ -1875,17 +1869,14 @@ printf("SIOCSSRVAR %08x %d %d\n", ifsrr->sr_probe, srp->array[ifsrr->sr_probe].d
 	{
 		struct if_srvarreq *ifsrr = (struct if_srvarreq *)ifr;
 		struct sr_storage *srp;
+		int idx = ifsrr->sr_probe & 0xFF;
 		if(ifp == 0) return (EOPNOTSUPP);
-		if(ifsrr->sr_probe & SIRENS_DIR_IN){
-			srp = (struct sr_storage *)(ifp->if_sr_in);
-		}else{
-			srp = (struct sr_storage *)(ifp->if_sr_out);
-		}
+		srp = (struct sr_storage *)(ifp->if_sr);
 /*
-printf("SIOCGSRVAR %08x %d %d\n", ifsrr->sr_probe, srp->array[ifsrr->sr_probe].data, srp->array[ifsrr->sr_probe].flag);
+printf("SIOCGSRVAR %d %d %d %d\n", ifsrr->sr_probe, idx, srp->array[idx].data, srp->array[idx].flag);
 */
-		ifsrr->sr_var.data = srp->array[ifsrr->sr_probe].data;
-		ifsrr->sr_var.flag = srp->array[ifsrr->sr_probe].flag;
+		ifsrr->sr_var.data = srp->array[idx].data;
+		ifsrr->sr_var.flag = srp->array[idx].flag;
 		return(0);
 		break;
 	}
