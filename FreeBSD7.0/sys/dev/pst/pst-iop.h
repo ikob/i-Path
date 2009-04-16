@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/pst/pst-iop.h,v 1.6 2004/10/03 16:06:46 stefanf Exp $
+ * $FreeBSD: src/sys/dev/pst/pst-iop.h,v 1.6.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /* misc defines */

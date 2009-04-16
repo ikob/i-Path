@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/syscons/rain/Makefile,v 1.8 2002/11/11 10:07:18 mux Exp $
+# $FreeBSD: src/sys/modules/syscons/rain/Makefile,v 1.8.32.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH:	${.CURDIR}/../../../dev/syscons/rain
 

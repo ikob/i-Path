@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ida/idareg.h,v 1.10 2005/04/13 05:09:49 mdodd Exp $
+ * $FreeBSD: src/sys/dev/ida/idareg.h,v 1.10.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

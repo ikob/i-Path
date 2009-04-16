@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/ida/Makefile,v 1.2 2004/01/11 07:01:30 mdodd Exp $
+# $FreeBSD: src/sys/modules/ida/Makefile,v 1.2.26.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH:	${.CURDIR}/../../dev/ida
 

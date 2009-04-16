@@ -99,7 +99,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mpt/mpt_pci.c,v 1.51 2007/09/18 16:39:24 ambrisko Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/mpt/mpt_pci.c,v 1.51.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <dev/mpt/mpt.h>
 #include <dev/mpt/mpt_cam.h>
@@ -185,6 +185,10 @@ __FBSDID("$FreeBSD: src/sys/dev/mpt/mpt_pci.c,v 1.51 2007/09/18 16:39:24 ambrisk
 #define PCI_PRODUCT_LSI_SAS1078		0x0062
 #endif
 
+#ifndef	PCI_PRODUCT_LSI_SAS1078DE
+#define	PCI_PRODUCT_LSI_SAS1078DE	0x007C
+#endif
+
 #ifndef	PCIM_CMD_SERRESPEN
 #define	PCIM_CMD_SERRESPEN	0x0100
 #endif
@@ -265,6 +269,7 @@ mpt_pci_probe(device_t dev)
 	case PCI_PRODUCT_LSI_SAS1068:
 	case PCI_PRODUCT_LSI_SAS1068E:
 	case PCI_PRODUCT_LSI_SAS1078:
+	case PCI_PRODUCT_LSI_SAS1078DE:
 		desc = "LSILogic SAS/SATA Adapter";
 		break;
 	default:
@@ -441,6 +446,7 @@ mpt_pci_attach(device_t dev)
 	case PCI_PRODUCT_LSI_SAS1068:
 	case PCI_PRODUCT_LSI_SAS1068E:
 	case PCI_PRODUCT_LSI_SAS1078:
+	case PCI_PRODUCT_LSI_SAS1078DE:
 		mpt->is_sas = 1;
 		break;
 	default:
@@ -682,7 +688,7 @@ mpt_pci_detach(device_t dev)
 		mpt_free_bus_resources(mpt);
 		mpt_raid_free_mem(mpt);
 		if (mpt->eh != NULL) {
-                        EVENTHANDLER_DEREGISTER(shutdown_final, mpt->eh);
+                        EVENTHANDLER_DEREGISTER(shutdown_post_sync, mpt->eh);
 		}
 	}
 	return(0);

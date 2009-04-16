@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/gdb/gdb_main.c,v 1.7 2006/05/26 11:52:59 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/gdb/gdb_main.c,v 1.7.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -143,6 +143,11 @@ gdb_trap(int type, int code)
 			}
 			kdb_cpu_clear_singlestep();
 			gdb_listening = 1;
+			return (1);
+		}
+		case 'D': {     /* Detach */
+			gdb_tx_ok();
+			kdb_cpu_clear_singlestep();
 			return (1);
 		}
 		case 'g': {	/* Read registers. */

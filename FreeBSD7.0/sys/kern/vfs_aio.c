@@ -19,7 +19,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/vfs_aio.c,v 1.233.4.1 2008/01/28 10:43:10 dumbbell Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/vfs_aio.c,v 1.233.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -118,6 +118,8 @@ static uint64_t jobseqno;
 #ifndef AIOD_LIFETIME_DEFAULT
 #define AIOD_LIFETIME_DEFAULT	(30 * hz)
 #endif
+
+FEATURE(aio, "Asynchronous I/O");
 
 static SYSCTL_NODE(_vfs, OID_AUTO, aio, CTLFLAG_RW, 0, "Async IO management");
 

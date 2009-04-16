@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_da.c,v 1.224 2007/07/01 17:42:07 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/cam/scsi/scsi_da.c,v 1.224.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 
@@ -477,7 +477,7 @@ static struct da_quirk_entry da_quirk_table[] =
 		 * PR: usb/96546
 		 */
 		{T_DIRECT, SIP_MEDIA_REMOVABLE, "EM732X", "MP3 Player*",
-		"1.0"}, /*quirks*/ DA_Q_NO_SYNC_CACHE
+		"1.00"}, /*quirks*/ DA_Q_NO_SYNC_CACHE
 	},
 	{
 		/*
@@ -535,6 +535,18 @@ static struct da_quirk_entry da_quirk_table[] =
 		{T_DIRECT, SIP_MEDIA_REMOVABLE, "ChipsBnk", "USB*",
 		 "*"}, /*quirks*/ DA_Q_NO_SYNC_CACHE
 	},
+	{
+		/*
+		 * Samsung YP-U3 mp3-player
+		 * PR: 125398
+		 */
+		{T_DIRECT, SIP_MEDIA_REMOVABLE, "Samsung", "YP-U3",
+		 "*"}, /*quirks*/ DA_Q_NO_SYNC_CACHE
+	},
+	{
+		{T_DIRECT, SIP_MEDIA_REMOVABLE, "Netac", "OnlyDisk*",
+		 "2000"}, /*quirks*/ DA_Q_NO_SYNC_CACHE
+	}
 };
 
 static	disk_strategy_t	dastrategy;

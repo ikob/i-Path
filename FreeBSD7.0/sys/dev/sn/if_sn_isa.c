@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/sn/if_sn_isa.c,v 1.14 2005/07/06 15:59:47 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/sn/if_sn_isa.c,v 1.14.18.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

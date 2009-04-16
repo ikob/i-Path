@@ -1,5 +1,5 @@
 #
-# $FreeBSD: src/sys/modules/hwpmc/Makefile,v 1.4 2006/07/27 19:12:49 marcel Exp $
+# $FreeBSD: src/sys/modules/hwpmc/Makefile,v 1.4.6.1 2008/11/25 02:59:29 kensmith Exp $
 #
 
 .PATH: ${.CURDIR}/../../dev/hwpmc

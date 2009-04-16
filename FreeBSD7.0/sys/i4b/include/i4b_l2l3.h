@@ -28,7 +28,7 @@
  *	i4b_l2l3.h - i4b layer 2 / layer 3 interactions
  *	-----------------------------------------------
  *
- * $FreeBSD: src/sys/i4b/include/i4b_l2l3.h,v 1.9 2005/01/06 22:18:18 imp Exp $
+ * $FreeBSD: src/sys/i4b/include/i4b_l2l3.h,v 1.9.18.1 2008/11/25 02:59:29 kensmith Exp $
  *
  *	last edit-date: [Sat Mar  9 15:55:16 2002]
  *

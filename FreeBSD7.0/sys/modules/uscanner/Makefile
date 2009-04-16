@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/uscanner/Makefile,v 1.7 2005/06/04 10:58:39 schweikh Exp $
+# $FreeBSD: src/sys/modules/uscanner/Makefile,v 1.7.18.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../dev/usb
 

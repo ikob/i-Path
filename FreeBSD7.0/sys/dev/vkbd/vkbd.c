@@ -28,7 +28,7 @@
  * SUCH DAMAGE.
  *
  * $Id: vkbd.c,v 1.20 2004/11/15 23:53:30 max Exp $
- * $FreeBSD: src/sys/dev/vkbd/vkbd.c,v 1.11 2006/09/27 19:57:00 ru Exp $
+ * $FreeBSD: src/sys/dev/vkbd/vkbd.c,v 1.11.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include "opt_compat.h"

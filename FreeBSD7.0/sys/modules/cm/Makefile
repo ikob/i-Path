@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/cm/Makefile,v 1.1 2002/01/08 20:03:13 fjoe Exp $
+# $FreeBSD: src/sys/modules/cm/Makefile,v 1.1.32.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../dev/cm
 

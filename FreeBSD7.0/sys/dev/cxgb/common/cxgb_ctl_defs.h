@@ -6,7 +6,7 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the LICENSE file included in this
  * release for licensing terms and conditions.
  *
- * $FreeBSD: src/sys/dev/cxgb/common/cxgb_ctl_defs.h,v 1.3 2007/09/09 01:28:03 kmacy Exp $
+ * $FreeBSD: src/sys/dev/cxgb/common/cxgb_ctl_defs.h,v 1.3.2.1.2.2 2008/12/19 05:05:35 kmacy Exp $
  */
 
 #ifndef _CXGB3_OFFLOAD_CTL_DEFS_H
@@ -85,7 +85,7 @@ struct ddp_params {
 
 struct adap_ports {
 	unsigned int nports;     /* number of ports on this adapter */
-	struct net_device *lldevs[2];
+	struct net_device *lldevs[MAX_NPORTS];
 };
 
 /*
@@ -125,8 +125,8 @@ struct rdma_info {
 	unsigned int rqt_top;	 /* RQT last entry address */
 	unsigned int udbell_len; /* user doorbell region length */
 	unsigned long udbell_physbase;  /* user doorbell physical start addr */
-	void volatile *kdb_addr;  /* kernel doorbell register address */
-	struct pci_dev *pdev;    /* associated PCI device */
+	void *kdb_addr;  /* kernel doorbell register address */
+	struct device *pdev;    /* associated PCI device */
 };
 
 /*

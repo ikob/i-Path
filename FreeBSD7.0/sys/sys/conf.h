@@ -34,7 +34,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)conf.h	8.5 (Berkeley) 1/9/95
- * $FreeBSD: src/sys/sys/conf.h,v 1.233.4.1 2008/01/30 21:21:51 ru Exp $
+ * $FreeBSD: src/sys/sys/conf.h,v 1.233.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS_CONF_H_
@@ -213,8 +213,13 @@ struct cdevsw {
 	LIST_ENTRY(cdevsw)	d_list;
 	LIST_HEAD(, cdev)	d_devs;
 	int			d_spare3;
-	struct cdevsw		*d_gianttrick;
+	union {
+		struct cdevsw		*gianttrick;
+		SLIST_ENTRY(cdevsw)	postfree_list;
+	} __d_giant;
 };
+#define	d_gianttrick		__d_giant.gianttrick
+#define	d_postfree_list		__d_giant.postfree_list
 
 #define NUMCDEVSW 256
 
@@ -275,6 +280,12 @@ void	dev_unlock(void);
 int	unit2minor(int _unit);
 u_int	minor2unit(u_int _minor);
 void	setconf(void);
+
+typedef	void (*cdevpriv_dtr_t)(void *data);
+int	devfs_get_cdevpriv(void **datap);
+int	devfs_set_cdevpriv(void *priv, cdevpriv_dtr_t dtr);
+void	devfs_clear_cdevpriv(void);
+void	devfs_fpdrop(struct file *fp);	/* XXX This is not public KPI */
 
 #define		UID_ROOT	0
 #define		UID_BIN		3

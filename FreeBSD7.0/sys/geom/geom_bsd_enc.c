@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/geom/geom_bsd_enc.c,v 1.6 2005/01/06 18:27:29 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/geom/geom_bsd_enc.c,v 1.6.10.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/types.h>
 #include <sys/endian.h>
@@ -127,7 +127,7 @@ bsd_disklabel_le_dec(u_char *ptr, struct disklabel *d, int maxpart)
 	d->d_npartitions = le16dec(ptr + 138);
 	d->d_bbsize = le32dec(ptr + 140);
 	d->d_sbsize = le32dec(ptr + 144);
-	for (i = 0; i < MAXPARTITIONS; i++)
+	for (i = 0; i < d->d_npartitions; i++)
 		bsd_partition_le_dec(ptr + 148 + 16 * i, &d->d_partitions[i]);
 	return(0);
 }

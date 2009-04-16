@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/tdfx/tdfx_pci.c,v 1.39 2006/03/03 21:37:36 yar Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/tdfx/tdfx_pci.c,v 1.39.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /* 3dfx driver for FreeBSD 4.x - Finished 11 May 2000, 12:25AM ET
  *
@@ -823,4 +823,5 @@ static driver_t tdfx_driver = {
 
 /* Tell Mr. Kernel about us! */
 DRIVER_MODULE(tdfx, pci, tdfx_driver, tdfx_devclass, 0, 0);
+MODULE_DEPEND(tdfx, mem, 1, 1, 1);
 MODULE_VERSION(tdfx, 1);

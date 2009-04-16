@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  *
  *
- * $FreeBSD: src/sys/sun4v/include/hv_pcivar.h,v 1.1 2006/10/05 06:14:25 kmacy Exp $
+ * $FreeBSD: src/sys/sun4v/include/hv_pcivar.h,v 1.1.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _HV_PCIVAR_H_

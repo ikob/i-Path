@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/apm/Makefile,v 1.9 2005/04/20 12:28:20 nyan Exp $
+# $FreeBSD: src/sys/modules/apm/Makefile,v 1.9.18.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../i386/bios
 .if ${MACHINE} == "pc98"

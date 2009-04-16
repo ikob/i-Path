@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/udf_iconv/Makefile,v 1.1 2003/11/07 09:38:05 scottl Exp $
+# $FreeBSD: src/sys/modules/udf_iconv/Makefile,v 1.1.28.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH:	${.CURDIR}/../../fs/udf
 KMOD=	udf_iconv

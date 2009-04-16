@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/ntfs/ntfs_vfsops.c,v 1.88 2007/09/21 23:50:15 rodrigc Exp $
+ * $FreeBSD: src/sys/fs/ntfs/ntfs_vfsops.c,v 1.88.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 
@@ -41,6 +41,7 @@
 #include <sys/buf.h>
 #include <sys/fcntl.h>
 #include <sys/malloc.h>
+#include <sys/stat.h>
 #include <sys/systm.h>
 
 #include <geom/geom.h>
@@ -331,7 +332,7 @@ ntfs_mountfs(devvp, mp, td)
 	if (1 == vfs_scanopt(mp->mnt_optnew, "gid", "%d", &v))
 		ntmp->ntm_gid = v;
 	if (1 == vfs_scanopt(mp->mnt_optnew, "mode", "%d", &v))
-		ntmp->ntm_mode = v;
+		ntmp->ntm_mode = v & ACCESSPERMS;
 	vfs_flagopt(mp->mnt_optnew,
 	    "caseins", &ntmp->ntm_flag, NTFS_MFLAG_CASEINS);
 	vfs_flagopt(mp->mnt_optnew,

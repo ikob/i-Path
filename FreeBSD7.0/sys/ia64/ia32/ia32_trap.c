@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ia64/ia32/ia32_trap.c,v 1.14 2007/06/04 21:38:46 attilio Exp $");
+__FBSDID("$FreeBSD: src/sys/ia64/ia32/ia32_trap.c,v 1.14.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

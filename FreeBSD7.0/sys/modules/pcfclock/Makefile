@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/pcfclock/Makefile,v 1.4 2001/01/06 14:00:10 obrien Exp $
+# $FreeBSD: src/sys/modules/pcfclock/Makefile,v 1.4.32.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH:	${.CURDIR}/../../dev/ppbus
 

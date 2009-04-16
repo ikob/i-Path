@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/boot/ia64/ski/skiload.cmd,v 1.2 2004/09/24 03:51:06 marcel Exp $
+# $FreeBSD: src/sys/boot/ia64/ski/skiload.cmd,v 1.2.18.1 2008/11/25 02:59:29 kensmith Exp $
 iar
 fr
 pa

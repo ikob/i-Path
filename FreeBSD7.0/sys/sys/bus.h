@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/bus.h,v 1.78.4.1 2008/02/06 03:35:40 iwasaki Exp $
+ * $FreeBSD: src/sys/sys/bus.h,v 1.78.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS_BUS_H_
@@ -286,6 +286,8 @@ struct resource *
 				   int *rid, u_long start, u_long end,
 				   u_long count, u_int flags);
 int	bus_generic_attach(device_t dev);
+int	bus_generic_bind_intr(device_t dev, device_t child,
+			      struct resource *irq, int cpu);
 int	bus_generic_child_present(device_t dev, device_t child);
 int	bus_generic_config_intr(device_t, int, enum intr_trigger,
 				enum intr_polarity);
@@ -358,6 +360,7 @@ int	bus_setup_intr(device_t dev, struct resource *r, int flags,
 		       driver_filter_t filter, driver_intr_t handler, 
 		       void *arg, void **cookiep);
 int	bus_teardown_intr(device_t dev, struct resource *r, void *cookie);
+int	bus_bind_intr(device_t dev, struct resource *r, int cpu);
 int	bus_set_resource(device_t dev, int type, int rid,
 			 u_long start, u_long count);
 int	bus_get_resource(device_t dev, int type, int rid,

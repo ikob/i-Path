@@ -35,13 +35,13 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/security/mac/mac_policy.h,v 1.94.2.1 2007/11/06 14:46:58 rwatson Exp $
+ * $FreeBSD: src/sys/security/mac/mac_policy.h,v 1.94.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 /*
  * Kernel interface for MAC policy modules.
  */
-#ifndef _SYS_SECURITY_MAC_MAC_POLICY_H_
-#define	_SYS_SECURITY_MAC_MAC_POLICY_H_
+#ifndef _SECURITY_MAC_MAC_POLICY_H_
+#define	_SECURITY_MAC_MAC_POLICY_H_
 
 #ifndef _KERNEL
 #error "no user-serviceable parts inside"
@@ -286,9 +286,9 @@ typedef void	(*mpo_create_inpcb_from_socket_t)(struct socket *so,
 		    struct label *solabel, struct inpcb *inp,
 		    struct label *inplabel);
 typedef void	(*mpo_create_ipq_t)(struct mbuf *m, struct label *mlabel,
-		    struct ipq *ipq, struct label *ipqlabel);
+		    struct ipq *q, struct label *qlabel);
 typedef void	(*mpo_create_datagram_from_ipq)
-		    (struct ipq *ipq, struct label *ipqlabel, struct mbuf *m,
+		    (struct ipq *q, struct label *qlabel, struct mbuf *m,
 		    struct label *mlabel);
 typedef void	(*mpo_create_fragment_t)(struct mbuf *m,
 		    struct label *mlabel, struct mbuf *frag,
@@ -313,7 +313,7 @@ typedef void	(*mpo_create_mbuf_netlayer_t)(struct mbuf *m,
 		    struct label *mlabel, struct mbuf *mnew,
 		    struct label *mnewlabel);
 typedef int	(*mpo_fragment_match_t)(struct mbuf *m, struct label *mlabel,
-		    struct ipq *ipq, struct label *ipqlabel);
+		    struct ipq *q, struct label *qlabel);
 typedef void	(*mpo_reflect_mbuf_icmp_t)(struct mbuf *m,
 		    struct label *mlabel);
 typedef void	(*mpo_reflect_mbuf_tcp_t)(struct mbuf *m,
@@ -370,6 +370,8 @@ typedef int	(*mpo_check_ifnet_transmit_t)(struct ifnet *ifp,
 typedef int	(*mpo_check_inpcb_deliver_t)(struct inpcb *inp,
 		    struct label *inplabel, struct mbuf *m,
 		    struct label *mlabel);
+typedef int	(*mpo_check_inpcb_visible_t)(struct ucred *cred,
+		    struct inpcb *inp, struct label *inplabel);
 typedef int	(*mpo_check_sysv_msgmsq_t)(struct ucred *cred,
 		    struct msg *msgptr, struct label *msglabel,
 		    struct msqid_kernel *msqkptr, struct label *msqklabel);
@@ -786,7 +788,7 @@ struct mac_policy_ops {
 	mpo_placeholder_t			_mpo_placeholder15;
 	mpo_placeholder_t			_mpo_placeholder16;
 	mpo_placeholder_t			_mpo_placeholder17;
-	mpo_placeholder_t			_mpo_placeholder18;
+	mpo_check_inpcb_visible_t		mpo_check_inpcb_visible;
 	mpo_check_ifnet_relabel_t		mpo_check_ifnet_relabel;
 	mpo_check_ifnet_transmit_t		mpo_check_ifnet_transmit;
 	mpo_check_inpcb_deliver_t		mpo_check_inpcb_deliver;
@@ -977,4 +979,4 @@ int	mac_policy_modevent(module_t mod, int type, void *data);
 intptr_t	mac_label_get(struct label *l, int slot);
 void		mac_label_set(struct label *l, int slot, intptr_t v);
 
-#endif /* !_SYS_SECURITY_MAC_MAC_POLICY_H_ */
+#endif /* !_SECURITY_MAC_MAC_POLICY_H_ */

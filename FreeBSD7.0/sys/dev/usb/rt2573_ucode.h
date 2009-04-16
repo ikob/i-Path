@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/dev/usb/rt2573_ucode.h,v 1.1 2007/05/06 10:07:20 kevlo Exp $	*/
+/*	$FreeBSD: src/sys/dev/usb/rt2573_ucode.h,v 1.1.6.1 2008/11/25 02:59:29 kensmith Exp $	*/
 
 /*-
  * Copyright (c) 2005-2006, Ralink Technology, Corp.

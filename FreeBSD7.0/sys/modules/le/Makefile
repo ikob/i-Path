@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/le/Makefile,v 1.3 2007/01/20 12:53:30 marius Exp $
+# $FreeBSD: src/sys/modules/le/Makefile,v 1.3.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../dev/le
 
@@ -16,7 +16,7 @@ if_le_isa=	if_le_isa.c
 isa_if=		isa_if.h
 .endif
 
-.if ${MACHINE_ARCH} == "sparc64"
+.if ${MACHINE} == "sparc64"
 if_le_lebuffer=	if_le_lebuffer.c
 if_le_ledma=	if_le_ledma.c
 lebuffer_sbus=	lebuffer_sbus.c

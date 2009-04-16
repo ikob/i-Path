@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/geom/Makefile,v 1.19.4.1 2008/01/24 20:28:27 lulf Exp $
+# $FreeBSD: src/sys/modules/geom/Makefile,v 1.19.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
 
 SUBDIR=	geom_bde \
 	geom_bsd \
@@ -10,10 +10,12 @@ SUBDIR=	geom_bde \
 	geom_gate \
 	geom_journal \
 	geom_label \
+	geom_linux_lvm \
 	geom_mbr \
 	geom_mirror \
 	geom_multipath \
 	geom_nop \
+	geom_part \
 	geom_pc98 \
 	geom_raid3 \
 	geom_shsec \

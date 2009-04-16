@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/acpi/acpi_sony/Makefile,v 1.1 2004/11/15 05:54:14 imp Exp $
+# $FreeBSD: src/sys/modules/acpi/acpi_sony/Makefile,v 1.1.18.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH:		${.CURDIR}/../../../dev/acpi_support
 

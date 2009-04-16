@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/linsysfs/Makefile,v 1.2 2006/08/15 13:01:36 netchild Exp $
+# $FreeBSD: src/sys/modules/linsysfs/Makefile,v 1.2.6.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../compat/linsysfs
 

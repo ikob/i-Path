@@ -31,7 +31,7 @@
  * owners.  This software is not copyrighted and is intended for reference
  * only.
  *
- * $FreeBSD: src/sys/boot/arm/at91/libat91/getc.c,v 1.3 2007/03/28 22:40:37 imp Exp $
+ * $FreeBSD: src/sys/boot/arm/at91/libat91/getc.c,v 1.3.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include "at91rm9200.h"

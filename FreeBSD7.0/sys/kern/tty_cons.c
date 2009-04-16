@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/tty_cons.c,v 1.139 2007/05/31 11:51:51 kib Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/tty_cons.c,v 1.139.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_ddb.h"
 
@@ -736,4 +736,4 @@ cn_drvinit(void *unused)
 	use_cnputs_mtx = 1;
 }
 
-SYSINIT(cndev, SI_SUB_DRIVERS, SI_ORDER_MIDDLE, cn_drvinit, NULL)
+SYSINIT(cndev, SI_SUB_DRIVERS, SI_ORDER_MIDDLE, cn_drvinit, NULL);

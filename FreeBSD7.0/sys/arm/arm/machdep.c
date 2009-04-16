@@ -43,8 +43,10 @@
  */
 
 #include "opt_compat.h"
+#include "opt_ddb.h"
+
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/arm/machdep.c,v 1.28 2007/05/31 22:52:10 attilio Exp $");
+__FBSDID("$FreeBSD: src/sys/arm/arm/machdep.c,v 1.28.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/proc.h>
@@ -100,6 +102,11 @@ int (*_arm_memcpy)(void *, void *, int, int) = NULL;
 int (*_arm_bzero)(void *, int, int) = NULL;
 int _min_memcpy_size = 0;
 int _min_bzero_size = 0;
+
+extern int *end;
+#ifdef DDB
+extern vm_offset_t ksym_start, ksym_end;
+#endif
 
 void
 sendsig(catcher, ksi, mask)
@@ -308,7 +315,7 @@ cpu_startup(void *dummy)
 #endif
 }
 
-SYSINIT(cpu, SI_SUB_CPU, SI_ORDER_FIRST, cpu_startup, NULL)
+SYSINIT(cpu, SI_SUB_CPU, SI_ORDER_FIRST, cpu_startup, NULL);
 
 /* Get current clock frequency for the given cpu id. */
 int
@@ -630,4 +637,54 @@ makectx(struct trapframe *tf, struct pcb *pcb)
 	pcb->un_32.pcb32_pc = tf->tf_pc;
 	pcb->un_32.pcb32_lr = tf->tf_usr_lr;
 	pcb->un_32.pcb32_sp = tf->tf_usr_sp;
+}
+
+/*
+ * Fake up a boot descriptor table
+ */
+vm_offset_t
+fake_preload_metadata(void)
+{
+#ifdef DDB
+	vm_offset_t zstart = 0, zend = 0;
+#endif
+	vm_offset_t lastaddr;
+	int i = 0;
+	static uint32_t fake_preload[35];
+
+	fake_preload[i++] = MODINFO_NAME;
+	fake_preload[i++] = strlen("elf kernel") + 1;
+	strcpy((char*)&fake_preload[i++], "elf kernel");
+	i += 2;
+	fake_preload[i++] = MODINFO_TYPE;
+	fake_preload[i++] = strlen("elf kernel") + 1;
+	strcpy((char*)&fake_preload[i++], "elf kernel");
+	i += 2;
+	fake_preload[i++] = MODINFO_ADDR;
+	fake_preload[i++] = sizeof(vm_offset_t);
+	fake_preload[i++] = KERNVIRTADDR;
+	fake_preload[i++] = MODINFO_SIZE;
+	fake_preload[i++] = sizeof(uint32_t);
+	fake_preload[i++] = (uint32_t)&end - KERNVIRTADDR;
+#ifdef DDB
+	if (*(uint32_t *)KERNVIRTADDR == MAGIC_TRAMP_NUMBER) {
+		fake_preload[i++] = MODINFO_METADATA|MODINFOMD_SSYM;
+		fake_preload[i++] = sizeof(vm_offset_t);
+		fake_preload[i++] = *(uint32_t *)(KERNVIRTADDR + 4);
+		fake_preload[i++] = MODINFO_METADATA|MODINFOMD_ESYM;
+		fake_preload[i++] = sizeof(vm_offset_t);
+		fake_preload[i++] = *(uint32_t *)(KERNVIRTADDR + 8);
+		lastaddr = *(uint32_t *)(KERNVIRTADDR + 8);
+		zend = lastaddr;
+		zstart = *(uint32_t *)(KERNVIRTADDR + 4);
+		ksym_start = zstart;
+		ksym_end = zend;
+	} else
+#endif
+		lastaddr = (vm_offset_t)&end;
+	fake_preload[i++] = 0;
+	fake_preload[i] = 0;
+	preload_metadata = (void *)fake_preload;
+
+	return (lastaddr);
 }

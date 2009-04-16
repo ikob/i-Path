@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sun4v/include/hypervisorvar.h,v 1.12 2006/11/26 04:37:49 kmacy Exp $
+ * $FreeBSD: src/sys/sun4v/include/hypervisorvar.h,v 1.12.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 

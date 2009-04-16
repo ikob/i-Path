@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/dc/if_dcreg.h,v 1.54 2007/08/05 11:28:19 marius Exp $
+ * $FreeBSD: src/sys/dev/dc/if_dcreg.h,v 1.54.2.2.2.2 2008/12/15 21:37:40 marius Exp $
  */
 
 /*
@@ -181,6 +181,10 @@
 #define DC_RXSTATE_CLOSE	0x000A0000	/* 101 - close tx desc */
 #define DC_RXSTATE_FLUSH	0x000C0000	/* 110 - flush from FIFO */
 #define DC_RXSTATE_DEQUEUE	0x000E0000	/* 111 - dequeue from FIFO */
+
+#define	DC_HAS_BROKEN_RXSTATE(x)					\
+	(DC_IS_CENTAUR(x) || DC_IS_CONEXANT(x) || (DC_IS_DAVICOM(x) &&	\
+	pci_get_revid((x)->dc_dev) >= DC_REVISION_DM9102A))
 
 #define DC_TXSTATE_RESET	0x00000000	/* 000 - reset */
 #define DC_TXSTATE_FETCH	0x00100000	/* 001 - fetching descriptor */
@@ -487,12 +491,10 @@ struct dc_list_data {
 struct dc_chain_data {
 	struct mbuf		*dc_rx_chain[DC_RX_LIST_CNT];
 	struct mbuf		*dc_tx_chain[DC_TX_LIST_CNT];
-	struct mbuf		*dc_tx_mapping;
 	bus_dmamap_t		dc_rx_map[DC_RX_LIST_CNT];
 	bus_dmamap_t		dc_tx_map[DC_TX_LIST_CNT];
 	u_int32_t		*dc_sbuf;
 	u_int8_t		dc_pad[DC_MIN_FRAMELEN];
-	int			dc_tx_err;
 	int			dc_tx_first;
 	int			dc_tx_prod;
 	int			dc_tx_cons;
@@ -730,7 +732,7 @@ struct dc_softc {
 	void			*dc_intrhand;
 	struct resource		*dc_irq;
 	struct resource		*dc_res;
-	struct dc_type		*dc_info;	/* adapter info */
+	const struct dc_type	*dc_info;	/* adapter info */
 	device_t		dc_miibus;
 	u_int8_t		dc_type;
 	u_int8_t		dc_pmode;
@@ -788,6 +790,9 @@ struct dc_softc {
 
 #define CSR_READ_4(sc, reg)		\
 	bus_space_read_4(sc->dc_btag, sc->dc_bhandle, reg)
+
+#define CSR_BARRIER_4(sc, reg, flags)		\
+	bus_space_barrier(sc->dc_btag, sc->dc_bhandle, reg, 4, flags)
 
 #define DC_TIMEOUT		1000
 #define ETHER_ALIGN		2

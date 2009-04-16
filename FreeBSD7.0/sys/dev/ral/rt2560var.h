@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/dev/ral/rt2560var.h,v 1.3 2007/06/11 03:36:52 sam Exp $	*/
+/*	$FreeBSD: src/sys/dev/ral/rt2560var.h,v 1.3.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $	*/
 
 /*-
  * Copyright (c) 2005, 2006
@@ -161,8 +161,10 @@ struct rt2560_softc {
 	}			sc_txtapu;
 #define sc_txtap	sc_txtapu.th
 	int			sc_txtap_len;
-#define                 RAL_INPUT_RUNNING       1
-	int                     sc_flags;
+#define RT2560_F_INPUT_RUNNING	0x1
+#define RT2560_F_PRIO_OACTIVE	0x2
+#define RT2560_F_DATA_OACTIVE	0x4
+	int			sc_flags;
 };
 
 int	rt2560_attach(device_t, int);

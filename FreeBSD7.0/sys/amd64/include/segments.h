@@ -31,7 +31,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)segments.h	7.1 (Berkeley) 5/9/91
- * $FreeBSD: src/sys/amd64/include/segments.h,v 1.39 2007/03/30 00:06:21 jkim Exp $
+ * $FreeBSD: src/sys/amd64/include/segments.h,v 1.39.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _MACHINE_SEGMENTS_H_
@@ -201,7 +201,7 @@ struct region_descriptor {
 #define	GUDATA_SEL	4	/* User 32/64 bit Data Descriptor */
 #define	GUCODE_SEL	5	/* User 64 bit Code Descriptor */
 #define	GPROC0_SEL	6	/* TSS for entering kernel etc */
-/* slot 6 is second half of GPROC0_SEL */
+/* slot 7 is second half of GPROC0_SEL */
 #define	GUGS32_SEL	8	/* User 32 bit GS Descriptor */
 #define	NGDT 		9
 

@@ -11,7 +11,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/trm/trm.c,v 1.33 2007/06/17 05:55:52 scottl Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/trm/trm.c,v 1.33.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  *	HISTORY:					

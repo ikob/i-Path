@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/hifn/hifn7751.c,v 1.40 2007/03/21 03:42:49 sam Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/hifn/hifn7751.c,v 1.40.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * Driver for various Hifn encryption processors.

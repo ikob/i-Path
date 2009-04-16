@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/sound/driver/mss/Makefile,v 1.5 2002/11/06 13:46:59 nyan Exp $
+# $FreeBSD: src/sys/modules/sound/driver/mss/Makefile,v 1.5.32.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../../../dev/sound/isa
 

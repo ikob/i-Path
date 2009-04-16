@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/Makefile,v 1.540.2.5.2.1 2008/02/06 03:24:27 scottl Exp $
+# $FreeBSD: src/sys/modules/Makefile,v 1.540.2.25.2.1 2008/11/25 02:59:29 kensmith Exp $
 
 .include <bsd.own.mk>
 
@@ -8,6 +8,8 @@ SUBDIR=	${_3dfx} \
 	accf_data \
 	accf_http \
 	${_acpi} \
+	ae \
+	age \
 	${_agp} \
 	aha \
 	${_ahb} \
@@ -15,6 +17,7 @@ SUBDIR=	${_3dfx} \
 	aic7xxx \
 	aio \
 	${_amd} \
+	ale \
 	amr \
 	${_an} \
 	${_aout} \
@@ -39,6 +42,7 @@ SUBDIR=	${_3dfx} \
 	bge \
 	${_bios} \
 	${_bktr} \
+	${_bm} \
 	bridgestp \
 	cam \
 	${_canbepm} \
@@ -51,6 +55,7 @@ SUBDIR=	${_3dfx} \
 	${_ce} \
 	${_ciss} \
 	${_cm} \
+	${_cmx} \
 	coda \
 	coda5 \
 	${_coff} \
@@ -64,19 +69,23 @@ SUBDIR=	${_3dfx} \
 	cue \
 	cxgb \
 	${_cx} \
+	${_cyclic} \
 	dc \
 	dcons \
 	dcons_crom \
 	de \
 	${_digi} \
+	${_dpms} \
 	${_dpt} \
 	${_drm} \
+	${_dtrace} \
 	dummynet \
 	${_ed} \
 	${_elink} \
 	${_em} \
 	en \
 	${_ep} \
+	${_et} \
 	${_ex} \
 	${_exca} \
 	${_ext2fs} \
@@ -89,9 +98,8 @@ SUBDIR=	${_3dfx} \
 	fxp \
 	gem \
 	geom \
-	${_harp} \
+	${_glxsb} \
 	hatm \
-	${_hfa} \
 	hifn \
 	hme \
 	${_hptiop} \
@@ -102,7 +110,6 @@ SUBDIR=	${_3dfx} \
 	${_ibcs2} \
 	${_ichwd} \
 	${_ida} \
-	${_idt} \
 	${_ie} \
 	if_bridge \
 	if_disc \
@@ -119,11 +126,13 @@ SUBDIR=	${_3dfx} \
 	if_tap \
 	if_tun \
 	if_vlan \
+	${_igb} \
 	${_iir} \
 	${_io} \
 	ipdivert \
 	${_ipfilter} \
 	ipfw \
+	ipfw_nat \
 	ip_mroute_mod \
 	${_ipmi} \
 	${_ips} \
@@ -135,8 +144,11 @@ SUBDIR=	${_3dfx} \
 	${_iwi} \
 	${_iwifw} \
 	${_ixgb} \
+	jme \
 	joy \
+	${_k8temp} \
 	kbdmux \
+	krpc \
 	kue \
 	le \
 	lge \
@@ -160,6 +172,7 @@ SUBDIR=	${_3dfx} \
 	mac_seeotheruids \
 	mac_stub \
 	mac_test \
+	malo \
 	mcd \
 	md \
 	mem \
@@ -181,6 +194,7 @@ SUBDIR=	${_3dfx} \
 	netgraph \
 	${_nfe} \
 	nfsclient \
+	nfslockd \
 	nfsserver \
 	nge \
 	nmdm \
@@ -193,6 +207,7 @@ SUBDIR=	${_3dfx} \
 	${_nvram} \
 	${_nwfs} \
 	${_oltr} \
+	${_opensolaris} \
 	${_padlock} \
 	patm \
 	${_pccard} \
@@ -217,6 +232,7 @@ SUBDIR=	${_3dfx} \
 	${_ray} \
 	rc \
 	rc4 \
+	${_rdma} \
 	re \
 	reiserfs \
 	rl \
@@ -288,6 +304,7 @@ SUBDIR=	${_3dfx} \
 	urio \
 	usb \
 	uscanner \
+	uslcom \
 	utopia \
 	uvisor \
 	uvscom \
@@ -325,11 +342,6 @@ _vpo=		vpo
 .if defined(ALL_MODULES)
 _ufs=		ufs
 .endif
-
-# Disabled in 7.0 as netatm is not MPSAFE.
-#if ${MK_ATM} != "no"
-#_harp=		harp
-#.endif
 
 .if ${MK_CRYPT} != "no" || defined(ALL_MODULES)
 .if exists(${.CURDIR}/../opencrypto)
@@ -377,21 +389,29 @@ _coff=		coff
 _cp=		cp
 _cpufreq=	cpufreq
 _cs=		cs
+.if ${MK_CDDL} != "no" || defined(ALL_MODULES)
+_cyclic=	cyclic
+.endif
 _digi=		digi
+_dpms=		dpms
 _drm=		drm
+.if ${MK_CDDL} != "no" || defined(ALL_MODULES)
+_dtrace=	dtrace
+.endif
 _ed=		ed
 _elink=		elink
 _em=		em
 _ep=		ep
+_et=		et
 _exca=		exca
 _ext2fs=	ext2fs
 _fe=		fe
-# Disabled due to non-MPSAFEty in 7.0
-#_hfa=		hfa
+_glxsb=		glxsb
 _i2c=		i2c
 _ibcs2=		ibcs2
 _ie=		ie
 _if_ndis=	if_ndis
+_igb=		igb
 _io=		io
 _linprocfs=	linprocfs
 _linsysfs=	linsysfs
@@ -407,11 +427,15 @@ _nsp=		nsp
 _nwfs=		nwfs
 .endif
 _oltr=		oltr
+.if ${MK_CDDL} != "no" || defined(ALL_MODULES)
+_opensolaris=	opensolaris
+.endif
 _pccard=	pccard
 _pcfclock=	pcfclock
 _pecoff=	pecoff
 _pst=		pst
 _ray=		ray
+_rdma=		rdma
 _safe=		safe
 _sbni=		sbni
 _scsi_low=	scsi_low
@@ -440,6 +464,7 @@ _asr=		asr
 _bios=		bios
 _ciss=		ciss
 _cm=		cm
+_cmx=		cmx
 _coretemp=	coretemp
 _ctau=		ctau
 _cx=		cx
@@ -450,8 +475,6 @@ _hptmv=		hptmv
 _hptrr=		hptrr
 _ichwd=		ichwd
 _ida=		ida
-# Disabled due to non-MPSAFEty in 7.0
-#_idt=		idt
 _iir=		iir
 _ipmi=		ipmi
 _ips=		ips
@@ -496,12 +519,20 @@ _ath_rate_onoe=	ath_rate_onoe
 _ath_rate_sample=ath_rate_sample
 _cardbus=	cardbus
 _cbb=		cbb
+_cmx=		cmx
 _ciss=		ciss
 _coretemp=	coretemp
 _cpufreq=	cpufreq
+.if ${MK_CDDL} != "no" || defined(ALL_MODULES)
+_cyclic=	cyclic
+.endif
 _digi=		digi
 _drm=		drm
+.if ${MK_CDDL} != "no" || defined(ALL_MODULES)
+_dtrace=	dtrace
+.endif
 _ed=		ed
+_et=		et
 _em=		em
 _exca=		exca
 _ext2fs=	ext2fs
@@ -512,6 +543,7 @@ _i2c=		i2c
 _ichwd=		ichwd
 _ida=		ida
 _if_ndis=	if_ndis
+_igb=		igb
 _iir=		iir
 _io=		io
 _ipmi=		ipmi
@@ -519,6 +551,7 @@ _ips=		ips
 _ipw=		ipw
 _ipwfw=		ipwfw
 _ixgb=   	ixgb
+_k8temp=	k8temp
 _linprocfs=	linprocfs
 _linsysfs=	linsysfs
 _linux=		linux
@@ -528,7 +561,11 @@ _nfe=		nfe
 _nve=		nve
 _nvram=		nvram
 _nxge=		nxge
+.if ${MK_CDDL} != "no" || defined(ALL_MODULES)
+_opensolaris=	opensolaris
+.endif
 _pccard=	pccard
+_rdma=		rdma	
 _safe=		safe
 _scsi_low=	scsi_low
 _smbfs=		smbfs
@@ -560,13 +597,14 @@ _cardbus=	cardbus
 _cbb=		cbb
 _ciss=		ciss
 _cm=		cm
+_cmx=		cmx
 _coff=		coff
 _cpufreq=	cpufreq
 _em=		em
 _ep=		ep
 _exca=		exca
 _fe=		fe
-_hfa=		hfa
+_igb=		igb
 _iir=		iir
 _mly=		mly
 _pccard=	pccard
@@ -588,6 +626,7 @@ _ath_hal=	ath_hal
 _ath_rate_amrr=	ath_rate_amrr
 _ath_rate_onoe=	ath_rate_onoe
 _ath_rate_sample=ath_rate_sample
+_bm=		bm
 _nvram=		powermac_nvram
 _smbfs=		smbfs
 .endif
@@ -601,7 +640,11 @@ _ath_rate_sample=ath_rate_sample
 _auxio=		auxio
 _em=		em
 _i2c=		i2c
+_igb=		igb
 _sound=		sound
+.if ${MK_ZFS} != "no" || defined(ALL_MODULES)
+_zfs=		zfs
+.endif
 .endif
 
 .if defined(MODULES_OVERRIDE) && !defined(ALL_MODULES)

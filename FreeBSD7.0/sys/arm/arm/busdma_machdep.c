@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/arm/busdma_machdep.c,v 1.35 2007/08/18 16:47:28 cognet Exp $");
+__FBSDID("$FreeBSD: src/sys/arm/arm/busdma_machdep.c,v 1.35.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * ARM bus dma support routines
@@ -664,12 +664,11 @@ bus_dmamem_free(bus_dma_tag_t dmat, void *vaddr, bus_dmamap_t map)
 
 static int
 _bus_dmamap_count_pages(bus_dma_tag_t dmat, bus_dmamap_t map, void *buf,
-			bus_size_t buflen, int flags, int *nb)
+			bus_size_t buflen, int flags)
 {
 	vm_offset_t vaddr;
 	vm_offset_t vendaddr;
 	bus_addr_t paddr;
-	int needbounce = *nb;
 
 	if ((map->pagesneeded == 0)) {
 		CTR4(KTR_BUSDMA, "lowaddr= %d Maxmem= %d, boundary= %d, "
@@ -687,10 +686,8 @@ _bus_dmamap_count_pages(bus_dma_tag_t dmat, bus_dmamap_t map, void *buf,
 		while (vaddr < vendaddr) {
 			paddr = pmap_kextract(vaddr);
 			if (((dmat->flags & BUS_DMA_COULD_BOUNCE) != 0) &&
-			    run_filter(dmat, paddr) != 0) {
-				needbounce = 1;
+			    run_filter(dmat, paddr) != 0)
 				map->pagesneeded++;
-			}
 			vaddr += PAGE_SIZE;
 		}
 		CTR1(KTR_BUSDMA, "pagesneeded= %d\n", map->pagesneeded);
@@ -716,7 +713,6 @@ _bus_dmamap_count_pages(bus_dma_tag_t dmat, bus_dmamap_t map, void *buf,
 		mtx_unlock(&bounce_lock);
 	}
 
-	*nb = needbounce;
 	return (0);
 }
 
@@ -739,14 +735,12 @@ bus_dmamap_load_buffer(bus_dma_tag_t dmat, bus_dma_segment_t *segs,
 	pd_entry_t *pde;
 	pt_entry_t pte;
 	pt_entry_t *ptep;
-	int needbounce = 0;
 
 	lastaddr = *lastaddrp;
 	bmask = ~(dmat->boundary - 1);
 
 	if ((dmat->flags & BUS_DMA_COULD_BOUNCE) != 0) {
-		error = _bus_dmamap_count_pages(dmat, map, buf, buflen, flags,
-		    &needbounce);
+		error = _bus_dmamap_count_pages(dmat, map, buf, buflen, flags);
 		if (error)
 			return (error);
 	}
@@ -761,7 +755,9 @@ bus_dmamap_load_buffer(bus_dma_tag_t dmat, bus_dma_segment_t *segs,
 		 * XXX in user address space.
 		 */
 		if (__predict_true(pmap == pmap_kernel())) {
-			(void) pmap_get_pde_pte(pmap, vaddr, &pde, &ptep);
+			if (pmap_get_pde_pte(pmap, vaddr, &pde, &ptep) == FALSE)
+				return (EFAULT);
+
 			if (__predict_false(pmap_pde_section(pde))) {
 				if (*pde & L1_S_SUPERSEC)
 					curaddr = (*pde & L1_SUP_FRAME) |
@@ -840,7 +836,7 @@ bus_dmamap_load_buffer(bus_dma_tag_t dmat, bus_dma_segment_t *segs,
 		 * Insert chunk into a segment, coalescing with
 		 * the previous segment if possible.
 		 */
-		if (needbounce == 0 && seg >= 0 && curaddr == lastaddr &&
+		if (seg >= 0 && curaddr == lastaddr &&
 		    (segs[seg].ds_len + sgsize) <= dmat->maxsegsz &&
 		    (dmat->boundary == 0 ||
 		     (segs[seg].ds_addr & bmask) == 
@@ -909,7 +905,7 @@ bus_dmamap_load(bus_dma_tag_t dmat, bus_dmamap_t map, void *buf,
 	CTR5(KTR_BUSDMA, "%s: tag %p tag flags 0x%x error %d nsegs %d",
 	    __func__, dmat, dmat->flags, nsegs + 1, error);
 
-	return (0);
+	return (error);
 }
 
 /*
@@ -1096,7 +1092,7 @@ bus_dmamap_sync_buf(void *buf, int len, bus_dmasync_op_t op)
 		cpu_l2cache_wb_range((vm_offset_t)buf, len);
 	}
 	if (op & BUS_DMASYNC_PREREAD) {
-		if ((op & BUS_DMASYNC_PREWRITE) ||
+		if (!(op & BUS_DMASYNC_PREWRITE) &&
 		    ((((vm_offset_t)(buf) | len) & arm_dcache_align_mask) == 0)) {
 			cpu_dcache_inv_range((vm_offset_t)buf, len);
 			cpu_l2cache_inv_range((vm_offset_t)buf, len);

@@ -57,7 +57,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD: src/sys/vm/vm_pageout.h,v 1.41 2005/01/07 02:29:27 imp Exp $
+ * $FreeBSD: src/sys/vm/vm_pageout.h,v 1.41.10.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _VM_VM_PAGEOUT_H_
@@ -98,6 +98,7 @@ extern void vm_wait(void);
 extern void vm_waitpfault(void);
 
 #ifdef _KERNEL
+boolean_t vm_pageout_fallback_object_lock(vm_page_t, vm_page_t *);
 int vm_pageout_flush(vm_page_t *, int, int);
 #endif
 #endif	/* _VM_VM_PAGEOUT_H_ */

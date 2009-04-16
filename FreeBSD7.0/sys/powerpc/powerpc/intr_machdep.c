@@ -57,7 +57,7 @@
  *	from: @(#)isa.c	7.2 (Berkeley) 5/13/91
  *	form: src/sys/i386/isa/intr_machdep.c,v 1.57 2001/07/20
  *
- * $FreeBSD: src/sys/powerpc/powerpc/intr_machdep.c,v 1.13.2.1 2007/11/26 16:14:45 scottl Exp $
+ * $FreeBSD: src/sys/powerpc/powerpc/intr_machdep.c,v 1.13.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include <sys/param.h>
@@ -191,7 +191,7 @@ powerpc_setup_intr(const char *name, u_int irq, driver_filter_t filter,
 #ifdef INTR_FILTER
 		    powerpc_intr_eoi, powerpc_intr_mask,
 #endif
-		    "irq%u:", irq);
+		    NULL, "irq%u:", irq);
 		if (error) {
 			/* XXX unlock */
 			free(i, M_INTR);

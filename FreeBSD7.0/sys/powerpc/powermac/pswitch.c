@@ -22,7 +22,7 @@
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/powerpc/powermac/pswitch.c,v 1.6 2007/03/02 15:13:17 piso Exp $
+ * $FreeBSD: src/sys/powerpc/powermac/pswitch.c,v 1.6.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include "opt_ddb.h"
@@ -139,6 +139,6 @@ pswitch_intr(void *arg)
 
 	dev = (device_t)arg;
 
-	kdb_enter(device_get_nameunit(dev));
+	kdb_enter_why(KDB_WHY_POWERPC, device_get_nameunit(dev));
 	return (FILTER_HANDLED);
 }

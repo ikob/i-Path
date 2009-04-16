@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/pci/if_wb.c,v 1.92 2007/02/23 12:19:03 piso Exp $");
+__FBSDID("$FreeBSD: src/sys/pci/if_wb.c,v 1.92.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * Winbond fast ethernet PCI NIC driver
@@ -1502,7 +1502,7 @@ wb_start_locked(ifp)
 	 * Place the request for the upload interrupt
 	 * in the last descriptor in the chain. This way, if
 	 * we're chaining several packets at once, we'll only
-	 * get an interupt once for the whole chain rather than
+	 * get an interrupt once for the whole chain rather than
 	 * once for each packet.
 	 */
 	WB_TXCTL(cur_tx) |= WB_TXCTL_FINT;

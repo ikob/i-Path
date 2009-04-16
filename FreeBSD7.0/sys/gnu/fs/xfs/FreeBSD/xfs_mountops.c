@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/gnu/fs/xfs/FreeBSD/xfs_mountops.c,v 1.10 2007/08/20 15:33:22 cognet Exp $
+ * $FreeBSD: src/sys/gnu/fs/xfs/FreeBSD/xfs_mountops.c,v 1.10.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include <sys/param.h>

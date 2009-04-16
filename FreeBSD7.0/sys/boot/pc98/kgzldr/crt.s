@@ -24,7 +24,7 @@
 # EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 #	From: btx.s 1.10 1999/02/25 16:27:41 rnordier
-# $FreeBSD: src/sys/boot/pc98/kgzldr/crt.s,v 1.5 2005/05/08 14:17:28 nyan Exp $
+# $FreeBSD: src/sys/boot/pc98/kgzldr/crt.s,v 1.5.18.1 2008/11/25 02:59:29 kensmith Exp $
 #
 
 # Screen defaults and assumptions.

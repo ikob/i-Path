@@ -34,7 +34,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/arm/xscale/ixp425/ixp425_intr.h,v 1.1 2006/11/19 23:55:23 sam Exp $
+ * $FreeBSD: src/sys/arm/xscale/ixp425/ixp425_intr.h,v 1.1.8.1 2008/11/25 02:59:29 kensmith Exp $
  *
  */
 

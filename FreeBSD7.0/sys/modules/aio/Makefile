@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/aio/Makefile,v 1.2 2006/10/15 14:22:13 netchild Exp $
+# $FreeBSD: src/sys/modules/aio/Makefile,v 1.2.6.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../kern
 

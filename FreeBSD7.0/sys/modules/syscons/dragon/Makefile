@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/syscons/dragon/Makefile,v 1.3 2002/11/11 10:11:58 mux Exp $
+# $FreeBSD: src/sys/modules/syscons/dragon/Makefile,v 1.3.34.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH:	${.CURDIR}/../../../dev/syscons/dragon
 

@@ -55,7 +55,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: src/sys/dev/sym/sym_defs.h,v 1.11 2005/01/06 01:43:24 imp Exp $ */
+/* $FreeBSD: src/sys/dev/sym/sym_defs.h,v 1.11.10.1.2.1 2008/11/25 02:59:29 kensmith Exp $ */
 
 #ifndef SYM_DEFS_H
 #define SYM_DEFS_H
@@ -90,7 +90,7 @@
 struct sym_pci_chip {
 	u_short	device_id;
 	unsigned short	revision_id;
-	char	*name;
+	const char *name;
 	u_char	burst_max;	/* log-base-2 of max burst */
 	u_char	offset_max;
 	u_char	nr_divisor;

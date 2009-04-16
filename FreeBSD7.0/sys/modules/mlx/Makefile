@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/mlx/Makefile,v 1.7 2001/01/06 13:59:55 obrien Exp $
+# $FreeBSD: src/sys/modules/mlx/Makefile,v 1.7.32.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../dev/mlx
 

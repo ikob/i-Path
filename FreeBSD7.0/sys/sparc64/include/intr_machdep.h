@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sparc64/include/intr_machdep.h,v 1.17 2007/09/06 19:16:29 marius Exp $
+ * $FreeBSD: src/sys/sparc64/include/intr_machdep.h,v 1.17.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef	_MACHINE_INTR_MACHDEP_H_
@@ -33,7 +33,7 @@
 
 #define	PIL_MAX		(1 << 4)
 #define	IV_MAX		(1 << 11)
-#define IV_NAMLEN	1024
+#define	IV_NAMLEN	1024
 
 #define	IR_FREE		(PIL_MAX * 2)
 
@@ -46,6 +46,7 @@
 #define	PIL_RENDEZVOUS	3	/* smp rendezvous ipi */
 #define	PIL_AST		4	/* ast ipi */
 #define	PIL_STOP	5	/* stop cpu ipi */
+#define	PIL_PREEMPT	6	/* preempt idle thread cpu ipi */
 #define	PIL_FAST	13	/* fast interrupts */
 #define	PIL_TICK	14
 
@@ -67,7 +68,8 @@ struct intr_request {
 struct intr_controller {
 	void	(*ic_enable)(void *);
 	void	(*ic_disable)(void *);
-	void	(*ic_eoi)(void *);
+	void	(*ic_assign)(void *);
+	void	(*ic_clear)(void *);
 };
 
 struct intr_vector {
@@ -86,6 +88,10 @@ struct intr_vector {
 extern ih_func_t *intr_handlers[];
 extern struct intr_vector intr_vectors[];
 
+#ifdef SMP
+void	intr_add_cpu(u_int cpu);
+#endif
+int	intr_bind(int vec, u_char cpu);
 void	intr_setup(int level, ih_func_t *ihf, int pri, iv_func_t *ivf,
 	    void *iva);
 void	intr_init1(void);

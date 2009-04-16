@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/fdc/Makefile,v 1.15 2006/05/30 09:38:54 ru Exp $
+# $FreeBSD: src/sys/modules/fdc/Makefile,v 1.15.6.1 2008/11/25 02:59:29 kensmith Exp $
 
 KMOD=	fdc
 

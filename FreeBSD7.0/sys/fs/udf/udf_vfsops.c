@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/udf/udf_vfsops.c,v 1.48.4.1 2008/01/28 12:51:31 kib Exp $
+ * $FreeBSD: src/sys/fs/udf/udf_vfsops.c,v 1.48.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /* udf_vfsops.c */
@@ -290,7 +290,7 @@ udf_checktag(struct desc_tag *tag, uint16_t id)
 	if (le16toh(tag->id) != id)
 		return (EINVAL);
 
-	for (i = 0; i < 15; i++)
+	for (i = 0; i < 16; i++)
 		cksum = cksum + itag[i];
 	cksum = cksum - itag[4];
 

@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/xscale/i8134x/i81342_pci.c,v 1.2 2007/09/30 11:05:14 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/arm/xscale/i8134x/i81342_pci.c,v 1.2.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -185,7 +185,7 @@ i81342_pci_attach(device_t dev)
 		IOP34X_PCIE_OIOBAR_VADDR,
 		(sc->sc_is_atux ? IOP34X_PCIX_OIOBAR_VADDR :
 		IOP34X_PCIE_OIOBAR_VADDR) + IOP34X_OIOBAR_SIZE) != 0) {
-		panic("i80321_pci_probe: failed to set up I/O rman");
+		panic("i81342_pci_probe: failed to set up I/O rman");
 	}
 	sc->sc_mem_rman.rm_type = RMAN_ARRAY;
 	sc->sc_mem_rman.rm_descr = "I81342 PCI Memory";

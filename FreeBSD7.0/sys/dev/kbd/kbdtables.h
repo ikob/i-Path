@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/kbd/kbdtables.h,v 1.50 2005/05/12 13:39:31 nyan Exp $
+ * $FreeBSD: src/sys/dev/kbd/kbdtables.h,v 1.50.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef KBD_DFLT_KEYMAP

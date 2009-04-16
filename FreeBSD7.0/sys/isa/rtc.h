@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)rtc.h	7.1 (Berkeley) 5/12/91
- * $FreeBSD: src/sys/isa/rtc.h,v 1.13 2004/04/07 20:46:09 imp Exp $
+ * $FreeBSD: src/sys/isa/rtc.h,v 1.13.26.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _I386_ISA_RTC_H_

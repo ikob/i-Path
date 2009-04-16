@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/uipc_syscalls.c,v 1.259.4.2 2008/02/14 11:45:41 simon Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/uipc_syscalls.c,v 1.259.2.6.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_sctp.h"
 #include "opt_compat.h"
@@ -227,6 +227,10 @@ kern_bind(td, fd, sa)
 	if (error)
 		return (error);
 	so = fp->f_data;
+#ifdef KTRACE
+	if (KTRPOINT(td, KTR_STRUCT))
+		ktrsockaddr(sa);
+#endif
 #ifdef MAC
 	SOCK_LOCK(so);
 	error = mac_check_socket_bind(td->td_ucred, so, sa);
@@ -454,6 +458,10 @@ kern_accept(struct thread *td, int s, struct sockaddr **name,
 		/* check sa_len before it is destroyed */
 		if (*namelen > sa->sa_len)
 			*namelen = sa->sa_len;
+#ifdef KTRACE
+		if (KTRPOINT(td, KTR_STRUCT))
+			ktrsockaddr(sa);
+#endif
 		*name = sa;
 		sa = NULL;
 	}
@@ -548,6 +556,10 @@ kern_connect(td, fd, sa)
 		error = EALREADY;
 		goto done1;
 	}
+#ifdef KTRACE
+	if (KTRPOINT(td, KTR_STRUCT))
+		ktrsockaddr(sa);
+#endif
 #ifdef MAC
 	SOCK_LOCK(so);
 	error = mac_check_socket_connect(td->td_ucred, so, sa);
@@ -761,7 +773,11 @@ kern_sendit(td, s, mp, flags, control, segflg)
 
 #ifdef MAC
 	SOCK_LOCK(so);
-	error = mac_check_socket_send(td->td_ucred, so);
+	if (mp->msg_name != NULL)
+		error = mac_check_socket_connect(td->td_ucred, so,
+		    mp->msg_name);
+	if (error == 0)
+		error = mac_check_socket_send(td->td_ucred, so);
 	SOCK_UNLOCK(so);
 	if (error)
 		goto bad;
@@ -1070,6 +1086,10 @@ kern_recvit(td, s, mp, fromseg, controlp)
 	}
 out:
 	fdrop(fp, td);
+#ifdef KTRACE
+	if (fromsa && KTRPOINT(td, KTR_STRUCT))
+		ktrsockaddr(fromsa);
+#endif
 	if (fromsa)
 		FREE(fromsa, M_SONAME);
 
@@ -1474,6 +1494,10 @@ kern_getsockname(struct thread *td, int fd, struct sockaddr **sa,
 	else
 		len = MIN(*alen, (*sa)->sa_len);
 	*alen = len;
+#ifdef KTRACE
+	if (KTRPOINT(td, KTR_STRUCT))
+		ktrsockaddr(*sa);
+#endif
 bad:
 	fdrop(fp, td);
 	if (error && *sa) {
@@ -1571,6 +1595,10 @@ kern_getpeername(struct thread *td, int fd, struct sockaddr **sa,
 	else
 		len = MIN(*alen, (*sa)->sa_len);
 	*alen = len;
+#ifdef KTRACE
+	if (KTRPOINT(td, KTR_STRUCT))
+		ktrsockaddr(*sa);
+#endif
 bad:
 	if (error && *sa) {
 		free(*sa, M_SONAME);
@@ -2172,7 +2200,9 @@ retry_space:
 		}
 
 		/* Quit outer loop on error or when we're done. */
-		if (error || done)
+		if (done) 
+			break;
+		if (error)
 			goto done;
 	}
 
@@ -2180,10 +2210,11 @@ retry_space:
 	 * Send trailers. Wimp out and use writev(2).
 	 */
 	if (trl_uio != NULL) {
+		sbunlock(&so->so_snd);
 		error = kern_writev(td, uap->s, trl_uio);
-		if (error)
-			goto done;
-		sbytes += td->td_retval[0];
+		if (error == 0)
+			sbytes += td->td_retval[0];
+		goto out;
 	}
 
 done:
@@ -2355,6 +2386,10 @@ sctp_generic_sendmsg (td, uap)
 	error = getsock(td->td_proc->p_fd, uap->sd, &fp, NULL);
 	if (error)
 		goto sctp_bad;
+#ifdef KTRACE
+	if (KTRPOINT(td, KTR_STRUCT))
+		ktrsockaddr(to);
+#endif
 
 	iov[0].iov_base = uap->msg;
 	iov[0].iov_len = uap->mlen;
@@ -2458,6 +2493,10 @@ sctp_generic_sendmsg_iov(td, uap)
 	error = copyiniov(uap->iov, uap->iovlen, &iov, EMSGSIZE);
 	if (error)
 		goto sctp_bad1;
+#ifdef KTRACE
+	if (KTRPOINT(td, KTR_STRUCT))
+		ktrsockaddr(to);
+#endif
 
 	so = (struct socket *)fp->f_data;
 #ifdef MAC
@@ -2641,6 +2680,10 @@ sctp_generic_recvmsg(td, uap)
 			goto out;
 		}
 	}
+#ifdef KTRACE
+	if (KTRPOINT(td, KTR_STRUCT))
+		ktrsockaddr(fromsa);
+#endif
 	if (uap->msg_flags) {
 		error = copyout(&msg_flags, uap->msg_flags, sizeof (int));
 		if (error) {

@@ -13,7 +13,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/ohci.c,v 1.170 2007/06/20 05:10:52 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/ohci.c,v 1.170.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
@@ -1560,6 +1560,24 @@ ohci_device_bulk_done(usbd_xfer_handle xfer)
 	xfer->hcpriv = NULL;
 }
 
+/*
+ * XXX write back xfer data for architectures with a write-back
+ *     data cache; this is a hack because usb is mis-architected
+ *     in blindly mixing bus_dma w/ PIO.
+ */
+static __inline void
+hacksync(usbd_xfer_handle xfer)
+{
+	bus_dma_tag_t tag;
+	struct usb_dma_mapping *dmap;
+
+	if (xfer->length == 0)
+		return;
+	tag = xfer->pipe->device->bus->buffer_dmatag;
+	dmap = &xfer->dmamap;
+	bus_dmamap_sync(tag, dmap->map, BUS_DMASYNC_PREWRITE);
+}
+
 void
 ohci_rhsc(ohci_softc_t *sc, usbd_xfer_handle xfer)
 {
@@ -1591,6 +1609,7 @@ ohci_rhsc(ohci_softc_t *sc, usbd_xfer_handle xfer)
 	xfer->actlen = xfer->length;
 	xfer->status = USBD_NORMAL_COMPLETION;
 
+	hacksync(xfer);	/* XXX to compensate for usb_transfer_complete */
 	usb_transfer_complete(xfer);
 }
 
@@ -2722,6 +2741,7 @@ ohci_root_ctrl_start(usbd_xfer_handle xfer)
  ret:
 	xfer->status = err;
 	s = splusb();
+	hacksync(xfer);	/* XXX to compensate for usb_transfer_complete */
 	usb_transfer_complete(xfer);
 	splx(s);
 	return (USBD_IN_PROGRESS);

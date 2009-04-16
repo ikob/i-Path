@@ -24,7 +24,7 @@
  * the rights to redistribute these changes.
  *
  *	from: Mach, Revision 2.2  92/04/04  11:34:26  rpd
- * $FreeBSD: src/sys/boot/pc98/boot2/serial_16550.S,v 1.7 2004/05/20 20:48:29 markm Exp $
+ * $FreeBSD: src/sys/boot/pc98/boot2/serial_16550.S,v 1.7.26.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

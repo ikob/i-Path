@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/ia64/include/limits.h,v 1.13 2005/03/02 21:33:27 joerg Exp $ */
+/* $FreeBSD: src/sys/ia64/include/limits.h,v 1.13.18.1 2008/11/25 02:59:29 kensmith Exp $ */
 /* From: NetBSD: limits.h,v 1.3 1997/04/06 08:47:31 cgd Exp */
 
 /*-

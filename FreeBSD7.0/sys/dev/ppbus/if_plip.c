@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ppbus/if_plip.c,v 1.44 2007/02/23 12:18:49 piso Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ppbus/if_plip.c,v 1.44.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * Parallel port TCP/IP interfaces added.  I looked at the driver from

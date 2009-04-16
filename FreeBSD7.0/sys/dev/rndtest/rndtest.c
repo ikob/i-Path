@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/rndtest/rndtest.c,v 1.5 2005/01/06 01:43:10 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/rndtest/rndtest.c,v 1.5.18.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

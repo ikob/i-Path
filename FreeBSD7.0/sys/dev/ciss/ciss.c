@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/dev/ciss/ciss.c,v 1.81.2.1.2.2 2008/02/15 13:55:23 iwasaki Exp $
+ *	$FreeBSD: src/sys/dev/ciss/ciss.c,v 1.81.2.12.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*
@@ -298,6 +298,11 @@ static struct
     { 0x103C, 0x323A, CISS_BOARD_SA5,	"HP Smart Array" },
     { 0x103C, 0x323B, CISS_BOARD_SA5,	"HP Smart Array" },
     { 0x103C, 0x323C, CISS_BOARD_SA5,	"HP Smart Array" },
+    { 0x103C, 0x3241, CISS_BOARD_SA5,	"HP Smart Array P212" },
+    { 0x103C, 0x3243, CISS_BOARD_SA5,	"HP Smart Array P410" },
+    { 0x103C, 0x3245, CISS_BOARD_SA5,	"HP Smart Array P410i" },
+    { 0x103C, 0x3247, CISS_BOARD_SA5,	"HP Smart Array P411" },
+    { 0x103C, 0x3249, CISS_BOARD_SA5,	"HP Smart Array P812" },
     { 0, 0, 0, NULL }
 };
 
@@ -2737,12 +2742,6 @@ ciss_cam_action_io(struct cam_sim *sim, struct ccb_scsiio *csio)
     target = csio->ccb_h.target_id;
 
     debug(2, "XPT_SCSI_IO %d:%d:%d", bus, target, csio->ccb_h.target_lun);
-
-    /* firmware does not support commands > 10 bytes */
-    if (csio->cdb_len > 12/*CISS_CDB_BUFFER_SIZE*/) {
-	debug(3, "  command too large (%d > %d)", csio->cdb_len, CISS_CDB_BUFFER_SIZE);
-	csio->ccb_h.status = CAM_REQ_CMP_ERR;
-    }
 
     /* check that the CDB pointer is not to a physical address */
     if ((csio->ccb_h.flags & CAM_CDB_POINTER) && (csio->ccb_h.flags & CAM_CDB_PHYS)) {

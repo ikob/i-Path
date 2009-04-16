@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/xscale/ixp425/ixp425_timer.c,v 1.2 2007/02/23 12:18:28 piso Exp $");
+__FBSDID("$FreeBSD: src/sys/arm/xscale/ixp425/ixp425_timer.c,v 1.2.8.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

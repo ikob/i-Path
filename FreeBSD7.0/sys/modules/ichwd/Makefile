@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/ichwd/Makefile,v 1.1 2004/05/11 18:21:38 des Exp $
+# $FreeBSD: src/sys/modules/ichwd/Makefile,v 1.1.26.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../dev/ichwd
 

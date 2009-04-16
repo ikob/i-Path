@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/pst/pst-pci.c,v 1.8 2005/03/05 18:10:49 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/pst/pst-pci.c,v 1.8.18.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/uart/uart.h,v 1.6 2007/04/02 22:00:22 marcel Exp $
+ * $FreeBSD: src/sys/dev/uart/uart.h,v 1.6.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _DEV_UART_H_
@@ -73,6 +73,10 @@ extern struct uart_class uart_z8530_class __attribute__((weak));
  */
 #define	UART_FLAGS_CONSOLE(f)		((f) & 0x10)
 #define	UART_FLAGS_DBGPORT(f)		((f) & 0x80)
+#define	UART_FLAGS_FCR_RX_LOW(f)	((f) & 0x100)
+#define	UART_FLAGS_FCR_RX_MEDL(f)	((f) & 0x200)
+#define	UART_FLAGS_FCR_RX_MEDH(f)	((f) & 0x400)
+#define	UART_FLAGS_FCR_RX_HIGH(f)	((f) & 0x800)
 
 /*
  * Data parity values (magical numbers related to ns8250).

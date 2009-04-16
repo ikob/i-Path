@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/iscsi/initiator/Makefile,v 1.1 2007/07/24 15:35:02 scottl Exp $
+# $FreeBSD: src/sys/modules/iscsi/initiator/Makefile,v 1.1.6.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../../dev/iscsi/initiator
 KMOD=iscsi_initiator

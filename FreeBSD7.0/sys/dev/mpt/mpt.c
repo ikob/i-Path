@@ -96,7 +96,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/mpt/mpt.c,v 1.44.2.2 2007/12/15 18:39:07 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/mpt/mpt.c,v 1.44.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <dev/mpt/mpt.h>
 #include <dev/mpt/mpt_cam.h> /* XXX For static handler registration */
@@ -218,8 +218,8 @@ static struct mpt_personality mpt_core_personality =
 {
 	.name		= "mpt_core",
 	.load		= mpt_core_load,
-	.attach		= mpt_core_attach,
-	.enable		= mpt_core_enable,
+//	.attach		= mpt_core_attach,
+//	.enable		= mpt_core_enable,
 	.event		= mpt_core_event,
 	.reset		= mpt_core_ioc_reset,
 	.shutdown	= mpt_core_shutdown,
@@ -2144,6 +2144,9 @@ mpt_attach(struct mpt_softc *mpt)
 	int i;
 	int error;
 
+	mpt_core_attach(mpt);
+	mpt_core_enable(mpt);
+
 	TAILQ_INSERT_TAIL(&mpt_tailq, mpt, links);
 	for (i = 0; i < MPT_MAX_PERSONALITIES; i++) {
 		pers = mpt_personalities[i];
@@ -2683,7 +2686,7 @@ mpt_configure_ioc(struct mpt_softc *mpt, int tn, int needreset)
 	/*
 	 * Enable the IOC
 	 */
-	if (mpt_enable_ioc(mpt, 0) != MPT_OK) {
+	if (mpt_enable_ioc(mpt, 1) != MPT_OK) {
 		mpt_prt(mpt, "unable to initialize IOC\n");
 		return (ENXIO);
 	}

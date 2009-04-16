@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/drm/mga_drm.h,v 1.7 2005/11/28 23:13:53 anholt Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/drm/mga_drm.h,v 1.7.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #ifndef __MGA_DRM_H__
 #define __MGA_DRM_H__

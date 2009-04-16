@@ -35,7 +35,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/security/mac_stub/mac_stub.c,v 1.68.2.1 2007/11/06 14:46:59 rwatson Exp $
+ * $FreeBSD: src/sys/security/mac_stub/mac_stub.c,v 1.68.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*
@@ -329,7 +329,7 @@ stub_create_bpfdesc(struct ucred *cred, struct bpf_d *d,
 }
 
 static void
-stub_create_datagram_from_ipq(struct ipq *ipq, struct label *ipqlabel,
+stub_create_datagram_from_ipq(struct ipq *q, struct label *qlabel,
     struct mbuf *m, struct label *mlabel)
 {
 
@@ -390,8 +390,8 @@ stub_create_sysv_shm(struct ucred *cred, struct shmid_kernel *shmsegptr,
 }
 
 static void
-stub_create_ipq(struct mbuf *m, struct label *mlabel, struct ipq *ipq,
-    struct label *ipqlabel)
+stub_create_ipq(struct mbuf *m, struct label *mlabel, struct ipq *q,
+    struct label *qlabel)
 {
 
 }
@@ -453,8 +453,8 @@ stub_create_mbuf_from_firewall(struct mbuf *m, struct label *mlabel)
 }
 
 static int
-stub_fragment_match(struct mbuf *m, struct label *mlabel, struct ipq *ipq,
-    struct label *ipqlabel)
+stub_fragment_match(struct mbuf *m, struct label *mlabel, struct ipq *q,
+    struct label *qlabel)
 {
 
 	return (1);
@@ -480,8 +480,8 @@ stub_relabel_ifnet(struct ucred *cred, struct ifnet *ifp,
 }
 
 static void
-stub_update_ipq(struct mbuf *m, struct label *mlabel, struct ipq *ipq,
-    struct label *ipqlabel)
+stub_update_ipq(struct mbuf *m, struct label *mlabel, struct ipq *q,
+    struct label *qlabel)
 {
 
 }
@@ -608,6 +608,14 @@ stub_check_ifnet_transmit(struct ifnet *ifp, struct label *ifplabel,
 static int
 stub_check_inpcb_deliver(struct inpcb *inp, struct label *inplabel,
     struct mbuf *m, struct label *mlabel)
+{
+
+	return (0);
+}
+
+static int
+stub_check_inpcb_visible(struct ucred *cred, struct inpcb *inp,
+   struct label *inplabel)
 {
 
 	return (0);
@@ -1434,7 +1442,7 @@ stub_priv_grant(struct ucred *cred, int priv)
 	return (EPERM);
 }
 
-static struct mac_policy_ops mac_stub_ops =
+static struct mac_policy_ops stub_ops =
 {
 	.mpo_destroy = stub_destroy,
 	.mpo_init = stub_init,
@@ -1550,6 +1558,7 @@ static struct mac_policy_ops mac_stub_ops =
 	.mpo_check_ifnet_relabel = stub_check_ifnet_relabel,
 	.mpo_check_ifnet_transmit = stub_check_ifnet_transmit,
 	.mpo_check_inpcb_deliver = stub_check_inpcb_deliver,
+	.mpo_check_inpcb_visible = stub_check_inpcb_visible,
 	.mpo_check_sysv_msgmsq = stub_check_sysv_msgmsq,
 	.mpo_check_sysv_msgrcv = stub_check_sysv_msgrcv,
 	.mpo_check_sysv_msgrmid = stub_check_sysv_msgrmid,
@@ -1660,5 +1669,5 @@ static struct mac_policy_ops mac_stub_ops =
 	.mpo_create_mbuf_from_syncache = stub_create_mbuf_from_syncache,
 };
 
-MAC_POLICY_SET(&mac_stub_ops, mac_stub, "TrustedBSD MAC/Stub",
+MAC_POLICY_SET(&stub_ops, mac_stub, "TrustedBSD MAC/Stub",
     MPC_LOADTIME_FLAG_UNLOADOK, NULL);

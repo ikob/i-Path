@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/uart/uart_cpu_pc98.c,v 1.17 2007/04/02 22:00:22 marcel Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/uart/uart_cpu_pc98.c,v 1.17.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

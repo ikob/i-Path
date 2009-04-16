@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/iscsi/initiator/iscsi.c,v 1.1 2007/07/24 15:35:02 scottl Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/iscsi/initiator/iscsi.c,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_iscsi_initiator.h"
 
@@ -808,3 +808,4 @@ moduledata_t iscsi_mod = {
 };
 
 DECLARE_MODULE(iscsi, iscsi_mod, SI_SUB_DRIVERS, SI_ORDER_MIDDLE);
+MODULE_DEPEND(iscsi, cam, 1, 1, 1);

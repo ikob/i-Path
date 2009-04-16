@@ -57,7 +57,7 @@
  * SUCH DAMAGE.
 */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/xscale/ixp425/ixp425_qmgr.c,v 1.2 2007/02/25 22:17:54 cognet Exp $");
+__FBSDID("$FreeBSD: src/sys/arm/xscale/ixp425/ixp425_qmgr.c,v 1.2.4.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * Intel XScale Queue Manager support.
@@ -341,7 +341,7 @@ ixpqmgr_qconfig(int qId, int qEntries, int ne, int nf, int srcSel,
 	 */
 	sc->aqmFreeSramAddress += (qi->qSizeInWords * sizeof(uint32_t));
 
-	/* Set the interupt source if this queue is in the range 0-31 */
+	/* Set the interrupt source if this queue is in the range 0-31 */
 	if (qId < IX_QMGR_MIN_QUEUPP_QID)
 	    aqm_srcsel_write(sc, qId, srcSel);
 
@@ -604,7 +604,7 @@ ixpqmgr_notify_enable(int qId, int srcSel)
 	/* Calculate the checkMask and checkValue for this q */
 	aqm_calc_statuscheck(sc, qId, srcSel);
 #endif
-	/* Set the interupt source if this queue is in the range 0-31 */
+	/* Set the interrupt source if this queue is in the range 0-31 */
 	if (qId < IX_QMGR_MIN_QUEUPP_QID)
 	    aqm_srcsel_write(sc, qId, srcSel);
 

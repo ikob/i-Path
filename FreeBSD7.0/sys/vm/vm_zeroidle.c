@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/vm/vm_zeroidle.c,v 1.49 2007/07/14 19:00:44 alc Exp $");
+__FBSDID("$FreeBSD: src/sys/vm/vm_zeroidle.c,v 1.49.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <opt_sched.h>
 
@@ -164,4 +164,4 @@ pagezero_start(void __unused *arg)
 	sched_add(td, SRQ_BORING);
 	thread_unlock(td);
 }
-SYSINIT(pagezero, SI_SUB_KTHREAD_VM, SI_ORDER_ANY, pagezero_start, NULL)
+SYSINIT(pagezero, SI_SUB_KTHREAD_VM, SI_ORDER_ANY, pagezero_start, NULL);

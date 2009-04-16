@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ppbus/lpbb.c,v 1.19 2005/12/21 10:54:46 ru Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ppbus/lpbb.c,v 1.19.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * I2C Bit-Banging over parallel port

@@ -18,7 +18,7 @@
  * 5. Modifications may be freely made to this file if the above conditions
  *    are met.
  *
- * $FreeBSD: src/sys/sys/pipe.h,v 1.29 2005/01/07 02:29:23 imp Exp $
+ * $FreeBSD: src/sys/sys/pipe.h,v 1.29.10.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS_PIPE_H_
@@ -113,6 +113,13 @@ struct pipe {
 	int	pipe_busy;		/* busy flag, mostly to handle rundown sanely */
 	int	pipe_present;		/* still present? */
 };
+
+/*
+ * Values for the pipe_present.
+ */
+#define PIPE_ACTIVE		1
+#define	PIPE_CLOSING		2
+#define	PIPE_FINALIZED		3
 
 /*
  * Container structure to hold the two pipe endpoints, mutex, and label

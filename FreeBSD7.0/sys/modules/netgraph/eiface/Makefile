@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/netgraph/eiface/Makefile,v 1.2 2002/01/11 15:48:52 ru Exp $
+# $FreeBSD: src/sys/modules/netgraph/eiface/Makefile,v 1.2.34.1 2008/11/25 02:59:29 kensmith Exp $
 
 KMOD=	ng_eiface
 SRCS= 	ng_eiface.c

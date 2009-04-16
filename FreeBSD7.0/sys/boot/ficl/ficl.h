@@ -41,7 +41,7 @@
 ** SUCH DAMAGE.
 */
 
-/* $FreeBSD: src/sys/boot/ficl/ficl.h,v 1.22 2007/03/23 22:26:01 jkim Exp $ */
+/* $FreeBSD: src/sys/boot/ficl/ficl.h,v 1.22.6.1 2008/11/25 02:59:29 kensmith Exp $ */
 
 #if !defined (__FICL_H__)
 #define __FICL_H__

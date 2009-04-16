@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/at91/at91_twi.c,v 1.10 2007/03/23 22:57:24 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/arm/at91/at91_twi.c,v 1.10.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -192,7 +192,7 @@ at91_twi_deactivate(device_t dev)
 	sc->intrhand = 0;
 	bus_generic_detach(sc->dev);
 	if (sc->mem_res)
-		bus_release_resource(dev, SYS_RES_IOPORT,
+		bus_release_resource(dev, SYS_RES_MEMORY,
 		    rman_get_rid(sc->mem_res), sc->mem_res);
 	sc->mem_res = 0;
 	if (sc->irq_res)

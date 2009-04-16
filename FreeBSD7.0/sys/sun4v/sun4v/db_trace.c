@@ -22,9 +22,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: src/sys/sun4v/sun4v/db_trace.c,v 1.1 2006/10/05 06:14:28 kmacy Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/sun4v/sun4v/db_trace.c,v 1.1.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -40,6 +41,7 @@
 
 #include <machine/cpu.h>
 #include <machine/pcb.h>
+#include <machine/stack.h>
 #include <machine/trap.h>
 #include <machine/vmparam.h>
 
@@ -48,9 +50,6 @@
 #include <ddb/db_sym.h>
 #include <ddb/db_variables.h>
 #include <ddb/db_watch.h>
-
-#define	INKERNEL(va) \
-	((va) >= VM_MIN_KERNEL_ADDRESS && (va) <= VM_MAX_KERNEL_ADDRESS)
 
 static db_varfcn_t db_frame;
 
@@ -243,7 +242,6 @@ db_backtrace(struct thread *td, struct frame *fp, int count)
 	db_addr_t pc;
 	int trap;
 	int user;
-	int quit;
 
 	if (count == -1)
 		count = 1024;
@@ -251,7 +249,6 @@ db_backtrace(struct thread *td, struct frame *fp, int count)
 	trap = 0;
 	user = 0;
 	npc = 0;
-	quit = 0;
 	while (count-- && !user && !db_pager_quit) {
 		pc = (db_addr_t)db_get_value((db_addr_t)&fp->fr_pc,
 		    sizeof(fp->fr_pc), FALSE);
@@ -290,10 +287,9 @@ db_backtrace(struct thread *td, struct frame *fp, int count)
 void
 db_trace_self(void)
 {
-	db_expr_t addr;
 
-	addr = (db_expr_t)__builtin_frame_address(1);
-	db_backtrace(curthread, (struct frame *)(addr + SPOFF), -1);
+	db_backtrace(curthread,
+	    (struct frame *)__builtin_frame_address(1), -1);
 }
 
 int
@@ -302,25 +298,6 @@ db_trace_thread(struct thread *td, int count)
 	struct pcb *ctx;
 
 	ctx = kdb_thr_ctx(td);
-	return (db_backtrace(td, (struct frame*)(ctx->pcb_sp + SPOFF), count));
-}
-
-void
-stack_save(struct stack *st)
-{
-	struct frame *fp;
-	db_expr_t addr;
-	vm_offset_t callpc;
-
-	stack_zero(st);
-	addr = (db_expr_t)__builtin_frame_address(1);
-	fp = (struct frame *)(addr + SPOFF);
-	while (1) {
-		callpc = fp->fr_pc;
-		if (!INKERNEL(callpc))
-			break;
-		if (stack_put(st, callpc) == -1)
-			break;
-		fp = (struct frame *)(fp->fr_fp + SPOFF);
-	}
+	return (db_backtrace(td,
+	    (struct frame *)(ctx->pcb_sp + SPOFF), count));
 }

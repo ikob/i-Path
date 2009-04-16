@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/compat/ndis/ndis_var.h,v 1.47 2007/04/06 11:18:57 pjd Exp $
+ * $FreeBSD: src/sys/compat/ndis/ndis_var.h,v 1.47.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _NDIS_VAR_H_
@@ -466,7 +466,7 @@ struct ndis_wlan_bssid_ex {
 	uint32_t		nwbx_netinfra;
 	ndis_80211_rates_ex	nwbx_supportedrates;
 	uint32_t		nwbx_ielen;
-	uint32_t		nwbx_ies[1];
+	uint8_t			nwbx_ies[1];
 };
 
 typedef struct ndis_wlan_bssid_ex ndis_wlan_bssid_ex;

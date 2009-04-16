@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/uipc_domain.c,v 1.51 2007/08/06 14:26:00 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/uipc_domain.c,v 1.51.2.1.2.2 2008/12/23 01:23:09 cperciva Exp $");
 
 #include <sys/param.h>
 #include <sys/socket.h>
@@ -58,11 +58,11 @@ __FBSDID("$FreeBSD: src/sys/kern/uipc_domain.c,v 1.51 2007/08/06 14:26:00 rwatso
  */
 
 static void domaininit(void *);
-SYSINIT(domain, SI_SUB_PROTO_DOMAIN, SI_ORDER_FIRST, domaininit, NULL)
+SYSINIT(domain, SI_SUB_PROTO_DOMAIN, SI_ORDER_FIRST, domaininit, NULL);
 
 static void domainfinalize(void *);
 SYSINIT(domainfin, SI_SUB_PROTO_IFATTACHDOMAIN, SI_ORDER_FIRST, domainfinalize,
-    NULL)
+    NULL);
 
 static struct callout pffast_callout;
 static struct callout pfslow_callout;
@@ -112,13 +112,18 @@ protosw_init(struct protosw *pr)
 
 #define DEFAULT(foo, bar)	if ((foo) == NULL)  (foo) = (bar)
 	DEFAULT(pu->pru_accept, pru_accept_notsupp);
+	DEFAULT(pu->pru_bind, pru_bind_notsupp);
 	DEFAULT(pu->pru_connect, pru_connect_notsupp);
 	DEFAULT(pu->pru_connect2, pru_connect2_notsupp);
 	DEFAULT(pu->pru_control, pru_control_notsupp);
+	DEFAULT(pu->pru_disconnect, pru_disconnect_notsupp);
 	DEFAULT(pu->pru_listen, pru_listen_notsupp);
+	DEFAULT(pu->pru_peeraddr, pru_peeraddr_notsupp);
 	DEFAULT(pu->pru_rcvd, pru_rcvd_notsupp);
 	DEFAULT(pu->pru_rcvoob, pru_rcvoob_notsupp);
 	DEFAULT(pu->pru_sense, pru_sense_null);
+	DEFAULT(pu->pru_shutdown, pru_shutdown_notsupp);
+	DEFAULT(pu->pru_sockaddr, pru_sockaddr_notsupp);
 	DEFAULT(pu->pru_sosend, sosend_generic);
 	DEFAULT(pu->pru_soreceive, soreceive_generic);
 	DEFAULT(pu->pru_sopoll, sopoll_generic);

@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/sysvipc/Makefile,v 1.1 2000/12/01 17:49:16 alfred Exp $
+# $FreeBSD: src/sys/modules/sysvipc/Makefile,v 1.1.32.1 2008/11/25 02:59:29 kensmith Exp $
 
 SUBDIR= sysvmsg sysvsem sysvshm
 

@@ -62,7 +62,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_vnops.c,v 1.173 2007/07/13 18:51:08 rodrigc Exp $");
+__FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_vnops.c,v 1.173.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/bio.h>
@@ -216,7 +216,7 @@ loop:
 	TAILQ_FOREACH(bp, &vp->v_bufobj.bo_dirty.bv_hd, b_bobufs)
 		bp->b_vflags &= ~BV_SCANNED;
 	TAILQ_FOREACH_SAFE(bp, &vp->v_bufobj.bo_dirty.bv_hd, b_bobufs, nbp) {
-		/* 
+		/*
 		 * Reasons to skip this buffer: it has already been considered
 		 * on this pass, this pass is the first time through on a
 		 * synchronous flush request and the buffer being considered
@@ -270,7 +270,7 @@ loop:
 				s = splbio();
 			}
 		} else if ((vp->v_type == VREG) && (bp->b_lblkno >= lbn)) {
-			/* 
+			/*
 			 * If the buffer is for data that has been truncated
 			 * off the file, then throw it away.
 			 */
@@ -283,7 +283,7 @@ loop:
 			vfs_bio_awrite(bp);
 
 		/*
-		 * Since we may have slept during the I/O, we need 
+		 * Since we may have slept during the I/O, we need
 		 * to start from a known point.
 		 */
 		VI_LOCK(vp);
@@ -302,7 +302,7 @@ loop:
 		bufobj_wwait(&vp->v_bufobj, 3, 0);
 		VI_UNLOCK(vp);
 
-		/* 
+		/*
 		 * Ensure that any filesystem metatdata associated
 		 * with the vnode has been written.
 		 */
@@ -325,7 +325,7 @@ loop:
 				passes -= 1;
 				goto loop;
 			}
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 			if (!vn_isdisk(vp, NULL))
 				vprint("ffs_fsync: dirty", vp);
 #endif
@@ -351,7 +351,7 @@ ffs_lock(ap)
 	int flags;
 	struct lock *lkp;
 	int result;
-	
+
 	switch (ap->a_flags & LK_TYPE_MASK) {
 	case LK_SHARED:
 	case LK_UPGRADE:
@@ -369,6 +369,10 @@ ffs_lock(ap)
 				VI_LOCK(vp);
 				flags |= LK_INTERLOCK;
 			}
+#ifdef DEBUG_VFS_LOCKS
+			KASSERT(vp->v_holdcnt != 0,
+			    ("ffs_lock %p: zero hold count", vp));
+#endif
 			lkp = vp->v_vnlock;
 			result = _lockmgr(lkp, flags, VI_MTX(vp), ap->a_td, ap->a_file, ap->a_line);
 			if (lkp == vp->v_vnlock || result != 0)
@@ -443,7 +447,7 @@ ffs_read(ap)
 	seqcount = ap->a_ioflag >> IO_SEQSHIFT;
 	ip = VTOI(vp);
 
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 	if (uio->uio_rw != UIO_READ)
 		panic("ffs_read: mode");
 
@@ -472,12 +476,12 @@ ffs_read(ap)
 		/*
 		 * size of buffer.  The buffer representing the
 		 * end of the file is rounded up to the size of
-		 * the block type ( fragment or full block, 
+		 * the block type ( fragment or full block,
 		 * depending ).
 		 */
 		size = blksize(fs, ip, lbn);
 		blkoffset = blkoff(fs, uio->uio_offset);
-		
+
 		/*
 		 * The amount we want to transfer in this iteration is
 		 * one FS block less the amount of the data before
@@ -501,7 +505,7 @@ ffs_read(ap)
 			 */
 			error = bread(vp, lbn, size, NOCRED, &bp);
 		} else if ((vp->v_mount->mnt_flag & MNT_NOCLUSTERR) == 0) {
-			/* 
+			/*
 			 * Otherwise if we are allowed to cluster,
 			 * grab as much as we can.
 			 *
@@ -524,7 +528,7 @@ ffs_read(ap)
 			    size, &nextlbn, &nextsize, 1, NOCRED, &bp);
 		} else {
 			/*
-			 * Failing all of the above, just read what the 
+			 * Failing all of the above, just read what the
 			 * user asked for. Interestingly, the same as
 			 * the first option above.
 			 */
@@ -584,7 +588,7 @@ ffs_read(ap)
 		}
 	}
 
-	/* 
+	/*
 	 * This can only happen in the case of an error
 	 * because the loop above resets bp to NULL on each iteration
 	 * and on normal completion has not set a new value into it.
@@ -645,7 +649,7 @@ ffs_write(ap)
 	seqcount = ap->a_ioflag >> IO_SEQSHIFT;
 	ip = VTOI(vp);
 
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 	if (uio->uio_rw != UIO_WRITE)
 		panic("ffs_write: mode");
 #endif
@@ -708,7 +712,7 @@ ffs_write(ap)
 		if (uio->uio_offset + xfersize > ip->i_size)
 			vnode_pager_setsize(vp, uio->uio_offset + xfersize);
 
-                /*      
+                /*
 		 * We must perform a read-before-write if the transfer size
 		 * does not cover the entire buffer.
                  */
@@ -753,7 +757,7 @@ ffs_write(ap)
 
 		/*
 		 * If IO_SYNC each buffer is written synchronously.  Otherwise
-		 * if we have a severe page deficiency write the buffer 
+		 * if we have a severe page deficiency write the buffer
 		 * asynchronously.  Otherwise try to cluster, and if that
 		 * doesn't do it then either do an async write (if O_DIRECT),
 		 * or a delayed write (if not).
@@ -869,7 +873,7 @@ ffs_extread(struct vnode *vp, struct uio *uio, int ioflag)
 	fs = ip->i_fs;
 	dp = ip->i_din2;
 
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 	if (uio->uio_rw != UIO_READ || fs->fs_magic != FS_UFS2_MAGIC)
 		panic("ffs_extread: mode");
 
@@ -889,12 +893,12 @@ ffs_extread(struct vnode *vp, struct uio *uio, int ioflag)
 		/*
 		 * size of buffer.  The buffer representing the
 		 * end of the file is rounded up to the size of
-		 * the block type ( fragment or full block, 
+		 * the block type ( fragment or full block,
 		 * depending ).
 		 */
 		size = sblksize(fs, dp->di_extsize, lbn);
 		blkoffset = blkoff(fs, uio->uio_offset);
-		
+
 		/*
 		 * The amount we want to transfer in this iteration is
 		 * one FS block less the amount of the data before
@@ -985,7 +989,7 @@ ffs_extread(struct vnode *vp, struct uio *uio, int ioflag)
 		}
 	}
 
-	/* 
+	/*
 	 * This can only happen in the case of an error
 	 * because the loop above resets bp to NULL on each iteration
 	 * and on normal completion has not set a new value into it.
@@ -1031,7 +1035,7 @@ ffs_extwrite(struct vnode *vp, struct uio *uio, int ioflag, struct ucred *ucred)
 	KASSERT(!(ip->i_flag & IN_SPACECOUNTED), ("inode %u: inode is dead",
 	    ip->i_number));
 
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 	if (uio->uio_rw != UIO_WRITE || fs->fs_magic != FS_UFS2_MAGIC)
 		panic("ffs_extwrite: mode");
 #endif
@@ -1056,7 +1060,7 @@ ffs_extwrite(struct vnode *vp, struct uio *uio, int ioflag, struct ucred *ucred)
 		if (uio->uio_resid < xfersize)
 			xfersize = uio->uio_resid;
 
-                /*      
+		/*
 		 * We must perform a read-before-write if the transfer size
 		 * does not cover the entire buffer.
                  */
@@ -1096,7 +1100,7 @@ ffs_extwrite(struct vnode *vp, struct uio *uio, int ioflag, struct ucred *ucred)
 
 		/*
 		 * If IO_SYNC each buffer is written synchronously.  Otherwise
-		 * if we have a severe page deficiency write the buffer 
+		 * if we have a severe page deficiency write the buffer
 		 * asynchronously.  Otherwise try to cluster, and if that
 		 * doesn't do it then either do an async write (if O_DIRECT),
 		 * or a delayed write (if not).

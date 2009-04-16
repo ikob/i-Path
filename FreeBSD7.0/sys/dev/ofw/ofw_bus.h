@@ -23,7 +23,7 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
  * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ofw/ofw_bus.h,v 1.1 2004/08/12 17:41:29 marius Exp $
+ * $FreeBSD: src/sys/dev/ofw/ofw_bus.h,v 1.1.26.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef	_DEV_OFW_OFW_BUS_H_

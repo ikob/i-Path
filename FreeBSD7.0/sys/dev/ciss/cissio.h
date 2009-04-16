@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/dev/ciss/cissio.h,v 1.5 2005/05/18 05:31:34 ps Exp $
+ *	$FreeBSD: src/sys/dev/ciss/cissio.h,v 1.5.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

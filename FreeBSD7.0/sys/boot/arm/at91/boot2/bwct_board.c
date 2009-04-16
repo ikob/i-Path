@@ -1,5 +1,5 @@
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/arm/at91/boot2/bwct_board.c,v 1.1 2007/07/13 14:27:04 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/arm/at91/boot2/bwct_board.c,v 1.1.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 

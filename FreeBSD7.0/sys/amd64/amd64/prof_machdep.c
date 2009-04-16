@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/prof_machdep.c,v 1.29 2007/03/26 18:03:29 njl Exp $");
+__FBSDID("$FreeBSD: src/sys/amd64/amd64/prof_machdep.c,v 1.29.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #ifdef GUPROF
 #if 0

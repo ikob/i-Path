@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/common/devopen.c,v 1.5 2006/11/02 00:02:22 marcel Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/common/devopen.c,v 1.5.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <stand.h>
 #include <string.h>

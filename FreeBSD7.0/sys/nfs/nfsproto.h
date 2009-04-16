@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)nfsproto.h  8.2 (Berkeley) 3/30/95
- * $FreeBSD: src/sys/nfs/nfsproto.h,v 1.12 2006/11/28 19:33:28 rees Exp $
+ * $FreeBSD: src/sys/nfs/nfsproto.h,v 1.12.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _NFS_NFSPROTO_H_

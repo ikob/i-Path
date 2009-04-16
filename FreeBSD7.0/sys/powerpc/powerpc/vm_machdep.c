@@ -38,7 +38,7 @@
  *
  *	from: @(#)vm_machdep.c	7.3 (Berkeley) 5/13/91
  *	Utah $Hdr: vm_machdep.c 1.16.1.1 89/06/23$
- * $FreeBSD: src/sys/powerpc/powerpc/vm_machdep.c,v 1.115 2007/06/06 06:01:56 grehan Exp $
+ * $FreeBSD: src/sys/powerpc/powerpc/vm_machdep.c,v 1.115.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 /*-
  * Copyright (c) 1994, 1995, 1996 Carnegie-Mellon University.
@@ -277,7 +277,7 @@ cpu_thread_clean(struct thread *td)
 }
 
 void
-cpu_thread_setup(struct thread *td)
+cpu_thread_alloc(struct thread *td)
 {
 	struct pcb *pcb;
 
@@ -285,6 +285,11 @@ cpu_thread_setup(struct thread *td)
 	    sizeof(struct pcb)) & ~0x2fU);
 	td->td_pcb = pcb;
 	td->td_frame = (struct trapframe *)pcb - 1;
+}
+
+void
+cpu_thread_free(struct thread *td)
+{
 }
 
 void

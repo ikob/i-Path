@@ -33,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ffs_balloc.c	8.4 (Berkeley) 9/23/93
- * $FreeBSD: src/sys/gnu/fs/ext2fs/ext2_balloc.c,v 1.22 2005/12/05 11:58:33 ru Exp $
+ * $FreeBSD: src/sys/gnu/fs/ext2fs/ext2_balloc.c,v 1.22.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include <sys/param.h>

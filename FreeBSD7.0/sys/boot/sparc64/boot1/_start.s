@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/boot/sparc64/boot1/_start.s,v 1.2 2004/02/11 21:17:04 ru Exp $ */
+/* $FreeBSD: src/sys/boot/sparc64/boot1/_start.s,v 1.2.26.1 2008/11/25 02:59:29 kensmith Exp $ */
 
 	.text
 	.globl	_start

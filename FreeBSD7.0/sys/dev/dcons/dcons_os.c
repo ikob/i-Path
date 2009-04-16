@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  * 
- * $FreeBSD: src/sys/dev/dcons/dcons_os.c,v 1.19 2007/08/17 05:32:39 simokawa Exp $
+ * $FreeBSD: src/sys/dev/dcons/dcons_os.c,v 1.19.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include <sys/param.h>
@@ -207,11 +207,13 @@ dcons_check_break(struct dcons_softc *dc, int c)
 #ifdef GDB
 			if (gdb_cur == &dcons_gdb_dbgport) {
 				kdb_dbbe_select("gdb");
-				kdb_enter("Break sequence on dcons gdb port");
+				kdb_enter_why(KDB_WHY_BREAK,
+				    "Break sequence on dcons gdb port");
 			}
 #endif
 		} else
-			kdb_enter("Break sequence on dcons console port");
+			kdb_enter_why(KDB_WHY_BREAK,
+			    "Break sequence on dcons console port");
 	}
 #else
 	switch (dc->brk_state) {

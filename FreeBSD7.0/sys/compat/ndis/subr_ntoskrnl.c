@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/ndis/subr_ntoskrnl.c,v 1.90 2007/07/22 20:53:28 thompsa Exp $");
+__FBSDID("$FreeBSD: src/sys/compat/ndis/subr_ntoskrnl.c,v 1.90.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/ctype.h>
 #include <sys/unistd.h>
@@ -218,12 +218,15 @@ static int atoi (const char *);
 static long atol (const char *);
 static int rand(void);
 static void srand(unsigned int);
-static void ntoskrnl_time(uint64_t *);
+static void KeQuerySystemTime(uint64_t *);
+static uint32_t KeTickCount(void);
 static uint8_t IoIsWdmVersionAvailable(uint8_t, uint8_t);
 static void ntoskrnl_thrfunc(void *);
 static ndis_status PsCreateSystemThread(ndis_handle *,
 	uint32_t, void *, ndis_handle, void *, void *, void *);
 static ndis_status PsTerminateSystemThread(ndis_status);
+static ndis_status IoGetDeviceObjectPointer(unicode_string *,
+	uint32_t, void *, device_object *);
 static ndis_status IoGetDeviceProperty(device_object *, uint32_t,
 	uint32_t, void *, uint32_t *);
 static void KeInitializeMutex(kmutant *, uint32_t);
@@ -241,11 +244,13 @@ static void *ntoskrnl_memset(void *, int, size_t);
 static void *ntoskrnl_memmove(void *, void *, size_t);
 static void *ntoskrnl_memchr(void *, unsigned char, size_t);
 static char *ntoskrnl_strstr(char *, char *);
+static char *ntoskrnl_strncat(char *, char *, size_t);
 static int ntoskrnl_toupper(int);
 static int ntoskrnl_tolower(int);
 static funcptr ntoskrnl_findwrap(funcptr);
 static uint32_t DbgPrint(char *, ...);
 static void DbgBreakPoint(void);
+static void KeBugCheckEx(uint32_t, u_long, u_long, u_long, u_long);
 static void dummy(void);
 
 static struct mtx ntoskrnl_dispatchlock;
@@ -474,6 +479,29 @@ ntoskrnl_strstr(s, find)
 		s--;
 	}
 	return ((char *)s);
+}
+
+/* Taken from libc */
+static char *
+ntoskrnl_strncat(dst, src, n)
+	char		*dst;
+	char		*src;
+	size_t		n;
+{
+	if (n != 0) {
+		char *d = dst;
+		const char *s = src;
+
+		while (*d != 0)
+			d++;
+		do {
+			if ((*d = *s++) == 0)
+				break;
+			d++;
+		} while (--n != 0);
+		*d = 0;
+        }
+        return (dst);
 }
 
 static int
@@ -1565,8 +1593,9 @@ ntoskrnl_waittest(obj, increment)
 		}
 
 		if (satisfied == TRUE)
-			cv_broadcastpri(&we->we_cv, w->wb_oldpri -
-			    (increment * 4));
+			cv_broadcastpri(&we->we_cv,
+			    (w->wb_oldpri - (increment * 4)) > PRI_MIN_KERN ?
+			    w->wb_oldpri - (increment * 4) : PRI_MIN_KERN);
 
 		e = e->nle_flink;
 	}
@@ -1574,7 +1603,11 @@ ntoskrnl_waittest(obj, increment)
 	return;
 }
 
-static void 
+/*
+ * Return the number of 100 nanosecond intervals since
+ * January 1, 1601. (?!?!)
+ */
+void
 ntoskrnl_time(tval)
 	uint64_t                *tval;
 {
@@ -1582,10 +1615,26 @@ ntoskrnl_time(tval)
 
 	nanotime(&ts);
 	*tval = (uint64_t)ts.tv_nsec / 100 + (uint64_t)ts.tv_sec * 10000000 +
-	    11644473600;
+	    11644473600 * 10000000; /* 100ns ticks from 1601 to 1970 */
 
 	return;
 }
+
+static void
+KeQuerySystemTime(current_time)
+	uint64_t		*current_time;
+{
+	ntoskrnl_time(current_time);
+}
+
+static uint32_t
+KeTickCount(void)
+{
+	struct timeval tv;
+	getmicrouptime(&tv);
+	return tvtohz(&tv);
+}
+
 
 /*
  * KeWaitForSingleObject() is a tricky beast, because it can be used
@@ -3188,6 +3237,16 @@ IoIsWdmVersionAvailable(major, minor)
 }
 
 static ndis_status
+IoGetDeviceObjectPointer(name, reqaccess, fileobj, devobj)
+	unicode_string		*name;
+	uint32_t		reqaccess;
+	void			*fileobj;
+	device_object		*devobj;
+{
+	return(STATUS_SUCCESS);
+}
+
+static ndis_status
 IoGetDeviceProperty(devobj, regprop, buflen, prop, reslen)
 	device_object		*devobj;
 	uint32_t		regprop;
@@ -3338,8 +3397,9 @@ KeSetEvent(kevent, increment, kwait)
 			}
 		} else {
 			w->wb_awakened |= TRUE;
-			cv_broadcastpri(&we->we_cv, w->wb_oldpri -
-			    (increment * 4));
+			cv_broadcastpri(&we->we_cv,
+			    (w->wb_oldpri - (increment * 4)) > PRI_MIN_KERN ?
+			    w->wb_oldpri - (increment * 4) : PRI_MIN_KERN);
 		}
 	}
 
@@ -3586,8 +3646,19 @@ DbgBreakPoint(void)
 #if __FreeBSD_version < 502113
 	Debugger("DbgBreakPoint(): breakpoint");
 #else
-	kdb_enter("DbgBreakPoint(): breakpoint");
+	kdb_enter_why(KDB_WHY_NDIS, "DbgBreakPoint(): breakpoint");
 #endif
+}
+
+static void
+KeBugCheckEx(code, param1, param2, param3, param4)
+    uint32_t			code;
+    u_long			param1;
+    u_long			param2;
+    u_long			param3;
+    u_long			param4;
+{
+	panic("KeBugCheckEx: STOP 0x%X", code);
 }
 
 static void
@@ -4215,6 +4286,7 @@ image_patch_table ntoskrnl_functbl[] = {
 	IMPORT_CFUNC_MAP(_vsnprintf, vsnprintf, 0),
 	IMPORT_CFUNC(DbgPrint, 0),
 	IMPORT_SFUNC(DbgBreakPoint, 0),
+	IMPORT_SFUNC(KeBugCheckEx, 5),
 	IMPORT_CFUNC(strncmp, 0),
 	IMPORT_CFUNC(strcmp, 0),
 	IMPORT_CFUNC_MAP(stricmp, strcasecmp, 0),
@@ -4224,6 +4296,7 @@ image_patch_table ntoskrnl_functbl[] = {
 	IMPORT_CFUNC_MAP(toupper, ntoskrnl_toupper, 0),
 	IMPORT_CFUNC_MAP(tolower, ntoskrnl_tolower, 0),
 	IMPORT_CFUNC_MAP(strstr, ntoskrnl_strstr, 0),
+	IMPORT_CFUNC_MAP(strncat, ntoskrnl_strncat, 0),
 	IMPORT_CFUNC_MAP(strchr, index, 0),
 	IMPORT_CFUNC_MAP(strrchr, rindex, 0),
 	IMPORT_CFUNC(memcpy, 0),
@@ -4330,6 +4403,7 @@ image_patch_table ntoskrnl_functbl[] = {
 	IMPORT_SFUNC(MmUnmapIoSpace, 2),
 	IMPORT_SFUNC(KeInitializeSpinLock, 1),
 	IMPORT_SFUNC(IoIsWdmVersionAvailable, 2),
+	IMPORT_SFUNC(IoGetDeviceObjectPointer, 4),
 	IMPORT_SFUNC(IoGetDeviceProperty, 5),
 	IMPORT_SFUNC(IoAllocateWorkItem, 1),
 	IMPORT_SFUNC(IoFreeWorkItem, 1),
@@ -4365,6 +4439,8 @@ image_patch_table ntoskrnl_functbl[] = {
 	IMPORT_SFUNC(IoWMIRegistrationControl, 2),
 	IMPORT_SFUNC(WmiQueryTraceInformation, 5),
 	IMPORT_CFUNC(WmiTraceMessage, 0),
+	IMPORT_SFUNC(KeQuerySystemTime, 1),
+	IMPORT_CFUNC(KeTickCount, 0),
 
 	/*
 	 * This last entry is a catch-all for any function we haven't

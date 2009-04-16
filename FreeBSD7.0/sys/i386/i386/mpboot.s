@@ -31,7 +31,7 @@
  * mpboot.s:	FreeBSD machine support for the Intel MP Spec
  *		multiprocessor systems.
  *
- * $FreeBSD: src/sys/i386/i386/mpboot.s,v 1.24 2005/01/05 19:10:48 imp Exp $
+ * $FreeBSD: src/sys/i386/i386/mpboot.s,v 1.24.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include "opt_pmap.h"

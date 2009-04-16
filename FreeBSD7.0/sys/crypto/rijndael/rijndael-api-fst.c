@@ -16,7 +16,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/crypto/rijndael/rijndael-api-fst.c,v 1.12 2005/03/11 16:26:10 ume Exp $");
+__FBSDID("$FreeBSD: src/sys/crypto/rijndael/rijndael-api-fst.c,v 1.12.18.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #ifdef _KERNEL

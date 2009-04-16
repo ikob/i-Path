@@ -40,7 +40,7 @@
  *---------------------------------------------------------------------------*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i4b/layer1/isic/i4b_avm_a1.c,v 1.12 2007/07/06 07:17:20 bz Exp $");
+__FBSDID("$FreeBSD: src/sys/i4b/layer1/isic/i4b_avm_a1.c,v 1.12.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_i4b.h"
 
@@ -251,7 +251,7 @@ isic_probe_avma1(device_t dev)
 	/* get the irq number */
 	sc->sc_irq = rman_get_start(sc->sc_resources.irq);
 
-	/* register interupt routine */
+	/* register interrupt routine */
 	if (bus_setup_intr(dev, sc->sc_resources.irq, INTR_TYPE_NET, NULL,
 			(void(*)(void *))(isicintr), sc, &ih) != 0)
 	{

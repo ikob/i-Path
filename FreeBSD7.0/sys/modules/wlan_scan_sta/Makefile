@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/wlan_scan_sta/Makefile,v 1.1 2007/06/11 03:36:54 sam Exp $
+# $FreeBSD: src/sys/modules/wlan_scan_sta/Makefile,v 1.1.6.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../net80211
 

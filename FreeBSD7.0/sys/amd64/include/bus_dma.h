@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/include/bus_dma.h,v 1.30 2005/07/22 04:03:25 obrien Exp $
+ * $FreeBSD: src/sys/amd64/include/bus_dma.h,v 1.30.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _AMD64_BUS_DMA_H_

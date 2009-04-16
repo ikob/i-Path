@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sun4v/include/cpufunc.h,v 1.2 2006/11/11 03:18:07 kmacy Exp $
+ * $FreeBSD: src/sys/sun4v/include/cpufunc.h,v 1.2.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef	_MACHINE_CPUFUNC_H_

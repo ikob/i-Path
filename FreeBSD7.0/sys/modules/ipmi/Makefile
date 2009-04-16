@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/ipmi/Makefile,v 1.2 2006/09/22 22:11:29 jhb Exp $
+# $FreeBSD: src/sys/modules/ipmi/Makefile,v 1.2.6.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../dev/ipmi
 

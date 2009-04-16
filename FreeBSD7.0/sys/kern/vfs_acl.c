@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/vfs_acl.c,v 1.53 2007/03/05 13:26:07 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/vfs_acl.c,v 1.53.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_mac.h"
 
@@ -428,4 +428,4 @@ aclinit(void *dummy __unused)
 	acl_zone = uma_zcreate("ACL UMA zone", sizeof(struct acl),
 	    NULL, NULL, NULL, NULL, UMA_ALIGN_PTR, 0);
 }
-SYSINIT(acls, SI_SUB_ACL, SI_ORDER_FIRST, aclinit, NULL)
+SYSINIT(acls, SI_SUB_ACL, SI_ORDER_FIRST, aclinit, NULL);

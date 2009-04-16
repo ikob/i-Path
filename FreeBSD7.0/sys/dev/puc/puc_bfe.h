@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/puc/puc_bfe.h,v 1.2 2007/02/23 12:18:50 piso Exp $
+ * $FreeBSD: src/sys/dev/puc/puc_bfe.h,v 1.2.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _DEV_PUC_BFE_H_

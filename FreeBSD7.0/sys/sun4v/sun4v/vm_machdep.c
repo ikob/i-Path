@@ -40,7 +40,7 @@
  *	from: @(#)vm_machdep.c	7.3 (Berkeley) 5/13/91
  *	Utah $Hdr: vm_machdep.c 1.16.1.1 89/06/23$
  * 	from: FreeBSD: src/sys/i386/i386/vm_machdep.c,v 1.167 2001/07/12
- * $FreeBSD: src/sys/sun4v/sun4v/vm_machdep.c,v 1.7 2007/09/15 18:47:02 alc Exp $
+ * $FreeBSD: src/sys/sun4v/sun4v/vm_machdep.c,v 1.7.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include "opt_pmap.h"
@@ -111,7 +111,7 @@ cpu_thread_clean(struct thread *td)
 }
 
 void
-cpu_thread_setup(struct thread *td)
+cpu_thread_alloc(struct thread *td)
 {
 	struct pcb *pcb;
 
@@ -124,6 +124,11 @@ cpu_thread_setup(struct thread *td)
 	KASSERT(pcb > (struct pcb *)VM_MIN_DIRECT_ADDRESS,("pcb is NULL"));
 	td->td_pcb = pcb;
 	
+}
+
+void
+cpu_thread_free(struct thread *td)
+{
 }
 
 void

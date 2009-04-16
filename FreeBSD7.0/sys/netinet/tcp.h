@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)tcp.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/netinet/tcp.h,v 1.40 2007/05/25 21:28:49 andre Exp $
+ * $FreeBSD: src/sys/netinet/tcp.h,v 1.40.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _NETINET_TCP_H_
@@ -78,6 +78,8 @@ struct tcphdr {
 
 #define	TCPOPT_EOL		0
 #define	   TCPOLEN_EOL			1
+#define	TCPOPT_PAD		0		/* padding after EOL */
+#define	   TCPOLEN_PAD			1
 #define	TCPOPT_NOP		1
 #define	   TCPOLEN_NOP			1
 #define	TCPOPT_MAXSEG		2
@@ -147,11 +149,15 @@ struct tcphdr {
 #define TCP_NOOPT	0x08	/* don't use TCP options */
 #define TCP_MD5SIG	0x10	/* use MD5 digests (RFC2385) */
 #define	TCP_INFO	0x20	/* retrieve tcp_info structure */
+#define	TCP_CONGESTION	0x40	/* get/set congestion control algorithm */
+
+#define	TCP_CA_NAME_MAX	16	/* max congestion control name length */
 
 #define	TCPI_OPT_TIMESTAMPS	0x01
 #define	TCPI_OPT_SACK		0x02
 #define	TCPI_OPT_WSCALE		0x04
 #define	TCPI_OPT_ECN		0x08
+#define	TCPI_OPT_TOE		0x10
 
 /*
  * The TCP_INFO socket option comes from the Linux 2.6 TCP API, and permits
@@ -208,9 +214,12 @@ struct tcp_info {
 	/* FreeBSD extensions to tcp_info. */
 	u_int32_t	tcpi_snd_wnd;		/* Advertised send window. */
 	u_int32_t	tcpi_snd_bwnd;		/* Bandwidth send window. */
-
+	u_int32_t	tcpi_snd_nxt;		/* Next egress seqno */
+	u_int32_t	tcpi_rcv_nxt;		/* Next ingress seqno */
+	u_int32_t	tcpi_toe_tid;		/* HWTID for TOE endpoints */
+	
 	/* Padding to grow without breaking ABI. */
-	u_int32_t	__tcpi_pad[32];		/* Padding. */
+	u_int32_t	__tcpi_pad[29];		/* Padding. */
 };
 #endif
 

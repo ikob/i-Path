@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/dev/isp/isp_tpublic.h,v 1.19 2007/05/05 20:17:23 mjacob Exp $ */
+/* $FreeBSD: src/sys/dev/isp/isp_tpublic.h,v 1.19.6.1 2008/11/25 02:59:29 kensmith Exp $ */
 /*-
  *  Copyright (c) 1997-2007 by Matthew Jacob
  *  All rights reserved.

@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/bce/if_bce.c,v 1.34 2007/07/31 00:06:04 davidch Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/bce/if_bce.c,v 1.34.2.3.2.5 2008/12/28 05:32:17 delphij Exp $");
 
 /*
  * The following controllers are supported by this driver:
@@ -211,7 +211,7 @@ static struct flash_spec flash_table[] =
 static int  bce_probe				(device_t);
 static int  bce_attach				(device_t);
 static int  bce_detach				(device_t);
-static void bce_shutdown			(device_t);
+static int  bce_shutdown			(device_t);
 
 
 /****************************************************************************/
@@ -915,9 +915,9 @@ bce_detach(device_t dev)
 /* Stops and resets the controller.                                         */
 /*                                                                          */
 /* Returns:                                                                 */
-/*   Nothing                                                                */
+/*   0 on success, positive value on failure.                               */
 /****************************************************************************/
-static void
+static int
 bce_shutdown(device_t dev)
 {
 	struct bce_softc *sc = device_get_softc(dev);
@@ -935,6 +935,8 @@ bce_shutdown(device_t dev)
 	BCE_UNLOCK(sc);
 	
 	DBPRINT(sc, BCE_VERBOSE_SPECIAL, "Exiting %s()\n", __FUNCTION__);
+
+	return (0);
 }
 
 

@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: src/sys/dev/drm/drm_pciids.h,v 1.7 2006/09/07 23:04:47 anholt Exp $
+ * $FreeBSD: src/sys/dev/drm/drm_pciids.h,v 1.7.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 /*
    This file is auto-generated from the drm_pciids.txt in the DRM CVS
@@ -293,6 +293,8 @@
 	{0x8086, 0x2982, 0, "Intel i965G"}, \
 	{0x8086, 0x2992, 0, "Intel i965Q"}, \
 	{0x8086, 0x29A2, 0, "Intel i965G"}, \
+	{0x8086, 0x2A02, 0, "Intel i965GM"}, \
+	{0x8086, 0x2A12, 0, "Intel i965GME"}, \
 	{0, 0, 0, NULL}
 
 #define imagine_PCI_IDS \

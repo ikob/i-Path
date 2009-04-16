@@ -36,7 +36,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)param.h	8.1 (Berkeley) 6/10/93
- * $FreeBSD: src/sys/amd64/include/param.h,v 1.20 2006/01/09 06:05:56 imp Exp $
+ * $FreeBSD: src/sys/amd64/include/param.h,v 1.20.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*
@@ -79,7 +79,7 @@
 #define	MACHINE_ARCH	"amd64"
 #endif
 
-#ifdef SMP
+#if defined(SMP) || defined(KLD_MODULE)
 #define MAXCPU		16
 #else
 #define MAXCPU		1

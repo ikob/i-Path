@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sun4v/sun4v/hcall.S,v 1.18 2006/12/17 01:22:51 kmacy Exp $
+ * $FreeBSD: src/sys/sun4v/sun4v/hcall.S,v 1.18.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include <sys/cdefs.h>

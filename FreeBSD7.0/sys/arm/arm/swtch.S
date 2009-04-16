@@ -83,7 +83,7 @@
 #include <machine/asm.h>
 #include <machine/asmacros.h>
 #include <machine/armreg.h>
-__FBSDID("$FreeBSD: src/sys/arm/arm/swtch.S,v 1.20 2007/08/07 18:20:55 cognet Exp $");
+__FBSDID("$FreeBSD: src/sys/arm/arm/swtch.S,v 1.20.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 
 /*
@@ -187,7 +187,7 @@ ENTRY(cpu_throw)
 	ldr	pc, [r9, #CF_CONTEXT_SWITCH]
 
 	/* Restore all the save registers */
-#ifndef __XSCALE__
+#ifndef _ARM_ARCH_5E
 	add	r1, r7, #PCB_R8
 	ldmia	r1, {r8-r13}
 #else
@@ -249,7 +249,7 @@ ENTRY(cpu_switch)
 	mov	r4, r0 /* Save the old thread. */
 
 	/* Save all the registers in the old thread's pcb */
-#ifndef __XSCALE__
+#ifndef _ARM_ARCH_5E
 	add	r7, r2, #(PCB_R8)
 	stmia	r7, {r8-r13}
 #else
@@ -419,7 +419,7 @@ ENTRY(cpu_switch)
 
         msr	cpsr_c, r3		/* Restore the old mode */
 	/* Restore all the save registers */
-#ifndef __XSCALE__
+#ifndef _ARM_ARCH_5E
 	add	r7, r9, #PCB_R8
 	ldmia	r7, {r8-r13}
 	sub	r7, r7, #PCB_R8		/* restore PCB pointer */

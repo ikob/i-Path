@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/digi/con.MBank.h,v 1.1 2001/05/02 01:08:04 brian Exp $
+ * $FreeBSD: src/sys/dev/digi/con.MBank.h,v 1.1.32.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 const u_char con_MBank[] = {

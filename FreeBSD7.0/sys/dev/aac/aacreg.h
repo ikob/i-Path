@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/dev/aac/aacreg.h,v 1.23.2.1 2007/12/10 20:18:19 emaste Exp $
+ *	$FreeBSD: src/sys/dev/aac/aacreg.h,v 1.23.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*
@@ -1140,6 +1140,7 @@ struct aac_mntobj {
 		u_int32_t	pad[8];
 	} ObjExtension;
 	u_int32_t			AlterEgoId;
+	u_int32_t			CapacityHigh;
 } __packed;
 
 struct aac_mntinfo {

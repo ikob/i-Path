@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/arm/include/exec.h,v 1.3 2005/02/19 21:16:48 ru Exp $
+ * $FreeBSD: src/sys/arm/include/exec.h,v 1.3.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef	_MACHINE_EXEC_H_

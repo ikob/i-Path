@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ata/ata-pci.h,v 1.81.2.1 2007/11/21 21:15:00 sos Exp $
+ * $FreeBSD: src/sys/dev/ata/ata-pci.h,v 1.81.2.7.2.2 2008/12/29 01:06:11 delphij Exp $
  */
 
 /* structure holding chipset config info */
@@ -104,7 +104,9 @@ struct ata_connect_task {
 #define ATA_ATI_IXP400_S1       0x43791002
 #define ATA_ATI_IXP400_S2       0x437a1002
 #define ATA_ATI_IXP600          0x438c1002
+#define ATA_ATI_IXP600_S1       0x43801002
 #define ATA_ATI_IXP700          0x439c1002
+#define ATA_ATI_IXP700_S1       0x43901002
 
 #define ATA_CENATEK_ID          0x16ca
 #define ATA_CENATEK_ROCKET      0x000116ca
@@ -168,12 +170,15 @@ struct ata_connect_task {
 #define ATA_I82801HB_R1         0x28228086
 #define ATA_I82801HB_AH4        0x28248086
 #define ATA_I82801HB_S2         0x28258086
-#define ATA_I82801HBM_S1        0x28298086
-#define ATA_I82801HBM_S2        0x282a8086
+#define ATA_I82801HBM           0x28508086
+#define ATA_I82801HBM_S1        0x28288086
+#define ATA_I82801HBM_S2        0x28298086
+#define ATA_I82801HBM_S3        0x282a8086
 #define ATA_I82801IB_S1         0x29208086
 #define ATA_I82801IB_AH2        0x29218086
 #define ATA_I82801IB_AH6        0x29228086
 #define ATA_I82801IB_AH4        0x29238086
+#define ATA_I82801IB_R1         0x29258086
 #define ATA_I82801IB_S2         0x29268086
 #define ATA_I31244              0x32008086
 
@@ -299,6 +304,7 @@ struct ata_connect_task {
 #define ATA_SII3112_1           0x02401095
 #define ATA_SII3124		0x31241095
 #define ATA_SII3132		0x31321095
+#define ATA_SII3132_1		0x02421095
 #define ATA_SII0680             0x06801095
 #define ATA_CMD646              0x06461095
 #define ATA_CMD648              0x06481095
@@ -382,6 +388,10 @@ struct ata_connect_task {
 #define ALIOLD          0x01
 #define ALINEW          0x02
 #define ALISATA         0x04
+
+#define ATIPATA		0x01
+#define ATISATA		0x02
+#define ATIAHCI		0x04
 
 #define HPT366          0
 #define HPT370          1

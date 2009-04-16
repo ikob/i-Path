@@ -1,5 +1,5 @@
 /*-
-% * Copyright (c) 2005 M. Warner Losh.
+ * Copyright (c) 2005 M. Warner Losh.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/arm/include/_bus.h,v 1.1 2005/04/18 21:45:33 imp Exp $
+ * $FreeBSD: src/sys/arm/include/_bus.h,v 1.1.10.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef ARM_INCLUDE__BUS_H

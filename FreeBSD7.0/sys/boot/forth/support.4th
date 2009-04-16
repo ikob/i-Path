@@ -22,7 +22,7 @@
 \ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 \ SUCH DAMAGE.
 \
-\ $FreeBSD: src/sys/boot/forth/support.4th,v 1.16 2006/10/13 20:48:17 ru Exp $
+\ $FreeBSD: src/sys/boot/forth/support.4th,v 1.16.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
 
 \ Loader.rc support functions:
 \
@@ -463,8 +463,10 @@ also parser definitions also
 
 : digit?
   line_pointer c@ >r
+  r@ [char] - =
   r@ [char] 0 >=
   r> [char] 9 <= and
+  or
 ;
 
 : quote?

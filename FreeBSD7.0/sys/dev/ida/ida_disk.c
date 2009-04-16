@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ida/ida_disk.c,v 1.46 2005/05/29 04:42:20 nyan Exp $
+ * $FreeBSD: src/sys/dev/ida/ida_disk.c,v 1.46.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

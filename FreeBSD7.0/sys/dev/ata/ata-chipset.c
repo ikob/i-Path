@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ata/ata-chipset.c,v 1.202.2.5.2.1 2008/01/09 08:55:10 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ata/ata-chipset.c,v 1.202.2.15.2.2 2008/12/29 01:06:11 delphij Exp $");
 
 #include "opt_ata.h"
 #include <sys/param.h>
@@ -1341,14 +1341,16 @@ ata_ati_ident(device_t dev)
 {
     struct ata_pci_controller *ctlr = device_get_softc(dev);
     static struct ata_chip_id ids[] =
-    {{ ATA_ATI_IXP200,    0x00, 0,        0, ATA_UDMA5, "IXP200" },
-     { ATA_ATI_IXP300,    0x00, 0,        0, ATA_UDMA6, "IXP300" },
-     { ATA_ATI_IXP300_S1, 0x00, SIIMEMIO, 0, ATA_SA150, "IXP300" },
-     { ATA_ATI_IXP400,    0x00, 0,        0, ATA_UDMA6, "IXP400" },
-     { ATA_ATI_IXP400_S1, 0x00, SIIMEMIO, 0, ATA_SA150, "IXP400" },
-     { ATA_ATI_IXP400_S2, 0x00, SIIMEMIO, 0, ATA_SA150, "IXP400" },
-     { ATA_ATI_IXP600,    0x00, 0,        0, ATA_UDMA6, "IXP600" },
-     { ATA_ATI_IXP700,    0x00, 0,        0, ATA_UDMA6, "IXP700" },
+    {{ ATA_ATI_IXP200,    0x00, 0, ATIPATA, ATA_UDMA5, "IXP200" },
+     { ATA_ATI_IXP300,    0x00, 0, ATIPATA, ATA_UDMA6, "IXP300" },
+     { ATA_ATI_IXP300_S1, 0x00, 0, ATISATA, ATA_SA150, "IXP300" },
+     { ATA_ATI_IXP400,    0x00, 0, ATIPATA, ATA_UDMA6, "IXP400" },
+     { ATA_ATI_IXP400_S1, 0x00, 0, ATISATA, ATA_SA150, "IXP400" },
+     { ATA_ATI_IXP400_S2, 0x00, 0, ATISATA, ATA_SA150, "IXP400" },
+     { ATA_ATI_IXP600,    0x00, 0, ATIPATA, ATA_UDMA6, "IXP600" },
+     { ATA_ATI_IXP600_S1, 0x00, 0, ATIAHCI, ATA_SA300, "IXP600" },
+     { ATA_ATI_IXP700,    0x00, 0, ATIPATA, ATA_UDMA6, "IXP700" },
+     { ATA_ATI_IXP700_S1, 0x00, 0, ATIAHCI, ATA_SA300, "IXP700" },
      { 0, 0, 0, 0, 0, 0}};
 
     if (!(ctlr->chip = ata_match_chip(dev, ids)))
@@ -1356,11 +1358,19 @@ ata_ati_ident(device_t dev)
 
     ata_set_desc(dev);
 
-    /* the ATI SATA controller is actually a SiI 3112 controller*/
-    if (ctlr->chip->cfg1 & SIIMEMIO)
-	ctlr->chipinit = ata_sii_chipinit;
-    else
+    switch (ctlr->chip->cfg2) {
+    case ATIPATA:
 	ctlr->chipinit = ata_ati_chipinit;
+	break;
+    case ATISATA:
+	/* the ATI SATA controller is actually a SiI 3112 controller */
+	ctlr->chip->cfg1 = SIIMEMIO;
+	ctlr->chipinit = ata_sii_chipinit;
+	break;
+    case ATIAHCI:
+	ctlr->chipinit = ata_ahci_chipinit;
+	break;
+    }
     return 0;
 }
 
@@ -1490,7 +1500,7 @@ ata_cyrix_setmode(device_t dev, int mode)
     int error;
 
     ch->dma->alignment = 16;
-    ch->dma->max_iosize = 126 * DEV_BSIZE;
+    ch->dma->max_iosize = 64 * DEV_BSIZE;
 
     mode = ata_limit_mode(dev, mode, ATA_UDMA2);
 
@@ -1793,13 +1803,16 @@ ata_intel_ident(device_t dev)
      { ATA_I82801HB_R1,  0, AHCI, 0x00, ATA_SA300, "ICH8" },
      { ATA_I82801HB_AH4, 0, AHCI, 0x00, ATA_SA300, "ICH8" },
      { ATA_I82801HB_AH6, 0, AHCI, 0x00, ATA_SA300, "ICH8" },
-     { ATA_I82801HBM_S1, 0, AHCI, 0x00, ATA_SA300, "ICH8M" },
+     { ATA_I82801HBM,    0,    0, 0x00, ATA_UDMA5, "ICH8M" },
+     { ATA_I82801HBM_S1, 0,    0, 0x00, ATA_SA150, "ICH8M" },
      { ATA_I82801HBM_S2, 0, AHCI, 0x00, ATA_SA300, "ICH8M" },
+     { ATA_I82801HBM_S3, 0, AHCI, 0x00, ATA_SA300, "ICH8M" },
      { ATA_I82801IB_S1,  0, AHCI, 0x00, ATA_SA300, "ICH9" },
      { ATA_I82801IB_S2,  0, AHCI, 0x00, ATA_SA300, "ICH9" },
      { ATA_I82801IB_AH2, 0, AHCI, 0x00, ATA_SA300, "ICH9" },
      { ATA_I82801IB_AH4, 0, AHCI, 0x00, ATA_SA300, "ICH9" },
      { ATA_I82801IB_AH6, 0, AHCI, 0x00, ATA_SA300, "ICH9" },
+     { ATA_I82801IB_R1,  0, AHCI, 0x00, ATA_SA300, "ICH9" },
      { ATA_I31244,       0,    0, 0x00, ATA_SA150, "31244" },
      { 0, 0, 0, 0, 0, 0}};
 
@@ -2879,7 +2892,7 @@ ata_marvell_edma_dmainit(device_t dev)
 	    ch->dma->max_address = BUS_SPACE_MAXADDR;
 
 	/* chip does not reliably do 64K DMA transfers */
-	ch->dma->max_iosize = 126 * DEV_BSIZE; 
+	ch->dma->max_iosize = 64 * DEV_BSIZE; 
     }
 }
 
@@ -2929,7 +2942,7 @@ ata_national_setmode(device_t dev, int mode)
     int error;
 
     ch->dma->alignment = 16;
-    ch->dma->max_iosize = 126 * DEV_BSIZE;
+    ch->dma->max_iosize = 64 * DEV_BSIZE;
 
     mode = ata_limit_mode(dev, mode, ATA_UDMA2);
 
@@ -4179,7 +4192,7 @@ ata_serverworks_ident(device_t dev)
      { ATA_CSB6,      0x00, SWKS100, 0, ATA_UDMA5, "CSB6" },
      { ATA_CSB6_1,    0x00, SWKS66,  0, ATA_UDMA4, "CSB6" },
      { ATA_HT1000,    0x00, SWKS100, 0, ATA_UDMA5, "HT1000" },
-     { ATA_HT1000_S1, 0x00, SWKS100, 4, ATA_SA150, "HT1000" },
+     { ATA_HT1000_S1, 0x00, SWKSMIO, 4, ATA_SA150, "HT1000" },
      { ATA_HT1000_S2, 0x00, SWKSMIO, 4, ATA_SA150, "HT1000" },
      { ATA_K2,        0x00, SWKSMIO, 4, ATA_SA150, "K2" },
      { ATA_FRODO4,    0x00, SWKSMIO, 4, ATA_SA150, "Frodo4" },
@@ -4282,7 +4295,7 @@ ata_serverworks_allocate(device_t dev)
 
     /* chip does not reliably do 64K DMA transfers */
     if (ch->dma)
-	ch->dma->max_iosize = 126 * DEV_BSIZE;
+	ch->dma->max_iosize = 64 * DEV_BSIZE;
 
     return 0;
 }
@@ -4445,6 +4458,7 @@ ata_sii_ident(device_t dev)
      { ATA_SII3112_1, 0x00, SIIMEMIO, SIIBUG,    ATA_SA150, "SiI 3112" },
      { ATA_SII3124,   0x00, SIIPRBIO, SII4CH,    ATA_SA300, "SiI 3124" },
      { ATA_SII3132,   0x00, SIIPRBIO, 0,         ATA_SA300, "SiI 3132" },
+     { ATA_SII3132_1, 0x00, SIIPRBIO, 0,         ATA_SA300, "SiI 3132" },
      { ATA_SII0680,   0x00, SIIMEMIO, SIISETCLK, ATA_UDMA6, "SiI 0680" },
      { ATA_CMD649,    0x00, 0,        SIIINTR,   ATA_UDMA5, "CMD 649" },
      { ATA_CMD648,    0x00, 0,        SIIINTR,   ATA_UDMA4, "CMD 648" },
@@ -4503,12 +4517,15 @@ ata_sii_chipinit(device_t dev)
 	ctlr->r_type2 = SYS_RES_MEMORY;
 	ctlr->r_rid2 = PCIR_BAR(5);
 	if (!(ctlr->r_res2 = bus_alloc_resource_any(dev, ctlr->r_type2,
-						    &ctlr->r_rid2, RF_ACTIVE)))
-	    return ENXIO;
+						    &ctlr->r_rid2, RF_ACTIVE))) {
+	    if (ctlr->chip->chipid != ATA_SII0680 ||
+			    (pci_read_config(dev, 0x8a, 1) & 1))
+		return ENXIO;
+	}
 
 	if (ctlr->chip->cfg2 & SIISETCLK) {
 	    if ((pci_read_config(dev, 0x8a, 1) & 0x30) != 0x10)
-		pci_write_config(dev, 0x8a, 
+		pci_write_config(dev, 0x8a,
 				 (pci_read_config(dev, 0x8a, 1) & 0xcf)|0x10,1);
 	    if ((pci_read_config(dev, 0x8a, 1) & 0x30) != 0x10)
 		device_printf(dev, "%s could not set ATA133 clock\n",
@@ -4528,7 +4545,9 @@ ata_sii_chipinit(device_t dev)
 	/* enable PCI interrupt as BIOS might not */
 	pci_write_config(dev, 0x8a, (pci_read_config(dev, 0x8a, 1) & 0x3f), 1);
 
-	ctlr->allocate = ata_sii_allocate;
+	if (ctlr->r_res2)
+	    ctlr->allocate = ata_sii_allocate;
+
 	if (ctlr->chip->max_dma >= ATA_SA150) {
 	    ctlr->reset = ata_sii_reset;
 	    ctlr->setmode = ata_sata_setmode;
@@ -5810,6 +5829,12 @@ static int
 ata_check_80pin(device_t dev, int mode)
 {
     struct ata_device *atadev = device_get_softc(dev);
+
+    if (!ata_dma_check_80pin) {
+	if (bootverbose)
+	    device_printf(dev, "Skipping 80pin cable check\n");
+	return mode;
+    }
 
     if (mode > ATA_UDMA2 && !(atadev->param.hwres & ATA_CABLE_ID)) {
 	ata_print_cable(dev, "device");

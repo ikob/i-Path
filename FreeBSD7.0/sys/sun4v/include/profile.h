@@ -26,7 +26,7 @@
  *
  *	from: NetBSD: profile.h,v 1.9 1997/04/06 08:47:37 cgd Exp
  *	from: FreeBSD: src/sys/alpha/include/profile.h,v 1.4 1999/12/29
- * $FreeBSD: src/sys/sun4v/include/profile.h,v 1.2 2007/05/11 23:43:55 marius Exp $
+ * $FreeBSD: src/sys/sun4v/include/profile.h,v 1.2.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _MACHINE_PROFILE_H_

@@ -1,7 +1,7 @@
 /*	$NetBSD: usbdi.c,v 1.106 2004/10/24 12:52:40 augustss Exp $	*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/usbdi.c,v 1.103 2007/06/30 20:18:44 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/usbdi.c,v 1.103.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
@@ -382,8 +382,10 @@ usbd_start_transfer(void *arg, bus_dma_segment_t *segs, int nseg, int error)
 			 * sync the dmamap for the request data in the SETUP
 			 * packet.
 			 */
-			bus_dmamap_sync(tag, dmap->map, BUS_DMASYNC_PREWRITE);
-		}
+			bus_dmamap_sync(tag, dmap->map,
+			    BUS_DMASYNC_PREREAD | BUS_DMASYNC_PREWRITE);
+		} else
+			bus_dmamap_sync(tag, dmap->map, BUS_DMASYNC_PREREAD);
 	}
 	err = pipe->methods->transfer(xfer);
 	if (err != USBD_IN_PROGRESS && err) {

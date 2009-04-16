@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)specialreg.h	7.1 (Berkeley) 5/9/91
- * $FreeBSD: src/sys/amd64/include/specialreg.h,v 1.40 2007/08/15 19:26:01 des Exp $
+ * $FreeBSD: src/sys/amd64/include/specialreg.h,v 1.40.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _MACHINE_SPECIALREG_H_
@@ -134,6 +134,7 @@
 #define	AMDID_NX	0x00100000
 #define	AMDID_EXT_MMX	0x00400000
 #define	AMDID_FFXSR	0x01000000
+#define	AMDID_PAGE1GB	0x04000000
 #define	AMDID_RDTSCP	0x08000000
 #define	AMDID_LM	0x20000000
 #define	AMDID_EXT_3DNOW	0x40000000
@@ -255,9 +256,24 @@
 /*
  * Constants related to MTRRs
  */
+#define	MTRR_UNCACHEABLE	0x00
+#define	MTRR_WRITE_COMBINING	0x01
+#define	MTRR_WRITE_THROUGH	0x04
+#define	MTRR_WRITE_PROTECTED	0x05
+#define	MTRR_WRITE_BACK		0x06
 #define	MTRR_N64K		8	/* numbers of fixed-size entries */
 #define	MTRR_N16K		16
 #define	MTRR_N4K		64
+#define	MTRR_CAP_WC		0x0000000000000400UL
+#define	MTRR_CAP_FIXED		0x0000000000000100UL
+#define	MTRR_CAP_VCNT		0x00000000000000ffUL
+#define	MTRR_DEF_ENABLE		0x0000000000000800UL
+#define	MTRR_DEF_FIXED_ENABLE	0x0000000000000400UL
+#define	MTRR_DEF_TYPE		0x00000000000000ffUL
+#define	MTRR_PHYSBASE_PHYSBASE	0x000ffffffffff000UL
+#define	MTRR_PHYSBASE_TYPE	0x00000000000000ffUL
+#define	MTRR_PHYSMASK_PHYSMASK	0x000ffffffffff000UL
+#define	MTRR_PHYSMASK_VALID	0x0000000000000800UL
 
 /* Performance Control Register (5x86 only). */
 #define	PCR0			0x20

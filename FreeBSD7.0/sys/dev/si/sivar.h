@@ -17,7 +17,7 @@
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN
  * NO EVENT SHALL THE AUTHORS BE LIABLE.
  *
- * $FreeBSD: src/sys/dev/si/sivar.h,v 1.4 2005/01/06 01:43:14 imp Exp $
+ * $FreeBSD: src/sys/dev/si/sivar.h,v 1.4.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifdef _KERNEL

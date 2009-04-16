@@ -82,7 +82,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/subr_witness.c,v 1.236.2.1 2007/11/27 13:18:54 attilio Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/subr_witness.c,v 1.236.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_ddb.h"
 #include "opt_hwpmc_hooks.h"
@@ -313,7 +313,7 @@ static struct witness_order_list_entry order_lists[] = {
 	/*
 	 * Multicast - protocol locks before interface locks, after UDP locks.
 	 */
-	{ "udpinp", &lock_class_mtx_sleep },
+	{ "udpinp", &lock_class_rw },
 	{ "in_multi_mtx", &lock_class_mtx_sleep },
 	{ "igmp_mtx", &lock_class_mtx_sleep },
 	{ "if_addr_mtx", &lock_class_mtx_sleep },
@@ -327,15 +327,15 @@ static struct witness_order_list_entry order_lists[] = {
 	/*
 	 * UDP/IP
 	 */
-	{ "udp", &lock_class_mtx_sleep },
-	{ "udpinp", &lock_class_mtx_sleep },
+	{ "udp", &lock_class_rw },
+	{ "udpinp", &lock_class_rw },
 	{ "so_snd", &lock_class_mtx_sleep },
 	{ NULL, NULL },
 	/*
 	 * TCP/IP
 	 */
-	{ "tcp", &lock_class_mtx_sleep },
-	{ "tcpinp", &lock_class_mtx_sleep },
+	{ "tcp", &lock_class_rw },
+	{ "tcpinp", &lock_class_rw },
 	{ "so_snd", &lock_class_mtx_sleep },
 	{ NULL, NULL },
 	/*
@@ -561,7 +561,8 @@ witness_initialize(void *dummy __unused)
 
 	mtx_lock(&Giant);
 }
-SYSINIT(witness_init, SI_SUB_WITNESS, SI_ORDER_FIRST, witness_initialize, NULL)
+SYSINIT(witness_init, SI_SUB_WITNESS, SI_ORDER_FIRST, witness_initialize,
+    NULL);
 
 static int
 sysctl_debug_witness_watch(SYSCTL_HANDLER_ARGS)
@@ -1122,7 +1123,7 @@ debugger:
 	if (witness_trace)
 		kdb_backtrace();
 	if (witness_kdb)
-		kdb_enter(__func__);
+		kdb_enter_why(KDB_WHY_WITNESS, __func__);
 #endif
 }
 
@@ -1395,7 +1396,7 @@ witness_warn(int flags, struct lock_object *lock, const char *fmt, ...)
 		panic("witness_warn");
 #ifdef KDB
 	else if (witness_kdb && n)
-		kdb_enter(__func__);
+		kdb_enter_why(KDB_WHY_WITNESS, __func__);
 	else if (witness_trace && n)
 		kdb_backtrace();
 #endif

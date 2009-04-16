@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/arm/nexus.c,v 1.11 2007/02/23 12:18:27 piso Exp $");
+__FBSDID("$FreeBSD: src/sys/arm/arm/nexus.c,v 1.11.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -128,6 +128,9 @@ nexus_setup_intr(device_t dev, device_t child, struct resource *res, int flags,
     driver_filter_t *filt, driver_intr_t *intr, void *arg, void **cookiep)
 {
 	int i;
+
+	if ((rman_get_flags(res) & RF_SHAREABLE) == 0)
+		flags |= INTR_EXCL;
 
 	for (i = rman_get_start(res); i <= rman_get_end(res); i++)
 		arm_setup_irqhandler(device_get_nameunit(child), 

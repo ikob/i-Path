@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/ie/Makefile,v 1.2 2005/01/26 16:26:06 imp Exp $
+# $FreeBSD: src/sys/modules/ie/Makefile,v 1.2.18.1 2008/11/25 02:59:29 kensmith Exp $
 #
 
 .PATH:	${.CURDIR}/../../dev/ie

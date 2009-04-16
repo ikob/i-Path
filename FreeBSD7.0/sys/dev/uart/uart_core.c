@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/uart/uart_core.c,v 1.22 2007/04/02 22:00:22 marcel Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/uart/uart_core.c,v 1.22.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #ifndef KLD_MODULE
 #include "opt_comconsole.h"
@@ -122,7 +122,7 @@ uart_intr_break(void *arg)
 
 #if defined(KDB) && defined(BREAK_TO_DEBUGGER)
 	if (sc->sc_sysdev != NULL && sc->sc_sysdev->type == UART_DEV_CONSOLE) {
-		kdb_enter("Line break on console");
+		kdb_enter_why(KDB_WHY_BREAK, "Line break on console");
 		return (0);
 	}
 #endif
@@ -176,7 +176,8 @@ uart_intr_rxready(void *arg)
 	if (sc->sc_sysdev != NULL && sc->sc_sysdev->type == UART_DEV_CONSOLE) {
 		while (rxp != sc->sc_rxput) {
 			if (kdb_alt_break(sc->sc_rxbuf[rxp++], &sc->sc_altbrk))
-				kdb_enter("Break sequence on console");
+				kdb_enter_why(KDB_WHY_BREAK,
+				    "Break sequence on console");
 			if (rxp == sc->sc_rxbufsz)
 				rxp = 0;
 		}

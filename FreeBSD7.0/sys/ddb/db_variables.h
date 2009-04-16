@@ -23,7 +23,7 @@
  * any improvements or extensions that they make and grant Carnegie the
  * rights to redistribute these changes.
  *
- * $FreeBSD: src/sys/ddb/db_variables.h,v 1.14 2005/01/06 01:34:41 imp Exp $
+ * $FreeBSD: src/sys/ddb/db_variables.h,v 1.14.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

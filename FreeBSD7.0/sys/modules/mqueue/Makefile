@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/mqueue/Makefile,v 1.2 2005/11/27 08:30:12 davidxu Exp $
+# $FreeBSD: src/sys/modules/mqueue/Makefile,v 1.2.6.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../kern
 

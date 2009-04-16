@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/crypto/sha2/sha2.h,v 1.2 2002/03/20 05:13:51 alfred Exp $	*/
+/*	$FreeBSD: src/sys/crypto/sha2/sha2.h,v 1.2.32.1 2008/11/25 02:59:29 kensmith Exp $	*/
 /*	$KAME: sha2.h,v 1.3 2001/03/12 08:27:48 itojun Exp $	*/
 
 /*

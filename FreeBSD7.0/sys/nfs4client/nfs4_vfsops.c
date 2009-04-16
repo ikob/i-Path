@@ -59,7 +59,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/nfs4client/nfs4_vfsops.c,v 1.27 2007/01/25 14:18:40 bde Exp $");
+__FBSDID("$FreeBSD: src/sys/nfs4client/nfs4_vfsops.c,v 1.27.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_bootp.h"
 #include "opt_nfsroot.h"
@@ -812,7 +812,8 @@ nfs4_do_setclientid(struct nfsmount *nmp, struct ucred *cred)
 #ifdef NFS4_USE_RPCCLNT
 	ro.ro_dst = *nmp->nm_rpcclnt.rc_name;
 #endif
-	rtalloc(&ro);
+/* XXX MRT NFS uses table 0 */
+	in_rtalloc(&ro, 0);
 	if (ro.ro_rt == NULL) {
 		error = EHOSTUNREACH;
 		goto nfsmout;

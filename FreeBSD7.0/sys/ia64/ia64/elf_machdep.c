@@ -22,7 +22,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/ia64/ia64/elf_machdep.c,v 1.24 2007/05/22 02:22:58 kan Exp $
+ * $FreeBSD: src/sys/ia64/ia64/elf_machdep.c,v 1.24.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include <sys/param.h>
@@ -295,6 +295,10 @@ elf_cpu_load_file(linker_file_t lf)
 		}
 		++ph;
 	}
+
+	/* Invalidate the I-cache, but not for the kernel itself. */
+	if (lf->id != 1)
+		ia64_invalidate_icache((uintptr_t)lf->address, lf->size);
 
 	return (0);
 }

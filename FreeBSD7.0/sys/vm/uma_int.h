@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/vm/uma_int.h,v 1.38 2007/05/09 22:53:34 rwatson Exp $
+ * $FreeBSD: src/sys/vm/uma_int.h,v 1.38.6.1 2008/11/25 02:59:29 kensmith Exp $
  *
  */
 

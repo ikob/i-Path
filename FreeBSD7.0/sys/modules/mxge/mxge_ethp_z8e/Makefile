@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/mxge/mxge_ethp_z8e/Makefile,v 1.3 2007/07/19 16:16:00 gallatin Exp $
+# $FreeBSD: src/sys/modules/mxge/mxge_ethp_z8e/Makefile,v 1.3.6.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../../dev/mxge
 KMOD=	mxge_ethp_z8e

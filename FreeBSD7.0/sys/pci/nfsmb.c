@@ -1,5 +1,31 @@
+/*-
+ * Copyright (c) 2005 Ruslan Ermilov
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ */
+
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/pci/nfsmb.c,v 1.6.2.1 2007/11/14 19:40:56 remko Exp $");
+__FBSDID("$FreeBSD: src/sys/pci/nfsmb.c,v 1.6.2.10.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -38,6 +64,7 @@ static int nfsmb_debug = 0;
 #define	NFSMB_DEVICEID_NF4_51_SMB	0x0264
 #define	NFSMB_DEVICEID_NF4_55_SMB	0x0368
 #define	NFSMB_DEVICEID_NF4_61_SMB	0x03eb
+#define	NFSMB_DEVICEID_NF4_65_SMB	0x0446
 
 /* PCI Configuration space registers */
 #define	NF2PCI_SMBASE_1		PCIR_BAR(4)
@@ -132,6 +159,7 @@ nfsmb_probe(device_t dev)
 		case NFSMB_DEVICEID_NF4_51_SMB:
 		case NFSMB_DEVICEID_NF4_55_SMB:
 		case NFSMB_DEVICEID_NF4_61_SMB:
+		case NFSMB_DEVICEID_NF4_65_SMB:
 			device_set_desc(dev, "nForce2/3/4 MCP SMBus Controller");
 			return (BUS_PROBE_DEFAULT);
 		}
@@ -222,6 +250,7 @@ nfsmb_attach(device_t dev)
 	case NFSMB_DEVICEID_NF4_51_SMB:
 	case NFSMB_DEVICEID_NF4_55_SMB:
 	case NFSMB_DEVICEID_NF4_61_SMB:
+	case NFSMB_DEVICEID_NF4_65_SMB:
 		/* Trying to add secondary device as slave */
 		nfsmb_sc->subdev = device_add_child(dev, "nfsmb", -1);
 		if (!nfsmb_sc->subdev) {

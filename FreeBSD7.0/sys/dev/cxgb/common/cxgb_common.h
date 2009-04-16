@@ -1,6 +1,6 @@
 /**************************************************************************
 
-Copyright (c) 2007, Chelsio Inc.
+Copyright (c) 2007-2008, Chelsio Inc.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-$FreeBSD: src/sys/dev/cxgb/common/cxgb_common.h,v 1.7 2007/09/09 01:28:03 kmacy Exp $
+$FreeBSD: src/sys/dev/cxgb/common/cxgb_common.h,v 1.7.2.3.2.2 2008/12/19 05:05:35 kmacy Exp $
 
 ***************************************************************************/
 #ifndef __CHELSIO_COMMON_H
@@ -41,16 +41,14 @@ enum {
 	MAX_FRAME_SIZE = 10240, /* max MAC frame size, includes header + FCS */
 	EEPROMSIZE     = 8192,  /* Serial EEPROM size */
 	SERNUM_LEN     = 16,    /* Serial # length */
+	ECNUM_LEN      = 16,    /* EC # length */
 	RSS_TABLE_SIZE = 64,    /* size of RSS lookup and mapping tables */
 	TCB_SIZE       = 128,   /* TCB size */
 	NMTUS          = 16,    /* size of MTU table */
 	NCCTRL_WIN     = 32,    /* # of congestion control windows */
 	NTX_SCHED      = 8,     /* # of HW Tx scheduling queues */
 	PROTO_SRAM_LINES = 128, /* size of protocol sram */
-	MAX_NPORTS     = 4,
-	TP_TMR_RES     = 200,
-	TP_SRAM_OFFSET = 4096,	/* TP SRAM content offset in eeprom */
-	TP_SRAM_LEN    = 2112,	/* TP SRAM content offset in eeprom */
+	EXACT_ADDR_FILTERS = 8,	/* # of HW exact match filters */
 };
 
 #define MAX_RX_COALESCING_LEN 12288U
@@ -98,8 +96,8 @@ enum {
 	    (((x) >> S_TP_VERSION_MICRO) & M_TP_VERSION_MICRO)
 
 enum {
-	FW_VERSION_MAJOR = 4,
-	FW_VERSION_MINOR = 7,
+	FW_VERSION_MAJOR = 5,
+	FW_VERSION_MINOR = 0,
 	FW_VERSION_MICRO = 0
 };
 
@@ -110,10 +108,10 @@ enum {
 };
 
 enum sge_context_type {           /* SGE egress context types */
-	SGE_CNTXT_RDMA  = 0,
-	SGE_CNTXT_ETH   = 2,
-	SGE_CNTXT_OFLD  = 4,
-	SGE_CNTXT_CTRL  = 5
+	SGE_CNTXT_RDMA = 0,
+	SGE_CNTXT_ETH  = 2,
+	SGE_CNTXT_OFLD = 4,
+	SGE_CNTXT_CTRL = 5
 };
 
 enum {
@@ -122,8 +120,8 @@ enum {
 };
 
 struct sg_ent {                   /* SGE scatter/gather entry */
-	u32 len[2];
-	u64 addr[2];
+	__be32 len[2];
+	__be64 addr[2];
 };
 
 #ifndef SGE_NUM_GENBITS
@@ -134,12 +132,14 @@ struct sg_ent {                   /* SGE scatter/gather entry */
 #define TX_DESC_FLITS 16U
 #define WR_FLITS (TX_DESC_FLITS + 1 - SGE_NUM_GENBITS)
 
+#define MAX_PHYINTRS 4
+
 struct cphy;
 
 struct mdio_ops {
 	int  (*read)(adapter_t *adapter, int phy_addr, int mmd_addr,
 		     int reg_addr, unsigned int *val);
-        int  (*write)(adapter_t *adapter, int phy_addr, int mmd_addr,
+	int  (*write)(adapter_t *adapter, int phy_addr, int mmd_addr,
 		      int reg_addr, unsigned int val);
 };
 
@@ -150,17 +150,10 @@ struct adapter_info {
 	unsigned char          mdien:1;
 	unsigned char          mdiinv:1;
 	unsigned int           gpio_out;       /* GPIO output settings */
-	unsigned int           gpio_intr;      /* GPIO IRQ enable mask */
+	unsigned char gpio_intr[MAX_PHYINTRS]; /* GPIO PHY IRQ pins */
 	unsigned long          caps;           /* adapter capabilities */
 	const struct mdio_ops *mdio_ops;       /* MDIO operations */
 	const char            *desc;           /* product description */
-};
-
-struct port_type_info {
-	void (*phy_prep)(struct cphy *phy, adapter_t *adapter, int phy_addr,
-			 const struct mdio_ops *ops);
-	unsigned int caps;
-	const char *desc;
 };
 
 struct mc5_stats {
@@ -307,7 +300,7 @@ struct tp_params {
 struct qset_params {                   /* SGE queue set parameters */
 	unsigned int polling;          /* polling/interrupt service for rspq */
 	unsigned int lro;              /* large receive offload */
-	unsigned int coalesce_nsecs;   /* irq coalescing timer */
+	unsigned int coalesce_usecs;   /* irq coalescing timer */
 	unsigned int rspq_size;        /* # of entries in response queue */
 	unsigned int fl_size;          /* # of entries in regular free list */
 	unsigned int jumbo_size;       /* # of entries in jumbo free list */
@@ -350,6 +343,7 @@ struct vpd_params {
 	unsigned int mdc;
 	unsigned int mem_timing;
 	u8 sn[SERNUM_LEN + 1];
+	u8 ec[ECNUM_LEN + 1];
 	u8 eth_base[6];
 	u8 port_type[MAX_NPORTS];
 	unsigned short xauicfg[2];
@@ -402,9 +396,9 @@ enum {					    /* chip revisions */
 
 struct trace_params {
 	u32 sip;
-       	u32 sip_mask;
+	u32 sip_mask;
 	u32 dip;
-       	u32 dip_mask;
+	u32 dip_mask;
 	u16 sport;
 	u16 sport_mask;
 	u16 dport;
@@ -420,14 +414,14 @@ struct trace_params {
 struct link_config {
 	unsigned int   supported;        /* link capabilities */
 	unsigned int   advertising;      /* advertised capabilities */
-        unsigned short requested_speed;  /* speed user has requested */
+	unsigned short requested_speed;  /* speed user has requested */
 	unsigned short speed;            /* actual link speed */
-        unsigned char  requested_duplex; /* duplex user has requested */
+	unsigned char  requested_duplex; /* duplex user has requested */
 	unsigned char  duplex;           /* actual link duplex */
 	unsigned char  requested_fc;     /* flow control user has requested */
 	unsigned char  fc;               /* actual link flow control */
 	unsigned char  autoneg;          /* autonegotiating? */
-	unsigned int link_ok;          /* link up? */
+	unsigned int   link_ok;          /* link up? */
 };
 
 #define SPEED_INVALID   0xffff
@@ -486,12 +480,25 @@ enum {
 	MAC_RXFIFO_SIZE  = 32768
 };
 
-/* IEEE 802.3ae specified MDIO devices */
+/* IEEE 802.3 specified MDIO devices */
 enum {
 	MDIO_DEV_PMA_PMD = 1,
 	MDIO_DEV_WIS     = 2,
 	MDIO_DEV_PCS     = 3,
-	MDIO_DEV_XGXS    = 4
+	MDIO_DEV_XGXS    = 4,
+	MDIO_DEV_ANEG    = 7,
+	MDIO_DEV_VEND1   = 30,
+	MDIO_DEV_VEND2   = 31
+};
+
+/* LASI control and status registers */
+enum {
+	RX_ALARM_CTRL = 0x9000,
+	TX_ALARM_CTRL = 0x9001,
+	LASI_CTRL     = 0x9002,
+	RX_ALARM_STAT = 0x9003,
+	TX_ALARM_STAT = 0x9004,
+	LASI_STAT     = 0x9005
 };
 
 /* PHY loopback direction */
@@ -503,12 +510,23 @@ enum {
 /* PHY interrupt types */
 enum {
 	cphy_cause_link_change = 1,
-	cphy_cause_fifo_error = 2
+	cphy_cause_fifo_error = 2,
+	cphy_cause_module_change = 4,
+};
+
+/* PHY module types */
+enum {
+	phy_modtype_none,
+	phy_modtype_sr,
+	phy_modtype_lr,
+	phy_modtype_lrm,
+	phy_modtype_twinax,
+	phy_modtype_twinax_long,
+	phy_modtype_unknown
 };
 
 /* PHY operations */
 struct cphy_ops {
-	void (*destroy)(struct cphy *phy);
 	int (*reset)(struct cphy *phy, int wait);
 
 	int (*intr_enable)(struct cphy *phy);
@@ -529,8 +547,12 @@ struct cphy_ops {
 
 /* A PHY instance */
 struct cphy {
-	int addr;                            /* PHY address */
+	u8 addr;                             /* PHY address */
+	u8 modtype;                          /* PHY module type */
+	short priv;                          /* scratch pad */
+	unsigned int caps;                   /* PHY capabilities */
 	adapter_t *adapter;                  /* associated adapter */
+	const char *desc;                    /* PHY description */
 	unsigned long fifo_errors;           /* FIFO over/under-flows */
 	const struct cphy_ops *ops;          /* PHY operations */
 	int (*mdio_read)(adapter_t *adapter, int phy_addr, int mmd_addr,
@@ -543,22 +565,25 @@ struct cphy {
 static inline int mdio_read(struct cphy *phy, int mmd, int reg,
 			    unsigned int *valp)
 {
-        return phy->mdio_read(phy->adapter, phy->addr, mmd, reg, valp);
+	return phy->mdio_read(phy->adapter, phy->addr, mmd, reg, valp);
 }
 
 static inline int mdio_write(struct cphy *phy, int mmd, int reg,
 			     unsigned int val)
 {
-        return phy->mdio_write(phy->adapter, phy->addr, mmd, reg, val);
+	return phy->mdio_write(phy->adapter, phy->addr, mmd, reg, val);
 }
 
 /* Convenience initializer */
 static inline void cphy_init(struct cphy *phy, adapter_t *adapter,
 			     int phy_addr, struct cphy_ops *phy_ops,
-			     const struct mdio_ops *mdio_ops)
+			     const struct mdio_ops *mdio_ops, unsigned int caps,
+			     const char *desc)
 {
+	phy->addr    = (u8)phy_addr;
+	phy->caps    = caps;
 	phy->adapter = adapter;
-	phy->addr    = phy_addr;
+	phy->desc    = desc;
 	phy->ops     = phy_ops;
 	if (mdio_ops) {
 		phy->mdio_read  = mdio_ops->read;
@@ -607,7 +632,7 @@ static inline int is_10G(const adapter_t *adap)
 
 static inline int is_offload(const adapter_t *adap)
 {
-#ifdef CONFIG_CHELSIO_T3_CORE
+#if defined(CONFIG_CHELSIO_T3_CORE)
 	return adap->params.offload;
 #else
 	return 0;
@@ -647,7 +672,12 @@ int t3_mdio_change_bits(struct cphy *phy, int mmd, int reg, unsigned int clear,
 			unsigned int set);
 int t3_phy_reset(struct cphy *phy, int mmd, int wait);
 int t3_phy_advertise(struct cphy *phy, unsigned int advert);
+int t3_phy_advertise_fiber(struct cphy *phy, unsigned int advert);
 int t3_set_phy_speed_duplex(struct cphy *phy, int speed, int duplex);
+int t3_phy_lasi_intr_enable(struct cphy *phy);
+int t3_phy_lasi_intr_disable(struct cphy *phy);
+int t3_phy_lasi_intr_clear(struct cphy *phy);
+int t3_phy_lasi_intr_handler(struct cphy *phy);
 
 void t3_intr_enable(adapter_t *adapter);
 void t3_intr_disable(adapter_t *adapter);
@@ -667,19 +697,22 @@ int t3_seeprom_wp(adapter_t *adapter, int enable);
 int t3_read_flash(adapter_t *adapter, unsigned int addr, unsigned int nwords,
 		  u32 *data, int byte_oriented);
 int t3_get_tp_version(adapter_t *adapter, u32 *vers);
-int t3_check_tpsram_version(adapter_t *adapter);
+int t3_check_tpsram_version(adapter_t *adapter, int *must_load);
 int t3_check_tpsram(adapter_t *adapter, const u8 *tp_ram, unsigned int size);
-int t3_load_fw(adapter_t *adapter, const const u8 *fw_data, unsigned int size);
+int t3_load_fw(adapter_t *adapter, const u8 *fw_data, unsigned int size);
 int t3_get_fw_version(adapter_t *adapter, u32 *vers);
-int t3_check_fw_version(adapter_t *adapter);
+int t3_check_fw_version(adapter_t *adapter, int *must_load);
+int t3_load_boot(adapter_t *adapter, u8 *fw_data, unsigned int size);
 int t3_init_hw(adapter_t *adapter, u32 fw_params);
 void mac_prep(struct cmac *mac, adapter_t *adapter, int index);
 void early_hw_init(adapter_t *adapter, const struct adapter_info *ai);
 int t3_prep_adapter(adapter_t *adapter, const struct adapter_info *ai, int reset);
+int t3_reinit_adapter(adapter_t *adap);
 void t3_led_ready(adapter_t *adapter);
 void t3_fatal_err(adapter_t *adapter);
 void t3_set_vlan_accel(adapter_t *adapter, unsigned int ports, int on);
 void t3_enable_filters(adapter_t *adap);
+void t3_tp_set_offload_mode(adapter_t *adap, int enable);
 void t3_config_rss(adapter_t *adapter, unsigned int rss_config, const u8 *cpus,
 		   const u16 *rspq);
 int t3_read_rss(adapter_t *adapter, u8 *lkup, u16 *map);
@@ -716,10 +749,9 @@ int t3_read_mc5_range(const struct mc5 *mc5, unsigned int start, unsigned int n,
 #ifdef CONFIG_CHELSIO_T3_CORE
 int t3_tp_set_coalescing_size(adapter_t *adap, unsigned int size, int psh);
 void t3_tp_set_max_rxsize(adapter_t *adap, unsigned int size);
-void t3_tp_set_offload_mode(adapter_t *adap, int enable);
 void t3_tp_get_mib_stats(adapter_t *adap, struct tp_mib_stats *tps);
 void t3_load_mtus(adapter_t *adap, unsigned short mtus[NMTUS],
-                  unsigned short alpha[NCCTRL_WIN],
+		  unsigned short alpha[NCCTRL_WIN],
 		  unsigned short beta[NCCTRL_WIN], unsigned short mtu_cap);
 void t3_read_hw_mtus(adapter_t *adap, unsigned short mtus[NMTUS]);
 void t3_get_cong_cntl_tab(adapter_t *adap,
@@ -771,16 +803,20 @@ int t3_vsc7323_enable(adapter_t *adap, int port, int which);
 int t3_vsc7323_disable(adapter_t *adap, int port, int which);
 const struct mac_stats *t3_vsc7323_update_stats(struct cmac *mac);
 
-void t3_mv88e1xxx_phy_prep(struct cphy *phy, adapter_t *adapter, int phy_addr,
-			   const struct mdio_ops *mdio_ops);
-void t3_vsc8211_phy_prep(struct cphy *phy, adapter_t *adapter, int phy_addr,
-			 const struct mdio_ops *mdio_ops);
-void t3_ael1002_phy_prep(struct cphy *phy, adapter_t *adapter, int phy_addr,
-			 const struct mdio_ops *mdio_ops);
-void t3_ael1006_phy_prep(struct cphy *phy, adapter_t *adapter, int phy_addr,
-			 const struct mdio_ops *mdio_ops);
-void t3_qt2045_phy_prep(struct cphy *phy, adapter_t *adapter, int phy_addr,
+int t3_mv88e1xxx_phy_prep(struct cphy *phy, adapter_t *adapter, int phy_addr,
+			  const struct mdio_ops *mdio_ops);
+int t3_vsc8211_phy_prep(struct cphy *phy, adapter_t *adapter, int phy_addr,
 			const struct mdio_ops *mdio_ops);
-void t3_xaui_direct_phy_prep(struct cphy *phy, adapter_t *adapter, int phy_addr,
-			     const struct mdio_ops *mdio_ops);
+int t3_ael1002_phy_prep(struct cphy *phy, adapter_t *adapter, int phy_addr,
+			const struct mdio_ops *mdio_ops);
+int t3_ael1006_phy_prep(struct cphy *phy, adapter_t *adapter, int phy_addr,
+			const struct mdio_ops *mdio_ops);
+int t3_ael2005_phy_prep(struct cphy *phy, adapter_t *adapter, int phy_addr,
+			const struct mdio_ops *mdio_ops);
+int t3_qt2045_phy_prep(struct cphy *phy, adapter_t *adapter, int phy_addr,
+		       const struct mdio_ops *mdio_ops);
+int t3_tn1010_phy_prep(struct cphy *phy, adapter_t *adapter, int phy_addr,
+		       const struct mdio_ops *mdio_ops);
+int t3_xaui_direct_phy_prep(struct cphy *phy, adapter_t *adapter, int phy_addr,
+			    const struct mdio_ops *mdio_ops);
 #endif /* __CHELSIO_COMMON_H */

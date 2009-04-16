@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/pci/intpm.c,v 1.39.2.1 2007/10/27 13:27:02 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/pci/intpm.c,v 1.39.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -109,6 +109,8 @@ intsmb_attach(device_t dev)
 	struct intsmb_softc *sc = device_get_softc(dev);
 	int error, rid, value;
 	char *str;
+
+	sc->dev = dev;
 
 	mtx_init(&sc->lock, device_get_nameunit(dev), "intsmb", MTX_DEF);
 
@@ -410,7 +412,7 @@ intsmb_stop_poll(struct intsmb_softc *sc)
 			sc->isbusy = 0;
 			error = intsmb_error(status);
 			if (error == 0 && !(status & PIIX4_SMBHSTSTAT_INTR))
-				device_printf(sc->dev, "unknown cause why?");
+				device_printf(sc->dev, "unknown cause why?\n");
 			return (error);
 		}
 	}

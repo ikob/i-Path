@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/amd64/support.S,v 1.128 2007/08/22 05:06:14 jkoshy Exp $
+ * $FreeBSD: src/sys/amd64/amd64/support.S,v 1.128.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include "opt_ddb.h"

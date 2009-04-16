@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/at91/ohci_atmelarm.c,v 1.3 2007/07/31 17:43:18 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/arm/at91/ohci_atmelarm.c,v 1.3.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -136,7 +136,6 @@ ohci_atmelarm_attach(device_t dev)
 	/*
 	 * turn on the clocks from the AT91's point of view.  Keep the unit in reset.
 	 */
-//	bus_space_write_4(sc->sc_ohci.iot, sc->sc_ohci.ioh, OHCI_CONTROL, 0);
 	at91_pmc_clock_enable(sc->iclk);
 	at91_pmc_clock_enable(sc->fclk);
 	bus_space_write_4(sc->sc_ohci.iot, sc->sc_ohci.ioh, OHCI_CONTROL, 0);

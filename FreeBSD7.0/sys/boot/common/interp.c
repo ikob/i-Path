@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/common/interp.c,v 1.29 2003/08/25 23:30:41 obrien Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/common/interp.c,v 1.29.28.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * Simple commandline interpreter, toplevel and misc.

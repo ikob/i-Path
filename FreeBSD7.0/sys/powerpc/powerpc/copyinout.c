@@ -54,7 +54,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/powerpc/powerpc/copyinout.c,v 1.15 2006/10/18 19:56:20 grehan Exp $");
+__FBSDID("$FreeBSD: src/sys/powerpc/powerpc/copyinout.c,v 1.15.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

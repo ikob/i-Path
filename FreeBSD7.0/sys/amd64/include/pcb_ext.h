@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/include/pcb_ext.h,v 1.10 2003/05/01 01:05:23 peter Exp $
+ * $FreeBSD: src/sys/amd64/include/pcb_ext.h,v 1.10.30.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _I386_PCB_EXT_H_

@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/nge/if_nge.c,v 1.91 2007/03/04 03:38:07 csjp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/nge/if_nge.c,v 1.91.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * National Semiconductor DP83820/DP83821 gigabit ethernet driver
@@ -166,7 +166,7 @@ static void nge_init(void *);
 static void nge_init_locked(struct nge_softc *);
 static void nge_stop(struct nge_softc *);
 static void nge_watchdog(struct ifnet *);
-static void nge_shutdown(device_t);
+static int nge_shutdown(device_t);
 static int nge_ifmedia_upd(struct ifnet *);
 static void nge_ifmedia_upd_locked(struct ifnet *);
 static void nge_ifmedia_sts(struct ifnet *, struct ifmediareq *);
@@ -2161,7 +2161,7 @@ nge_stop(sc)
  * Stop all chip I/O so that the kernel's probe routines don't
  * get confused by errant DMAs when rebooting.
  */
-static void
+static int
 nge_shutdown(dev)
 	device_t		dev;
 {
@@ -2174,5 +2174,5 @@ nge_shutdown(dev)
 	nge_stop(sc);
 	NGE_UNLOCK(sc);
 
-	return;
+	return (0);
 }

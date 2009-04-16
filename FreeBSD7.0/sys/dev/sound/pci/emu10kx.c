@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/sound/pci/emu10kx.c,v 1.12 2007/09/12 07:43:42 ariff Exp $
+ * $FreeBSD: src/sys/dev/sound/pci/emu10kx.c,v 1.12.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include <sys/param.h>
@@ -950,7 +950,7 @@ emu_intr_unregister(struct emu_sc_info *sc, int hnumber)
 	sc->ihandler[hnumber].softc = NULL;
 	sc->ihandler[hnumber].irq_func = NULL;
 
-	/* other interupt handlers may use this INTE value */
+	/* other interrupt handlers may use this INTE value */
 	for (i = 0; i < EMU_MAX_IRQ_CONSUMERS; i++)
 		if (sc->ihandler[i].inte_mask != 0)
 			x |= sc->ihandler[i].inte_mask;

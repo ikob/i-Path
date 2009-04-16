@@ -13,7 +13,7 @@
  * warranties of merchantability and fitness for a particular
  * purpose.
  *
- * $FreeBSD: src/sys/boot/i386/boot0/boot0.S,v 1.16 2007/03/26 21:56:13 thomas Exp $
+ * $FreeBSD: src/sys/boot/i386/boot0/boot0.S,v 1.16.6.2 2008/11/30 00:00:35 luigi Exp $
  */
 
 /* A 512-byte boot manager. */
@@ -319,8 +319,9 @@ main.15:	movw $LOAD,%bx			# Address for read
 		jc main.10			# If error
 		cmpw $MAGIC,0x1fe(%bx)		# Bootable?
 		jne main.10			# No
-		movw $crlf,%si			# Leave some
-		callw puts			#  space
+		pushw %si			# Save ptr to selected part.
+		callw putn			# Leave some space
+		popw %si			# Restore, next stage uses it
 		jmp *%bx			# Invoke bootstrap
 
 /*

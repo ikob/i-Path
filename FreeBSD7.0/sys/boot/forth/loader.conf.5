@@ -22,8 +22,8 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/sys/boot/forth/loader.conf.5,v 1.26 2005/11/18 10:34:24 ru Exp $
-.Dd November 15, 2005
+.\" $FreeBSD: src/sys/boot/forth/loader.conf.5,v 1.26.6.2 2008/12/06 13:40:17 keramida Exp $
+.Dd January 16, 2008
 .Dt LOADER.CONF 5
 .Os
 .Sh NAME
@@ -238,6 +238,16 @@ contains the instructions to automatically process
 .Xr boot 8 ,
 .Xr loader 8 ,
 .Xr loader.4th 8
+.Sh BUGS
+The
+.Xr loader 8
+stops reading
+.Nm
+when it encounters a syntax error, so any options which are vital for
+booting a particular system (i.e.\& 
+.Dq Va hw.ata.ata_dma Ns "=0" )
+should precede any experimental additions to
+.Nm .
 .Sh HISTORY
 The file
 .Nm

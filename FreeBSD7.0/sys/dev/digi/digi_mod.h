@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/digi/digi_mod.h,v 1.1 2001/05/02 01:08:04 brian Exp $
+ * $FreeBSD: src/sys/dev/digi/digi_mod.h,v 1.1.32.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #define	DIGI_MOD_VERSION	1

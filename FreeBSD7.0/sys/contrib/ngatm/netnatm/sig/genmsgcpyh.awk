@@ -36,7 +36,7 @@ function begin() {
 function first_entry() {
 	print "/* This file was created automatically"
 	print " * Source file: " id
-	print " * $FreeBSD: src/sys/contrib/ngatm/netnatm/sig/genmsgcpyh.awk,v 1.1.1.2 2004/07/08 16:39:00 harti Exp $"
+	print " * $FreeBSD: src/sys/contrib/ngatm/netnatm/sig/genmsgcpyh.awk,v 1.1.1.2.26.1 2008/11/25 02:59:29 kensmith Exp $"
 	print " */"
 	print ""
 }

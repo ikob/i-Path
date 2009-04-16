@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/bios/smbios/Makefile,v 1.1 2003/03/29 15:20:44 mdodd Exp $
+# $FreeBSD: src/sys/modules/bios/smbios/Makefile,v 1.1.30.1 2008/11/25 02:59:29 kensmith Exp $
 #
 
 .PATH:  ${.CURDIR}/../../../i386/bios

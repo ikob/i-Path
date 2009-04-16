@@ -1,6 +1,6 @@
 /**************************************************************************
 
-Copyright (c) 2007, Chelsio Inc.
+Copyright (c) 2007-2008, Chelsio Inc.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -26,10 +26,10 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
 
-$FreeBSD: src/sys/dev/cxgb/cxgb_adapter.h,v 1.20 2007/09/10 00:59:51 kmacy Exp $
+$FreeBSD: src/sys/dev/cxgb/cxgb_adapter.h,v 1.20.2.6.2.1 2008/11/25 02:59:29 kensmith Exp $
+
 
 ***************************************************************************/
-
 
 
 #ifndef _CXGB_ADAPTER_H_
@@ -42,25 +42,32 @@ $FreeBSD: src/sys/dev/cxgb/cxgb_adapter.h,v 1.20 2007/09/10 00:59:51 kmacy Exp $
 #include <sys/mbuf.h>
 #include <sys/socket.h>
 #include <sys/sockio.h>
+#include <sys/condvar.h>
 
 #include <net/ethernet.h>
 #include <net/if.h>
 #include <net/if_media.h>
+#include <net/if_dl.h>
+#include <netinet/tcp_lro.h>
 
 #include <machine/bus.h>
 #include <machine/resource.h>
+
 #include <sys/bus_dma.h>
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 
+
 #ifdef CONFIG_DEFINED
 #include <cxgb_osdep.h>
-#include <ulp/toecore/toedev.h>
+#include <t3cdev.h>
+#include <ulp/toecore/cxgb_toedev.h>
 #include <sys/mbufq.h>
 #else
 #include <dev/cxgb/cxgb_osdep.h>
+#include <dev/cxgb/t3cdev.h>
 #include <dev/cxgb/sys/mbufq.h>
-#include <dev/cxgb/ulp/toecore/toedev.h>
+#include <dev/cxgb/ulp/toecore/cxgb_toedev.h>
 #endif
 
 #define USE_SX
@@ -117,19 +124,17 @@ struct port_info {
 	uint8_t		port_id;
 	uint8_t		tx_chan;
 	uint8_t		txpkt_intf;
-	uint8_t		nqsets;
 	uint8_t         first_qset;
+	uint32_t	nqsets;
 	
 	uint8_t		hw_addr[ETHER_ADDR_LEN];
-	struct taskqueue *tq;
-	struct task     start_task;
 	struct task	timer_reclaim_task;
 	struct cdev     *port_cdev;
 
+#define PORT_LOCK_NAME_LEN 32
 #define PORT_NAME_LEN 32
-#define TASKQ_NAME_LEN 32
-	char            lockbuf[PORT_NAME_LEN];
-	char            taskqbuf[TASKQ_NAME_LEN];
+	char            lockbuf[PORT_LOCK_NAME_LEN];
+	char            namebuf[PORT_NAME_LEN];
 };
 
 enum {				/* adapter flags */
@@ -139,48 +144,30 @@ enum {				/* adapter flags */
 	QUEUES_BOUND	= (1 << 3),
 	FW_UPTODATE     = (1 << 4),
 	TPS_UPTODATE    = (1 << 5),
+	CXGB_SHUTDOWN	= (1 << 6),
+	CXGB_OFLD_INIT	= (1 << 7),
+	TP_PARITY_INIT  = (1 << 8),
 };
 
-
 #define FL_Q_SIZE	4096
-#define JUMBO_Q_SIZE	512
+#define JUMBO_Q_SIZE	1024
 #define RSPQ_Q_SIZE	1024
 #define TX_ETH_Q_SIZE	1024
 
+enum { TXQ_ETH = 0,
+       TXQ_OFLD = 1,
+       TXQ_CTRL = 2, };
 
 
-/*
- * Types of Tx queues in each queue set.  Order here matters, do not change.
- * XXX TOE is not implemented yet, so the extra queues are just placeholders.
+/* 
+ * work request size in bytes
  */
-enum { TXQ_ETH, TXQ_OFLD, TXQ_CTRL };
-
-
-/* careful, the following are set on priv_flags and must not collide with
- * IFF_ flags!
- */
-enum {
-	LRO_ACTIVE = (1 << 8),
-};
-
-/* Max concurrent LRO sessions per queue set */
-#define MAX_LRO_SES 8
-
-struct t3_lro_session {
-	struct mbuf *head;
-	struct mbuf *tail;
-	uint32_t seq;
-	uint16_t ip_len;
-	uint16_t mss;
-	uint16_t vtag;
-	uint8_t npkts;
-};
+#define WR_LEN (WR_FLITS * 8)
+#define PIO_LEN (WR_LEN - sizeof(struct cpl_tx_pkt_lso))
 
 struct lro_state {
 	unsigned short enabled;
-	unsigned short active_idx;
-	unsigned int nactive;
-	struct t3_lro_session sess[MAX_LRO_SES];
+	struct lro_ctrl ctrl;
 };
 
 #define RX_BUNDLE_SIZE 8
@@ -196,12 +183,8 @@ struct sge_rspq {
 	uint32_t	holdoff_tmr;
 	uint32_t	next_holdoff;
 	uint32_t        imm_data;
-	struct rsp_desc	*desc;
+	uint32_t        async_notif;
 	uint32_t	cntxt_id;
-	struct mtx      lock;
-	struct mbuf     *rx_head;    /* offload packet receive queue head */
-	struct mbuf     *rx_tail;    /* offload packet receive queue tail */
-
 	uint32_t        offload_pkts;
 	uint32_t        offload_bundles;
 	uint32_t        pure_rsps;
@@ -212,9 +195,12 @@ struct sge_rspq {
 	bus_dmamap_t	desc_map;
 
 	struct t3_mbuf_hdr rspq_mh;
+	struct rsp_desc	*desc;
+	struct mtx      lock;
 #define RSPQ_NAME_LEN  32
 	char            lockbuf[RSPQ_NAME_LEN];
-
+	uint32_t	rspq_dump_start;
+	uint32_t	rspq_dump_count;
 };
 
 #ifndef DISABLE_MBUF_IOVEC
@@ -231,8 +217,6 @@ struct sge_fl {
 	uint32_t	cidx;
 	uint32_t	pidx;
 	uint32_t	gen;
-	struct rx_desc	*desc;
-	struct rx_sw_desc *sdesc;
 	bus_addr_t	phys_addr;
 	uint32_t	cntxt_id;
 	uint64_t	empty;
@@ -240,6 +224,8 @@ struct sge_fl {
 	bus_dmamap_t	desc_map;
 	bus_dma_tag_t   entry_tag;
 	uma_zone_t      zone;
+	struct rx_desc	*desc;
+	struct rx_sw_desc *sdesc;
 	int             type;
 };
 
@@ -273,8 +259,23 @@ struct sge_txq {
 	bus_dmamap_t	desc_map;
 	bus_dma_tag_t   entry_tag;
 	struct mbuf_head sendq;
+	/*
+	 * cleanq should really be an buf_ring to avoid extra
+	 * mbuf touches
+	 */
+	struct mbuf_head cleanq;	
+	struct buf_ring txq_mr;
+	struct mbuf     *immpkt;
+	uint32_t        txq_drops;
+	uint32_t        txq_skipped;
+	uint32_t        txq_coalesced;
+	uint32_t        txq_enqueued;
+	uint32_t	txq_dump_start;
+	uint32_t	txq_dump_count;
+	unsigned long   txq_frees;
 	struct mtx      lock;
-#define TXQ_NAME_LEN  32
+	struct sg_ent  txq_sgl[TX_MAX_SEGS / 2 + 1];
+	#define TXQ_NAME_LEN  32
 	char            lockbuf[TXQ_NAME_LEN];
 };
      	
@@ -285,12 +286,13 @@ enum {
 	SGE_PSTAT_TX_CSUM,          /* # of TX checksum offloads */
 	SGE_PSTAT_VLANEX,           /* # of VLAN tag extractions */
 	SGE_PSTAT_VLANINS,          /* # of VLAN tag insertions */
-	SGE_PSTATS_LRO_QUEUED,	    /* # of LRO appended packets */
-	SGE_PSTATS_LRO_FLUSHED,	    /* # of LRO flushed packets */
-	SGE_PSTATS_LRO_X_STREAMS,   /* # of exceeded LRO contexts */
 };
 
-#define SGE_PSTAT_MAX (SGE_PSTATS_LRO_X_STREAMS+1)
+#define SGE_PSTAT_MAX (SGE_PSTAT_VLANINS+1)
+
+#define QS_EXITING              0x1
+#define QS_RUNNING              0x2
+#define QS_BOUND                0x4
 
 struct sge_qset {
 	struct sge_rspq		rspq;
@@ -301,6 +303,12 @@ struct sge_qset {
 	uint64_t                port_stats[SGE_PSTAT_MAX];
 	struct port_info        *port;
 	int                     idx; /* qset # */
+	int                     qs_cpuid;
+	int                     qs_flags;
+	struct cv		qs_cv;
+	struct mtx		qs_mtx;
+#define QS_NAME_LEN 32
+	char                    namebuf[QS_NAME_LEN];
 };
 
 struct sge {
@@ -318,6 +326,8 @@ struct adapter {
 	/* PCI register resources */
 	int			regs_rid;
 	struct resource		*regs_res;
+	int			udbs_rid;
+	struct resource		*udbs_res;
 	bus_space_handle_t	bh;
 	bus_space_tag_t		bt;
 	bus_size_t              mmio_len;
@@ -342,17 +352,26 @@ struct adapter {
 	void			*msix_intr_tag[SGE_QSETS];
 	uint8_t                 rxpkt_map[8]; /* maps RX_PKT interface values to port ids */
 	uint8_t                 rrss_map[SGE_QSETS]; /* revers RSS map table */
+	uint16_t                rspq_map[RSS_TABLE_SIZE];     /* maps 7-bit cookie to qidx */
+	union {
+		uint8_t                 fill[SGE_QSETS];
+		uint64_t                coalesce;
+	} u;
 
+#define tunq_fill u.fill
+#define tunq_coalesce u.coalesce
+	
 	struct filter_info      *filters;
 	
 	/* Tasks */
 	struct task		ext_intr_task;
 	struct task		slow_intr_task;
 	struct task		tick_task;
-	struct task		process_responses_task;
 	struct taskqueue	*tq;
 	struct callout		cxgb_tick_ch;
 	struct callout		sge_timer_ch;
+
+	unsigned int		check_task_cnt;
 
 	/* Register lock for use by the hardware layer */
 	struct mtx		mdio_lock;
@@ -371,7 +390,7 @@ struct adapter {
 
 	struct port_info	port[MAX_NPORTS];
 	device_t		portdev[MAX_NPORTS];
-	struct toedev           tdev;
+	struct t3cdev           tdev;
 	char                    fw_version[64];
 	uint32_t                open_device_map;
 	uint32_t                registered_device_map;
@@ -470,10 +489,23 @@ static __inline uint8_t *
 t3_get_next_mcaddr(struct t3_rx_mode *rm)
 {
 	uint8_t *macaddr = NULL;
-	
-	if (rm->idx == 0)
-		macaddr = rm->port->hw_addr;
+	struct ifnet *ifp = rm->port->ifp;
+	struct ifmultiaddr *ifma;
+	int i = 0;
 
+	IF_ADDR_LOCK(ifp);
+	TAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
+		if (ifma->ifma_addr->sa_family != AF_LINK)
+			continue;
+		if (i == rm->idx) {
+			macaddr = LLADDR((struct sockaddr_dl *)ifma->ifma_addr);
+			break;
+		}
+		i++;
+	}
+	IF_ADDR_UNLOCK(ifp);
+
+	
 	rm->idx++;
 	return (macaddr);
 }
@@ -496,8 +528,9 @@ int t3_os_pci_save_state(struct adapter *adapter);
 int t3_os_pci_restore_state(struct adapter *adapter);
 void t3_os_link_changed(adapter_t *adapter, int port_id, int link_status,
 			int speed, int duplex, int fc);
+void t3_os_phymod_changed(struct adapter *adap, int port_id);
 void t3_sge_err_intr_handler(adapter_t *adapter);
-int t3_offload_tx(struct toedev *, struct mbuf *);
+int t3_offload_tx(struct t3cdev *, struct mbuf *);
 void t3_os_ext_intr_handler(adapter_t *adapter);
 void t3_os_set_hw_addr(adapter_t *adapter, int port_idx, u8 hw_addr[]);
 int t3_mgmt_tx(adapter_t *adap, struct mbuf *m);
@@ -513,27 +546,33 @@ void t3_sge_stop(adapter_t *);
 void t3b_intr(void *data);
 void t3_intr_msi(void *data);
 void t3_intr_msix(void *data);
-int t3_encap(struct port_info *, struct mbuf **, int *free);
+int t3_encap(struct sge_qset *, struct mbuf **, int);
 
 int t3_sge_init_adapter(adapter_t *);
+int t3_sge_reset_adapter(adapter_t *);
 int t3_sge_init_port(struct port_info *);
 void t3_sge_deinit_sw(adapter_t *);
+void t3_free_tx_desc(struct sge_txq *q, int n);
+void t3_free_tx_desc_all(struct sge_txq *q);
 
-void t3_rx_eth_lro(adapter_t *adap, struct sge_rspq *rq, struct mbuf *m,
-    int ethpad, uint32_t rss_hash, uint32_t rss_csum, int lro);
 void t3_rx_eth(struct adapter *adap, struct sge_rspq *rq, struct mbuf *m, int ethpad);
-void t3_lro_flush(adapter_t *adap, struct sge_qset *qs, struct lro_state *state);
 
-void t3_add_sysctls(adapter_t *sc);
+void t3_add_attach_sysctls(adapter_t *sc);
+void t3_add_configured_sysctls(adapter_t *sc);
 int t3_get_desc(const struct sge_qset *qs, unsigned int qnum, unsigned int idx,
     unsigned char *data);
 void t3_update_qset_coalesce(struct sge_qset *qs, const struct qset_params *p);
+
+#define CXGB_TICKS(a) ((a)->params.linkpoll_period ? \
+    (hz * (a)->params.linkpoll_period) / 10 : \
+    (a)->params.stats_update_period * hz)
+
 /*
  * XXX figure out how we can return this to being private to sge
  */
 #define desc_reclaimable(q) ((int)((q)->processed - (q)->cleaned - TX_MAX_DESC))
 
-#define container_of(p, stype, field) ((stype *)(((uint8_t *)(p)) - offsetof(stype, field))) 
+#define container_of(p, stype, field) ((stype *)(((uint8_t *)(p)) - offsetof(stype, field)))
 
 static __inline struct sge_qset *
 fl_to_qset(struct sge_fl *q, int qidx)
@@ -554,7 +593,7 @@ txq_to_qset(struct sge_txq *q, int qidx)
 }
 
 static __inline struct adapter *
-tdev2adap(struct toedev *d)
+tdev2adap(struct t3cdev *d)
 {
 	return container_of(d, struct adapter, tdev);
 }
@@ -567,5 +606,13 @@ static inline int offload_running(adapter_t *adapter)
         return isset(&adapter->open_device_map, OFFLOAD_DEVMAP_BIT);
 }
 
+int cxgb_pcpu_enqueue_packet(struct ifnet *ifp, struct mbuf *m);
+int cxgb_pcpu_start(struct ifnet *ifp, struct mbuf *m);
+void cxgb_pcpu_shutdown_threads(struct adapter *sc);
+void cxgb_pcpu_startup_threads(struct adapter *sc);
 
+int process_responses(adapter_t *adap, struct sge_qset *qs, int budget);
+void t3_free_qset(adapter_t *sc, struct sge_qset *q);
+void cxgb_start(struct ifnet *ifp);
+void refill_fl_service(adapter_t *adap, struct sge_fl *fl);
 #endif

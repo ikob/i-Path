@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/include/pcpu.h,v 1.48 2007/06/04 21:38:45 attilio Exp $
+ * $FreeBSD: src/sys/amd64/include/pcpu.h,v 1.48.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _MACHINE_PCPU_H_
@@ -32,8 +32,6 @@
 #ifndef _SYS_CDEFS_H_
 #error "sys/cdefs.h is a prerequisite for this file"
 #endif
-
-#ifdef _KERNEL
 
 /*
  * The SMP parts are setup in pmap.c and locore.s for the BSP, and
@@ -49,7 +47,10 @@
 	register_t pc_rsp0;						\
 	register_t pc_scratch_rsp;	/* User %rsp in syscall */	\
 	u_int	pc_apic_id;						\
-	u_int   pc_acpi_id		/* ACPI CPU id */
+	u_int   pc_acpi_id;		/* ACPI CPU id */		\
+	struct user_segment_descriptor	*pc_gs32p
+
+#ifdef _KERNEL
 
 #ifdef lint
 

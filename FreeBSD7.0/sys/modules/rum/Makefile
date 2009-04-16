@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/rum/Makefile,v 1.1 2007/05/06 10:07:21 kevlo Exp $
+# $FreeBSD: src/sys/modules/rum/Makefile,v 1.1.6.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../dev/usb
 

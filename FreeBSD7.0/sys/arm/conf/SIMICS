@@ -15,7 +15,7 @@
 # If you are in doubt as to the purpose or necessity of a line, check first 
 # in NOTES.
 #
-# $FreeBSD: src/sys/arm/conf/SIMICS,v 1.13 2007/02/19 00:37:25 cognet Exp $
+# $FreeBSD: src/sys/arm/conf/SIMICS,v 1.13.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
 
 machine		arm
 ident		SIMICS
@@ -43,6 +43,7 @@ options 	MD_ROOT			#MD is a potential root device
 options		ROOTDEVNAME=\"ufs:md0\"
 options 	NFSCLIENT		#Network Filesystem Client
 options 	NFSSERVER		#Network Filesystem Server
+options 	NFSLOCKD		#Network Lock Manager
 options 	NFS_ROOT		#NFS usable as /, requires NFSCLIENT
 #options 	MSDOSFS			#MSDOS Filesystem
 options 	CD9660			#ISO 9660 Filesystem

@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/pci/pci.c,v 1.355.2.1 2007/11/26 17:37:24 jkim Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/pci/pci.c,v 1.355.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_bus.h"
 
@@ -562,11 +562,12 @@ pci_read_extcap(device_t pcib, pcicfgregs *cfg)
 						    cfg->domain, cfg->bus,
 						    cfg->slot, cfg->func,
 						    (long long)addr);
-				}
+				} else
+					addr = MSI_INTEL_ADDR_BASE;
 
-				/* Enable MSI -> HT mapping. */
-				val |= PCIM_HTCMD_MSI_ENABLE;
-				WREG(ptr + PCIR_HT_COMMAND, val, 2);
+				cfg->ht.ht_msimap = ptr;
+				cfg->ht.ht_msictrl = val;
+				cfg->ht.ht_msiaddr = addr;
 				break;
 			}
 			break;
@@ -616,12 +617,9 @@ pci_read_extcap(device_t pcib, pcicfgregs *cfg)
 		case PCIY_EXPRESS:	/* PCI-express */
 			/*
 			 * Assume we have a PCI-express chipset if we have
-			 * at least one PCI-express root port.
+			 * at least one PCI-express device.
 			 */
-			val = REG(ptr + PCIR_EXPRESS_FLAGS, 2);
-			if ((val & PCIM_EXP_FLAGS_TYPE) ==
-			    PCIM_EXP_TYPE_ROOT_PORT)
-				pcie_chipset = 1;
+			pcie_chipset = 1;
 			break;
 		default:
 			break;
@@ -1098,6 +1096,9 @@ pci_enable_msix(device_t dev, u_int index, uint64_t address, uint32_t data)
 	bus_write_4(msix->msix_table_res, offset, address & 0xffffffff);
 	bus_write_4(msix->msix_table_res, offset + 4, address >> 32);
 	bus_write_4(msix->msix_table_res, offset + 8, data);
+
+	/* Enable MSI -> HT mapping. */
+	pci_ht_map_msi(dev, address);
 }
 
 void
@@ -1537,6 +1538,34 @@ pci_msix_count_method(device_t dev, device_t child)
 }
 
 /*
+ * HyperTransport MSI mapping control
+ */
+void
+pci_ht_map_msi(device_t dev, uint64_t addr)
+{
+	struct pci_devinfo *dinfo = device_get_ivars(dev);
+	struct pcicfg_ht *ht = &dinfo->cfg.ht;
+
+	if (!ht->ht_msimap)
+		return;
+
+	if (addr && !(ht->ht_msictrl & PCIM_HTCMD_MSI_ENABLE) &&
+	    ht->ht_msiaddr >> 20 == addr >> 20) {
+		/* Enable MSI -> HT mapping. */
+		ht->ht_msictrl |= PCIM_HTCMD_MSI_ENABLE;
+		pci_write_config(dev, ht->ht_msimap + PCIR_HT_COMMAND,
+		    ht->ht_msictrl, 2);
+	}
+
+	if (!addr && ht->ht_msictrl & PCIM_HTCMD_MSI_ENABLE) {
+		/* Disable MSI -> HT mapping. */
+		ht->ht_msictrl &= ~PCIM_HTCMD_MSI_ENABLE;
+		pci_write_config(dev, ht->ht_msimap + PCIR_HT_COMMAND,
+		    ht->ht_msictrl, 2);
+	}
+}
+
+/*
  * Support for MSI message signalled interrupts.
  */
 void
@@ -1561,6 +1590,9 @@ pci_enable_msi(device_t dev, uint64_t address, uint16_t data)
 	msi->msi_ctrl |= PCIM_MSICTRL_MSI_ENABLE;
 	pci_write_config(dev, msi->msi_location + PCIR_MSI_CTRL, msi->msi_ctrl,
 	    2);
+
+	/* Enable MSI -> HT mapping. */
+	pci_ht_map_msi(dev, address);
 }
 
 void
@@ -1568,6 +1600,9 @@ pci_disable_msi(device_t dev)
 {
 	struct pci_devinfo *dinfo = device_get_ivars(dev);
 	struct pcicfg_msi *msi = &dinfo->cfg.msi;
+
+	/* Disable MSI -> HT mapping. */
+	pci_ht_map_msi(dev, 0);
 
 	/* Disable MSI in the control register. */
 	msi->msi_ctrl &= ~PCIM_MSICTRL_MSI_ENABLE;
@@ -2344,7 +2379,7 @@ pci_add_map(device_t pcib, device_t bus, device_t dev,
 
 	count = 1 << ln2size;
 	if (base == 0 || base == pci_mapbase(testval)) {
-		start = 0;	/* Let the parent deside */
+		start = 0;	/* Let the parent decide. */
 		end = ~0ULL;
 	} else {
 		start = base;
@@ -2353,22 +2388,24 @@ pci_add_map(device_t pcib, device_t bus, device_t dev,
 	resource_list_add(rl, type, reg, start, end, count);
 
 	/*
-	 * Not quite sure what to do on failure of allocating the resource
-	 * since I can postulate several right answers.
+	 * Try to allocate the resource for this BAR from our parent
+	 * so that this resource range is already reserved.  The
+	 * driver for this device will later inherit this resource in
+	 * pci_alloc_resource().
 	 */
 	res = resource_list_alloc(rl, bus, dev, type, &reg, start, end, count,
 	    prefetch ? RF_PREFETCHABLE : 0);
-	if (res == NULL)
-		return (barlen);
-	start = rman_get_start(res);
-	if ((u_long)start != start) {
-		/* Wait a minute!  this platform can't do this address. */
-		device_printf(bus,
-		    "pci%d:%d.%d.%x bar %#x start %#jx, too many bits.",
-		    pci_get_domain(dev), b, s, f, reg, (uintmax_t)start);
-		resource_list_release(rl, bus, dev, type, reg, res);
-		return (barlen);
-	}
+	if (res == NULL) {
+		/*
+		 * If the allocation fails, clear the BAR and delete
+		 * the resource list entry to force
+		 * pci_alloc_resource() to allocate resources from the
+		 * parent.
+		 */
+		resource_list_delete(rl, type, reg);
+		start = 0;
+	} else
+		start = rman_get_start(res);
 	pci_write_config(dev, reg, start, 4);
 	if (ln2range == 64)
 		pci_write_config(dev, reg + 4, start >> 32, 4);

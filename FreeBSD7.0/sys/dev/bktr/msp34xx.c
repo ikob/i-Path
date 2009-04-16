@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/bktr/msp34xx.c,v 1.5 2004/12/16 23:19:57 julian Exp $
+ * $FreeBSD: src/sys/dev/bktr/msp34xx.c,v 1.5.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

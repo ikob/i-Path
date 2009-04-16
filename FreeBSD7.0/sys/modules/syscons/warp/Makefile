@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/syscons/warp/Makefile,v 1.9 2002/11/11 10:11:59 mux Exp $
+# $FreeBSD: src/sys/modules/syscons/warp/Makefile,v 1.9.32.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH:	${.CURDIR}/../../../dev/syscons/warp
 

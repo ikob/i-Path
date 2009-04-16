@@ -25,7 +25,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: src/sys/boot/pc98/boot0.5/boot0.5.s,v 1.4 2007/04/07 08:37:04 kato Exp $
+# $FreeBSD: src/sys/boot/pc98/boot0.5/boot0.5.s,v 1.4.6.1 2008/11/25 02:59:29 kensmith Exp $
 #
 	.global	main
 	.code16

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/powerpc/powermac/hrowpic.c,v 1.13 2007/08/11 19:25:32 marcel Exp $
+ * $FreeBSD: src/sys/powerpc/powermac/hrowpic.c,v 1.13.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

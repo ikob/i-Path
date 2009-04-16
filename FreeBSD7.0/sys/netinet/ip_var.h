@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ip_var.h	8.2 (Berkeley) 1/9/95
- * $FreeBSD: src/sys/netinet/ip_var.h,v 1.101 2007/06/12 16:24:53 bms Exp $
+ * $FreeBSD: src/sys/netinet/ip_var.h,v 1.101.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _NETINET_IP_VAR_H_
@@ -213,7 +213,7 @@ int	ipproto_unregister(u_char);
 struct mbuf *
 	ip_reass(struct mbuf *);
 struct in_ifaddr *
-	ip_rtaddr(struct in_addr);
+	ip_rtaddr(struct in_addr, u_int fibnum);
 void	ip_savecontrol(struct inpcb *, struct mbuf **, struct ip *,
 	    struct mbuf *);
 void	ip_slowtimo(void);

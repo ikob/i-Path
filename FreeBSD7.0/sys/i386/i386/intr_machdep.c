@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/i386/intr_machdep.c,v 1.29.2.1 2007/11/26 15:06:49 scottl Exp $
+ * $FreeBSD: src/sys/i386/i386/intr_machdep.c,v 1.29.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*
@@ -47,6 +47,7 @@
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/proc.h>
+#include <sys/smp.h>
 #include <sys/syslog.h>
 #include <sys/systm.h>
 #include <sys/sx.h>
@@ -79,6 +80,7 @@ static int assign_cpu;
 static void	intr_assign_next_cpu(struct intsrc *isrc);
 #endif
 
+static int	intr_assign_cpu(void *arg, u_char cpu);
 static void	intr_init(void *__dummy);
 static int	intr_pic_registered(struct pic *pic);
 static void	intrcnt_setname(const char *name, int index);
@@ -136,10 +138,12 @@ intr_register_source(struct intsrc *isrc)
 #ifdef INTR_FILTER
 	error = intr_event_create(&isrc->is_event, isrc, 0,
 	    (mask_fn)isrc->is_pic->pic_enable_source,
-	    intr_eoi_src, intr_disab_eoi_src, "irq%d:", vector);
+	    intr_eoi_src, intr_disab_eoi_src, intr_assign_cpu, "irq%d:",
+	    vector);
 #else
 	error = intr_event_create(&isrc->is_event, isrc, 0,
-	    (mask_fn)isrc->is_pic->pic_enable_source, "irq%d:", vector);
+	    (mask_fn)isrc->is_pic->pic_enable_source, intr_assign_cpu, "irq%d:",
+	    vector);
 #endif
 	if (error)
 		return (error);
@@ -428,6 +432,28 @@ intr_suspend(void)
 	sx_xunlock(&intr_table_lock);
 }
 
+static int
+intr_assign_cpu(void *arg, u_char cpu)
+{
+#ifdef SMP
+	struct intsrc *isrc;	
+
+	/*
+	 * Don't do anything during early boot.  We will pick up the
+	 * assignment once the APs are started.
+	 */
+	if (assign_cpu && cpu != NOCPU) {
+		isrc = arg;
+		sx_xlock(&intr_table_lock);
+		isrc->is_pic->pic_assign_cpu(isrc, cpu_apic_ids[cpu]);
+		sx_xunlock(&intr_table_lock);
+	}
+	return (0);
+#else
+	return (EOPNOTSUPP);
+#endif
+}
+
 static void
 intrcnt_setname(const char *name, int index)
 {
@@ -482,7 +508,7 @@ intr_init(void *dummy __unused)
 	sx_init(&intr_table_lock, "intr sources");
 	mtx_init(&intrcnt_lock, "intrcnt", NULL, MTX_SPIN);
 }
-SYSINIT(intr_init, SI_SUB_INTR, SI_ORDER_FIRST, intr_init, NULL)
+SYSINIT(intr_init, SI_SUB_INTR, SI_ORDER_FIRST, intr_init, NULL);
 
 #ifdef DDB
 /*
@@ -512,25 +538,33 @@ DB_SHOW_COMMAND(irqs, db_show_irqs)
 
 /* The BSP is always a valid target. */
 static cpumask_t intr_cpus = (1 << 0);
-static int current_cpu, num_cpus = 1;
+static int current_cpu;
 
 static void
 intr_assign_next_cpu(struct intsrc *isrc)
 {
-	struct pic *pic;
-	u_int apic_id;
 
 	/*
 	 * Assign this source to a local APIC in a round-robin fashion.
 	 */
-	pic = isrc->is_pic;
-	apic_id = cpu_apic_ids[current_cpu];
-	pic->pic_assign_cpu(isrc, apic_id);
+	isrc->is_pic->pic_assign_cpu(isrc, cpu_apic_ids[current_cpu]);
 	do {
 		current_cpu++;
-		if (current_cpu >= num_cpus)
+		if (current_cpu > mp_maxid)
 			current_cpu = 0;
 	} while (!(intr_cpus & (1 << current_cpu)));
+}
+
+/* Attempt to bind the specified IRQ to the specified CPU. */
+int
+intr_bind(u_int vector, u_char cpu)
+{
+	struct intsrc *isrc;
+
+	isrc = intr_lookup_source(vector);
+	if (isrc == NULL)
+		return (EINVAL);
+	return (intr_event_bind(isrc->is_event, cpu));
 }
 
 /*
@@ -548,7 +582,6 @@ intr_add_cpu(u_int cpu)
 		    cpu_apic_ids[cpu]);
 
 	intr_cpus |= (1 << cpu);
-	num_cpus++;
 }
 
 /*
@@ -562,7 +595,7 @@ intr_shuffle_irqs(void *arg __unused)
 	int i;
 
 	/* Don't bother on UP. */
-	if (num_cpus <= 1)
+	if (mp_ncpus == 1)
 		return;
 
 	/* Round-robin assign a CPU to each enabled source. */
@@ -570,10 +603,21 @@ intr_shuffle_irqs(void *arg __unused)
 	assign_cpu = 1;
 	for (i = 0; i < NUM_IO_INTS; i++) {
 		isrc = interrupt_sources[i];
-		if (isrc != NULL && isrc->is_handlers > 0)
-			intr_assign_next_cpu(isrc);
+		if (isrc != NULL && isrc->is_handlers > 0) {
+			/*
+			 * If this event is already bound to a CPU,
+			 * then assign the source to that CPU instead
+			 * of picking one via round-robin.
+			 */
+			if (isrc->is_event->ie_cpu != NOCPU)
+				isrc->is_pic->pic_assign_cpu(isrc,
+				    cpu_apic_ids[isrc->is_event->ie_cpu]);
+			else
+				intr_assign_next_cpu(isrc);
+		}
 	}
 	sx_xunlock(&intr_table_lock);
 }
-SYSINIT(intr_shuffle_irqs, SI_SUB_SMP, SI_ORDER_SECOND, intr_shuffle_irqs, NULL)
+SYSINIT(intr_shuffle_irqs, SI_SUB_SMP, SI_ORDER_SECOND, intr_shuffle_irqs,
+    NULL);
 #endif

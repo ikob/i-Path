@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/ia64/ski/efi_stub.c,v 1.6 2006/11/05 22:03:04 marcel Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/ia64/ski/efi_stub.c,v 1.6.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/types.h>
 #include <machine/efi.h>

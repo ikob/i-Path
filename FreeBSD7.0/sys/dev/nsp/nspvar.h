@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/dev/nsp/nspvar.h,v 1.8 2005/01/06 01:43:00 imp Exp $	*/
+/*	$FreeBSD: src/sys/dev/nsp/nspvar.h,v 1.8.18.1 2008/11/25 02:59:29 kensmith Exp $	*/
 /*	$NecBSD: nspvar.h,v 1.7.14.5 2001/06/29 06:27:54 honda Exp $	*/
 /*	$NetBSD$	*/
 

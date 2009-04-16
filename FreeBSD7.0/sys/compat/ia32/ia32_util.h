@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/compat/ia32/ia32_util.h,v 1.9 2003/12/11 01:05:09 peter Exp $
+ * $FreeBSD: src/sys/compat/ia32/ia32_util.h,v 1.9.26.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include <vm/vm.h>

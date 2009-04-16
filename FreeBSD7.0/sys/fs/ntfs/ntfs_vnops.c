@@ -31,7 +31,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/ntfs/ntfs_vnops.c,v 1.60 2007/02/15 22:08:32 pjd Exp $
+ * $FreeBSD: src/sys/fs/ntfs/ntfs_vnops.c,v 1.60.6.1 2008/11/25 02:59:29 kensmith Exp $
  *
  */
 

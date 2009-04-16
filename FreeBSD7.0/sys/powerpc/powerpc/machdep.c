@@ -55,7 +55,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/powerpc/powerpc/machdep.c,v 1.103.2.1.2.1 2008/01/19 18:15:05 kib Exp $");
+__FBSDID("$FreeBSD: src/sys/powerpc/powerpc/machdep.c,v 1.103.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_compat.h"
 #include "opt_ddb.h"
@@ -141,7 +141,7 @@ SYSCTL_INT(_machdep, CPU_CACHELINE, cacheline_size,
 	   CTLFLAG_RD, &cacheline_size, 0, "");
 
 static void	cpu_startup(void *);
-SYSINIT(cpu, SI_SUB_CPU, SI_ORDER_FIRST, cpu_startup, NULL)
+SYSINIT(cpu, SI_SUB_CPU, SI_ORDER_FIRST, cpu_startup, NULL);
 
 void		powerpc_init(u_int, u_int, u_int, void *);
 
@@ -398,7 +398,8 @@ powerpc_init(u_int startkernel, u_int endkernel, u_int basekernel, void *mdp)
 
 #ifdef KDB
 	if (boothowto & RB_KDB)
-		kdb_enter("Boot flags requested debugger");
+		kdb_enter_why(KDB_WHY_BOOTFLAGS,
+		    "Boot flags requested debugger");
 #endif
 }
 

@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/sound/driver/atiixp/Makefile,v 1.1 2005/11/27 03:29:59 ariff Exp $
+# $FreeBSD: src/sys/modules/sound/driver/atiixp/Makefile,v 1.1.8.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../../../dev/sound/pci
 

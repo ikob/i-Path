@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/dc/dcphy.c,v 1.32 2006/08/02 05:28:52 yongari Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/dc/dcphy.c,v 1.32.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * Pseudo-driver for internal NWAY support on DEC 21143 and workalike
@@ -364,12 +364,12 @@ dcphy_status(struct mii_softc *sc)
 
 		if (tstat & DC_TSTAT_LP_CAN_NWAY) {
 			anlpar = tstat >> 16;
-			if (anlpar & ANLPAR_T4 &&
-			    sc->mii_capabilities & BMSR_100TXHDX)
-				mii->mii_media_active |= IFM_100_T4;
-			else if (anlpar & ANLPAR_TX_FD &&
+			if (anlpar & ANLPAR_TX_FD &&
 			    sc->mii_capabilities & BMSR_100TXFDX)
 				mii->mii_media_active |= IFM_100_TX|IFM_FDX;
+			else if (anlpar & ANLPAR_T4 &&
+			    sc->mii_capabilities & BMSR_100T4)
+				mii->mii_media_active |= IFM_100_T4;
 			else if (anlpar & ANLPAR_TX &&
 			    sc->mii_capabilities & BMSR_100TXHDX)
 				mii->mii_media_active |= IFM_100_TX;

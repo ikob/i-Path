@@ -36,7 +36,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $FreeBSD: src/sys/dev/stge/if_stgereg.h,v 1.3 2007/05/01 03:35:48 yongari Exp $ */
+/* $FreeBSD: src/sys/dev/stge/if_stgereg.h,v 1.3.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $ */
 
 /*
  * Sundance Technology PCI vendor ID
@@ -314,6 +314,14 @@ struct stge_rfd {
 #define	STGE_ExpRomData			0x50	/* 8-bit */
 
 #define	STGE_WakeEvent			0x51	/* 8-bit */
+#define	WE_WakePktEnable		(1U << 0)
+#define	WE_MagicPktEnable		(1U << 1)
+#define	WE_LinkEventEnable		(1U << 2)
+#define	WE_WakePolarity			(1U << 3)
+#define	WE_WakePktEvent			(1U << 4)
+#define	WE_MagicPktEvent		(1U << 5)
+#define	WE_LinkEvent			(1U << 6)
+#define	WE_WakeOnLanEnable		(1U << 7)
 
 #define	STGE_Countdown			0x54
 #define	CD_Count(x)			((x) & 0xffff)

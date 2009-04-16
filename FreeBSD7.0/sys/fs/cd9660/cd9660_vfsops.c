@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/fs/cd9660/cd9660_vfsops.c,v 1.150 2007/03/13 01:50:22 tegge Exp $");
+__FBSDID("$FreeBSD: src/sys/fs/cd9660/cd9660_vfsops.c,v 1.150.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

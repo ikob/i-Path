@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/fdc/fdc.c,v 1.317 2007/02/27 17:16:52 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/fdc/fdc.c,v 1.317.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_fdc.h"
 
@@ -1383,6 +1383,7 @@ fd_access(struct g_provider *pp, int r, int w, int e)
 	struct fd_data *fd;
 	struct fdc_data *fdc;
 	int ar, aw, ae;
+	int busy;
 
 	fd = pp->geom->softc;
 	fdc = fd->fdc;
@@ -1403,6 +1404,7 @@ fd_access(struct g_provider *pp, int r, int w, int e)
 		return (0);
 	}
 
+	busy = 0;
 	if (pp->acr == 0 && pp->acw == 0 && pp->ace == 0) {
 		if (fdmisccmd(fd, BIO_PROBE, NULL))
 			return (ENXIO);
@@ -1415,10 +1417,14 @@ fd_access(struct g_provider *pp, int r, int w, int e)
 			mtx_unlock(&fdc->fdc_mtx);
 		}
 		device_busy(fd->dev);
+		busy = 1;
 	}
 
-	if (w > 0 && (fd->flags & FD_WP))
+	if (w > 0 && (fd->flags & FD_WP)) {
+		if (busy)
+			device_unbusy(fd->dev);
 		return (EROFS);
+	}
 
 	pp->sectorsize = fd->sectorsize;
 	pp->stripesize = fd->ft->heads * fd->ft->sectrac * fd->sectorsize;
@@ -1714,7 +1720,7 @@ fdc_detach(device_t dev)
 	fdc->flags |= FDC_KTHREAD_EXIT;
 	wakeup(&fdc->head);
 	while ((fdc->flags & FDC_KTHREAD_ALIVE) != 0)
-		msleep(&fdc->fdc_thread, &fdc->fdc_mtx, PRIBIO, "fdcdet", 0);
+		msleep(fdc->fdc_thread, &fdc->fdc_mtx, PRIBIO, "fdcdet", 0);
 	mtx_unlock(&fdc->fdc_mtx);
 
 	/* reset controller, turn motor off */

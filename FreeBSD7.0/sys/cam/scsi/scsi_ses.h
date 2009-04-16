@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/cam/scsi/scsi_ses.h,v 1.4 2006/01/18 08:37:27 mjacob Exp $ */
+/* $FreeBSD: src/sys/cam/scsi/scsi_ses.h,v 1.4.6.1 2008/11/25 02:59:29 kensmith Exp $ */
 /*-
  * Copyright (c) 2000 by Matthew Jacob
  * All rights reserved.

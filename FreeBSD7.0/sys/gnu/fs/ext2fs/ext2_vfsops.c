@@ -33,7 +33,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)ffs_vfsops.c	8.8 (Berkeley) 4/18/94
- * $FreeBSD: src/sys/gnu/fs/ext2fs/ext2_vfsops.c,v 1.165 2007/08/15 17:40:09 jhb Exp $
+ * $FreeBSD: src/sys/gnu/fs/ext2fs/ext2_vfsops.c,v 1.165.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*-
@@ -117,7 +117,7 @@ static int	ext2_check_sb_compat(struct ext2_super_block *es, struct cdev *dev,
 static int	compute_sb_data(struct vnode * devvp,
 		    struct ext2_super_block * es, struct ext2_sb_info * fs);
 
-static const char *ext2_opts[] = { "from", "export", "union", "acls", "exec",
+static const char *ext2_opts[] = { "from", "export", "acls", "noexec",
     "noatime", "union", "suiddir", "multilabel", "nosymfollow",
     "noclusterr", "noclusterw", "force", NULL };
  

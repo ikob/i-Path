@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/ndis/kern_ndis.c,v 1.96 2007/06/10 04:40:13 mjacob Exp $");
+__FBSDID("$FreeBSD: src/sys/compat/ndis/kern_ndis.c,v 1.96.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -876,6 +876,8 @@ ndis_set_info(arg, oid, buf, buflen)
 
 	sc = arg;
 
+	KeResetEvent(&sc->ndis_block->nmb_setevent);
+
 	KeAcquireSpinLock(&sc->ndis_block->nmb_lock, &irql);
 
 	if (sc->ndis_block->nmb_pendingreq != NULL) {
@@ -904,7 +906,6 @@ ndis_set_info(arg, oid, buf, buflen)
 	if (rval == NDIS_STATUS_PENDING) {
 		/* Wait up to 5 seconds. */
 		duetime = (5 * 1000000) * -10;
-		KeResetEvent(&sc->ndis_block->nmb_setevent);
 		KeWaitForSingleObject(&sc->ndis_block->nmb_setevent,
 		    0, 0, FALSE, &duetime);
 		rval = sc->ndis_block->nmb_setstat;
@@ -1097,6 +1098,8 @@ ndis_reset_nic(arg)
 
 	NDIS_UNLOCK(sc);
 
+	KeResetEvent(&sc->ndis_block->nmb_resetevent);
+
 	if (NDIS_SERIALIZED(sc->ndis_block))
 		KeAcquireSpinLock(&sc->ndis_block->nmb_lock, &irql);
 
@@ -1105,11 +1108,9 @@ ndis_reset_nic(arg)
 	if (NDIS_SERIALIZED(sc->ndis_block))
 		KeReleaseSpinLock(&sc->ndis_block->nmb_lock, irql);
 
-	if (rval == NDIS_STATUS_PENDING) {
-		KeResetEvent(&sc->ndis_block->nmb_resetevent);
+	if (rval == NDIS_STATUS_PENDING)
 		KeWaitForSingleObject(&sc->ndis_block->nmb_resetevent,
 		    0, 0, FALSE, NULL);
-	}
 
 	return(0);
 }
@@ -1298,6 +1299,8 @@ ndis_get_info(arg, oid, buf, buflen)
 
 	sc = arg;
 
+	KeResetEvent(&sc->ndis_block->nmb_getevent);
+
 	KeAcquireSpinLock(&sc->ndis_block->nmb_lock, &irql);
 
 	if (sc->ndis_block->nmb_pendingreq != NULL) {
@@ -1328,7 +1331,6 @@ ndis_get_info(arg, oid, buf, buflen)
 	if (rval == NDIS_STATUS_PENDING) {
 		/* Wait up to 5 seconds. */
 		duetime = (5 * 1000000) * -10;
-		KeResetEvent(&sc->ndis_block->nmb_getevent);
 		KeWaitForSingleObject(&sc->ndis_block->nmb_getevent,
 		    0, 0, FALSE, &duetime);
 		rval = sc->ndis_block->nmb_getstat;

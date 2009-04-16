@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/libalias/libalias/Makefile,v 1.2 2007/04/09 17:08:27 piso Exp $
+# $FreeBSD: src/sys/modules/libalias/libalias/Makefile,v 1.2.6.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../../netinet/libalias
 

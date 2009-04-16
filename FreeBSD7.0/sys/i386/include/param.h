@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)param.h	5.8 (Berkeley) 6/28/91
- * $FreeBSD: src/sys/i386/include/param.h,v 1.81 2006/01/09 06:05:56 imp Exp $
+ * $FreeBSD: src/sys/i386/include/param.h,v 1.81.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*
@@ -65,7 +65,7 @@
 #endif
 #define MID_MACHINE	MID_I386
 
-#ifdef SMP
+#if defined(SMP) || defined(KLD_MODULE)
 #define MAXCPU		16
 #else
 #define MAXCPU		1

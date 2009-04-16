@@ -1,5 +1,5 @@
 #	From: @(#)bsd.prog.mk	5.26 (Berkeley) 6/25/91
-# $FreeBSD: src/sys/conf/kmod.mk,v 1.219 2007/07/11 01:20:37 marcel Exp $
+# $FreeBSD: src/sys/conf/kmod.mk,v 1.219.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
 #
 # The include file <bsd.kmod.mk> handles building and installing loadable
 # kernel modules.
@@ -422,6 +422,9 @@ acpi_quirks.h: @/tools/acpi_quirks2h.awk @/dev/acpica/acpi_quirks
 .if !empty(SRCS:Massym.s)
 CLEANFILES+=	assym.s genassym.o
 assym.s: genassym.o
+.if defined(KERNBUILDDIR)
+genassym.o: opt_global.h
+.endif
 .if !exists(@)
 assym.s: @
 .else
@@ -438,6 +441,10 @@ genassym.o: @ machine ${SRCS:Mopt_*.h}
 
 lint: ${SRCS}
 	${LINT} ${LINTKERNFLAGS} ${CFLAGS:M-[DILU]*} ${.ALLSRC:M*.c}
+
+.if defined(KERNBUILDDIR)
+${OBJS}: opt_global.h
+.endif
 
 .include <bsd.dep.mk>
 

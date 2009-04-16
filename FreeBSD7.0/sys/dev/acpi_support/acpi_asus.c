@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpi_support/acpi_asus.c,v 1.30 2007/06/02 21:10:00 philip Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/acpi_support/acpi_asus.c,v 1.30.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * Driver for extra ACPI-controlled gadgets (hotkeys, leds, etc) found on
@@ -55,6 +55,8 @@ __FBSDID("$FreeBSD: src/sys/dev/acpi_support/acpi_asus.c,v 1.30 2007/06/02 21:10
 #define ACPI_ASUS_METHOD_BRN	1
 #define ACPI_ASUS_METHOD_DISP	2
 #define ACPI_ASUS_METHOD_LCD	3
+#define ACPI_ASUS_METHOD_CAMERA	4
+#define ACPI_ASUS_METHOD_CARDRD 5
 
 #define _COMPONENT	ACPI_OEM
 ACPI_MODULE_NAME("ASUS")
@@ -63,6 +65,8 @@ struct acpi_asus_model {
 	char	*name;
 
 	char	*bled_set;
+	char	*dled_set;
+	char	*gled_set;
 	char	*mled_set;
 	char	*tled_set;
 	char	*wled_set;
@@ -77,6 +81,14 @@ struct acpi_asus_model {
 
 	char	*disp_get;
 	char	*disp_set;
+
+	char	*cam_get;
+	char	*cam_set;
+
+	char	*crd_get;
+	char	*crd_set;
+
+	void	(*n_func)(ACPI_HANDLE, UINT32, void *);
 };
 
 struct acpi_asus_led {
@@ -86,6 +98,8 @@ struct acpi_asus_led {
 	int		state;
 	enum {
 		ACPI_ASUS_LED_BLED,
+		ACPI_ASUS_LED_DLED,
+		ACPI_ASUS_LED_GLED,
 		ACPI_ASUS_LED_MLED,
 		ACPI_ASUS_LED_TLED,
 		ACPI_ASUS_LED_WLED,
@@ -101,6 +115,8 @@ struct acpi_asus_softc {
 	struct sysctl_oid	*sysctl_tree;
 
 	struct acpi_asus_led	s_bled;
+	struct acpi_asus_led	s_dled;
+	struct acpi_asus_led	s_gled;
 	struct acpi_asus_led	s_mled;
 	struct acpi_asus_led	s_tled;
 	struct acpi_asus_led	s_wled;
@@ -108,6 +124,8 @@ struct acpi_asus_softc {
 	int			s_brn;
 	int			s_disp;
 	int			s_lcd;
+	int			s_cam;
+	int			s_crd;
 };
 
 /*
@@ -190,6 +208,21 @@ static struct acpi_asus_model acpi_asus_models[] = {
 		.brn_dn		= "\\Q0B",
 		.disp_get	= "\\INFB",
 		.disp_set	= "SDSP"
+	},
+	{
+		.name		= "G2K",
+		.bled_set	= "BLED",
+		.dled_set	= "DLED",
+		.gled_set	= "GLED",
+		.mled_set	= "MLED",
+		.tled_set	= "TLED",
+		.wled_set	= "WLED",
+		.brn_get	= "GPLV",
+		.brn_set	= "SPLV",
+		.lcd_get	= "\\_SB.PCI0.SBRG.EC0.RPIN",
+		.lcd_set	= "\\_SB.PCI0.SBRG.EC0._Q10",
+		.disp_get	= "\\_SB.PCI0.PCE2.VGA.GETD",
+		.disp_set	= "SDSP",
 	},
 	{
 		.name		= "L2D",
@@ -354,25 +387,62 @@ static struct acpi_asus_model acpi_samsung_models[] = {
 	{ .name = NULL }
 };
 
+static void	acpi_asus_eeepc_notify(ACPI_HANDLE h, UINT32 notify, void *context);
+
+/*
+ * EeePC have an Asus ASUS010 gadget interface,
+ * but they can't be probed quite the same way as Asus laptops.
+ */
+static struct acpi_asus_model acpi_eeepc_models[] = {
+	{
+		.name		= "EEE",
+		.brn_get	= "\\_SB.ATKD.PBLG",
+		.brn_set	= "\\_SB.ATKD.PBLS",
+		.cam_get	= "\\_SB.ATKD.CAMG",
+		.cam_set	= "\\_SB.ATKD.CAMS",
+		.crd_set	= "\\_SB.ATKD.CRDS",
+		.crd_get	= "\\_SB.ATKD.CRDG",
+		.n_func		= acpi_asus_eeepc_notify
+	},
+
+	{ .name = NULL }
+};
+
 static struct {
 	char	*name;
 	char	*description;
 	int	method;
+	int	flags;
 } acpi_asus_sysctls[] = {
 	{
 		.name		= "lcd_backlight",
 		.method		= ACPI_ASUS_METHOD_LCD,
-		.description	= "state of the lcd backlight"
+		.description	= "state of the lcd backlight",
+		.flags 		= CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_ANYBODY
 	},
 	{
 		.name		= "lcd_brightness",
 		.method		= ACPI_ASUS_METHOD_BRN,
-		.description	= "brightness of the lcd panel"
+		.description	= "brightness of the lcd panel",
+		.flags 		= CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_ANYBODY
 	},
 	{
 		.name		= "video_output",
 		.method		= ACPI_ASUS_METHOD_DISP,
-		.description	= "display output state"
+		.description	= "display output state",
+		.flags 		= CTLTYPE_INT | CTLFLAG_RW
+	},
+	{
+		.name		= "camera",
+		.method		= ACPI_ASUS_METHOD_CAMERA,
+		.description	= "internal camera state",  
+		.flags 		= CTLTYPE_INT | CTLFLAG_RW
+	},
+	{
+		.name		= "cardreader",
+		.method		= ACPI_ASUS_METHOD_CARDRD,
+		.description	= "internal card reader state",
+		.flags 		= CTLTYPE_INT | CTLFLAG_RW
 	},
 
 	{ .name = NULL }
@@ -423,13 +493,17 @@ acpi_asus_probe(device_t dev)
 	ACPI_BUFFER		Buf;
 	ACPI_OBJECT		Arg, *Obj;
 	ACPI_OBJECT_LIST	Args;
-	static char		*asus_ids[] = { "ATK0100", NULL };
+	static char		*asus_ids[] = { "ATK0100", "ASUS010", NULL };
+	char *rstr;
 
 	ACPI_FUNCTION_TRACE((char *)(uintptr_t)__func__);
 
-	if (acpi_disabled("asus") ||
-	    ACPI_ID_PROBE(device_get_parent(dev), dev, asus_ids) == NULL)
+	if (acpi_disabled("asus"))
 		return (ENXIO);
+	rstr = ACPI_ID_PROBE(device_get_parent(dev), dev, asus_ids);
+	if (rstr == NULL) {
+		return (ENXIO);
+	}
 
 	sc = device_get_softc(dev);
 	sc->dev = dev;
@@ -465,6 +539,14 @@ acpi_asus_probe(device_t dev)
 		if (strncmp("ODEM", th.OemTableId, 4) == 0) {
 			sc->model = &acpi_samsung_models[0];
 			device_set_desc(dev, "Samsung P30 Laptop Extras");
+			AcpiOsFree(Buf.Pointer);
+			return (0);
+		}
+
+		/* if EeePC */
+		if (strncmp("ASUS010", rstr, 7) == 0) {
+			sc->model = &acpi_eeepc_models[0];
+			device_set_desc(dev, "ASUS EeePC");
 			AcpiOsFree(Buf.Pointer);
 			return (0);
 		}
@@ -600,7 +682,7 @@ acpi_asus_attach(device_t dev)
 		SYSCTL_ADD_PROC(&sc->sysctl_ctx,
 		    SYSCTL_CHILDREN(sc->sysctl_tree), OID_AUTO,
 		    acpi_asus_sysctls[i].name,
-		    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_ANYBODY,
+		    acpi_asus_sysctls[i].flags,
 		    sc, i, acpi_asus_sysctl, "I",
 		    acpi_asus_sysctls[i].description);
 	}
@@ -611,7 +693,24 @@ acpi_asus_attach(device_t dev)
 		sc->s_bled.sc = sc;
 		sc->s_bled.type = ACPI_ASUS_LED_BLED;
 		sc->s_bled.cdev =
-		    led_create((led_t *)acpi_asus_led, &sc->s_bled, "bled");
+		    led_create_state((led_t *)acpi_asus_led, &sc->s_bled,
+			"bled", 1);
+	}
+
+	if (sc->model->dled_set) {
+		sc->s_dled.busy = 0;
+		sc->s_dled.sc = sc;
+		sc->s_dled.type = ACPI_ASUS_LED_DLED;
+		sc->s_dled.cdev =
+		    led_create((led_t *)acpi_asus_led, &sc->s_dled, "dled");
+	}
+
+	if (sc->model->gled_set) {
+		sc->s_gled.busy = 0;
+		sc->s_gled.sc = sc;
+		sc->s_gled.type = ACPI_ASUS_LED_GLED;
+		sc->s_gled.cdev =
+		    led_create((led_t *)acpi_asus_led, &sc->s_gled, "gled");
 	}
 
 	if (sc->model->mled_set) {
@@ -627,7 +726,8 @@ acpi_asus_attach(device_t dev)
 		sc->s_tled.sc = sc;
 		sc->s_tled.type = ACPI_ASUS_LED_TLED;
 		sc->s_tled.cdev =
-		    led_create((led_t *)acpi_asus_led, &sc->s_tled, "tled");
+		    led_create_state((led_t *)acpi_asus_led, &sc->s_tled,
+			"tled", 1);
 	}
 
 	if (sc->model->wled_set) {
@@ -635,15 +735,19 @@ acpi_asus_attach(device_t dev)
 		sc->s_wled.sc = sc;
 		sc->s_wled.type = ACPI_ASUS_LED_WLED;
 		sc->s_wled.cdev =
-		    led_create((led_t *)acpi_asus_led, &sc->s_wled, "wled");
+		    led_create_state((led_t *)acpi_asus_led, &sc->s_wled,
+			"wled", 1);
 	}
 
 	/* Activate hotkeys */
 	AcpiEvaluateObject(sc->handle, "BSTS", NULL, NULL);
 
 	/* Handle notifies */
+	if (sc->model->n_func == NULL)
+		sc->model->n_func = acpi_asus_notify;
+
 	AcpiInstallNotifyHandler(sc->handle, ACPI_SYSTEM_NOTIFY,
-	    acpi_asus_notify, dev);
+	    sc->model->n_func, dev);
 
 	return (0);
 }
@@ -660,6 +764,12 @@ acpi_asus_detach(device_t dev)
 	/* Turn the lights off */
 	if (sc->model->bled_set)
 		led_destroy(sc->s_bled.cdev);
+
+	if (sc->model->dled_set)
+		led_destroy(sc->s_dled.cdev);
+
+	if (sc->model->gled_set)
+		led_destroy(sc->s_gled.cdev);
 
 	if (sc->model->mled_set)
 		led_destroy(sc->s_mled.cdev);
@@ -696,11 +806,17 @@ acpi_asus_led_task(struct acpi_asus_led *led, int pending __unused)
 		method = sc->model->bled_set;
 		state = led->state;
 		break;
+	case ACPI_ASUS_LED_DLED:
+		method = sc->model->dled_set;
+		state = led->state;
+		break;
+	case ACPI_ASUS_LED_GLED:
+		method = sc->model->gled_set;
+		state = led->state + 1;	/* 1: off, 2: on */
+		break;
 	case ACPI_ASUS_LED_MLED:
 		method = sc->model->mled_set;
-
-		/* Note: inverted */
-		state = !led->state;
+		state = !led->state;	/* inverted */
 		break;
 	case ACPI_ASUS_LED_TLED:
 		method = sc->model->tled_set;
@@ -784,6 +900,12 @@ acpi_asus_sysctl_get(struct acpi_asus_softc *sc, int method)
 	case ACPI_ASUS_METHOD_LCD:
 		val = sc->s_lcd;
 		break;
+	case ACPI_ASUS_METHOD_CAMERA:
+		val = sc->s_cam;
+		break;
+	case ACPI_ASUS_METHOD_CARDRD:
+		val = sc->s_crd;
+		break;
 	}
 
 	return (val);
@@ -844,6 +966,26 @@ acpi_asus_sysctl_set(struct acpi_asus_softc *sc, int method, int arg)
 			sc->s_lcd = arg;
 
 		break;
+	case ACPI_ASUS_METHOD_CAMERA:
+		if (arg < 0 || arg > 1)
+			return (EINVAL);
+
+		status = AcpiEvaluateObject(sc->handle,
+		    sc->model->cam_set, NULL, NULL);
+
+		if (ACPI_SUCCESS(status))
+			sc->s_cam = arg;
+		break;
+	case ACPI_ASUS_METHOD_CARDRD:
+		if (arg < 0 || arg > 1)
+			return (EINVAL);
+
+		status = AcpiEvaluateObject(sc->handle,
+		    sc->model->crd_set, NULL, NULL);
+
+		if (ACPI_SUCCESS(status))
+			sc->s_crd = arg;
+		break;
 	}
 
 	return (0);
@@ -886,37 +1028,72 @@ acpi_asus_sysctl_init(struct acpi_asus_softc *sc, int method)
 		}
 		return (FALSE);
 	case ACPI_ASUS_METHOD_LCD:
-		if (sc->model->lcd_get &&
-		    strncmp(sc->model->name, "L3H", 3) != 0) {
+		if (sc->model->lcd_get) {
+			if (strncmp(sc->model->name, "G2K", 3) == 0) {
+				ACPI_BUFFER		Buf;
+				ACPI_OBJECT		Arg, Obj;
+				ACPI_OBJECT_LIST	Args;
+
+				Arg.Type = ACPI_TYPE_INTEGER;
+				Arg.Integer.Value = 0x11;
+				Args.Count = 1;
+				Args.Pointer = &Arg;
+				Buf.Length = sizeof(Obj);
+				Buf.Pointer = &Obj;
+
+				status = AcpiEvaluateObject(sc->handle,
+				    sc->model->lcd_get, &Args, &Buf);
+				if (ACPI_SUCCESS(status) &&
+				    Obj.Type == ACPI_TYPE_INTEGER) {
+					sc->s_lcd = Obj.Integer.Value;
+					return (TRUE);
+				}
+			} else if (strncmp(sc->model->name, "L3H", 3) == 0) {
+				ACPI_BUFFER		Buf;
+				ACPI_OBJECT		Arg[2], Obj;
+				ACPI_OBJECT_LIST	Args;
+
+				/* L3H is a bit special */
+				Arg[0].Type = ACPI_TYPE_INTEGER;
+				Arg[0].Integer.Value = 0x02;
+				Arg[1].Type = ACPI_TYPE_INTEGER;
+				Arg[1].Integer.Value = 0x03;
+
+				Args.Count = 2;
+				Args.Pointer = Arg;
+
+				Buf.Length = sizeof(Obj);
+				Buf.Pointer = &Obj;
+
+				status = AcpiEvaluateObject(sc->handle,
+				    sc->model->lcd_get, &Args, &Buf);
+				if (ACPI_SUCCESS(status) &&
+				    Obj.Type == ACPI_TYPE_INTEGER) {
+					sc->s_lcd = Obj.Integer.Value >> 8;
+					return (TRUE);
+				}
+			} else {
+				status = acpi_GetInteger(sc->handle,
+				    sc->model->lcd_get, &sc->s_lcd);
+				if (ACPI_SUCCESS(status))
+					return (TRUE);
+			}
+		}
+		return (FALSE);
+	case ACPI_ASUS_METHOD_CAMERA:
+		if (sc->model->cam_get) {
 			status = acpi_GetInteger(sc->handle,
-			    sc->model->lcd_get, &sc->s_lcd);
+			    sc->model->cam_get, &sc->s_cam);
 			if (ACPI_SUCCESS(status))
 				return (TRUE);
 		}
-		else if (sc->model->lcd_get) {
-			ACPI_BUFFER		Buf;
-			ACPI_OBJECT		Arg[2], Obj;
-			ACPI_OBJECT_LIST	Args;
-
-			/* L3H is a bit special */
-			Arg[0].Type = ACPI_TYPE_INTEGER;
-			Arg[0].Integer.Value = 0x02;
-			Arg[1].Type = ACPI_TYPE_INTEGER;
-			Arg[1].Integer.Value = 0x03;
-
-			Args.Count = 2;
-			Args.Pointer = Arg;
-
-			Buf.Length = sizeof(Obj);
-			Buf.Pointer = &Obj;
-
-			status = AcpiEvaluateObject(sc->handle,
-			    sc->model->lcd_get, &Args, &Buf);
-			if (ACPI_SUCCESS(status) &&
-			    Obj.Type == ACPI_TYPE_INTEGER) {
-				sc->s_lcd = Obj.Integer.Value >> 8;
+		return (FALSE);
+	case ACPI_ASUS_METHOD_CARDRD:
+		if (sc->model->crd_get) {
+			status = acpi_GetInteger(sc->handle,
+			    sc->model->crd_get, &sc->s_crd);
+			if (ACPI_SUCCESS(status))
 				return (TRUE);
-			}
 		}
 		return (FALSE);
 	}
@@ -950,6 +1127,29 @@ acpi_asus_notify(ACPI_HANDLE h, UINT32 notify, void *context)
 	} else {
 		/* Notify devd(8) */
 		acpi_UserNotify("ASUS", h, notify);
+	}
+	ACPI_SERIAL_END(asus);
+}
+
+static void
+acpi_asus_eeepc_notify(ACPI_HANDLE h, UINT32 notify, void *context)
+{
+	struct acpi_asus_softc	*sc;
+	struct acpi_softc	*acpi_sc;
+
+	ACPI_FUNCTION_TRACE((char *)(uintptr_t)__func__);
+
+	sc = device_get_softc((device_t)context);
+	acpi_sc = acpi_device_get_parent_softc(sc->dev);
+
+	ACPI_SERIAL_BEGIN(asus);
+	if ((notify & ~0x20) <= 15) {
+		sc->s_brn = notify & ~0x20;
+		ACPI_VPRINT(sc->dev, acpi_sc,
+		    "Brightness increased/decreased\n");
+	} else {
+		/* Notify devd(8) */
+		acpi_UserNotify("ASUS-Eee", h, notify);
 	}
 	ACPI_SERIAL_END(asus);
 }

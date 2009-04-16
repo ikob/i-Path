@@ -24,7 +24,7 @@
 # EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 #	From: sio.s 1.3 1999/01/10 14:48:03 rnordier
-# $FreeBSD: src/sys/boot/i386/kgzldr/sio.s,v 1.5 2002/09/30 20:37:57 peter Exp $
+# $FreeBSD: src/sys/boot/i386/kgzldr/sio.s,v 1.5.32.1 2008/11/25 02:59:29 kensmith Exp $
 #
 
 		.globl sio_putchr

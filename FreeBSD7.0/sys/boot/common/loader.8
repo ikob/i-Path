@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: src/sys/boot/common/loader.8,v 1.93 2007/05/09 02:37:58 sepotvin Exp $
+.\" $FreeBSD: src/sys/boot/common/loader.8,v 1.93.6.2 2008/12/28 23:50:05 danger Exp $
 .\"
 .Dd May 8, 2007
 .Dt LOADER 8
@@ -454,7 +454,7 @@ if the script terminates with a non-zero exit code,
 or if a SIGTERM is delivered to the
 .Xr init 8
 process (PID 1).
-.It Va init_script
+.It Va init_shell
 Defines the shell binary to be used for executing the various shell scripts.
 The default is
 .Dq Li /bin/sh .

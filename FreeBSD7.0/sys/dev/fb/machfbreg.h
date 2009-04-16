@@ -26,7 +26,7 @@
  *
  *	from: NetBSD: machfbreg.h,v 1.1 2002/10/24 18:15:57 junyoung Exp
  *
- * $FreeBSD: src/sys/dev/fb/machfbreg.h,v 1.1 2005/05/21 20:47:38 marius Exp $
+ * $FreeBSD: src/sys/dev/fb/machfbreg.h,v 1.1.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _DEV_FB_MACHFB_H_

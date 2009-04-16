@@ -6,7 +6,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: src/sys/ia64/ia64/sscdisk.c,v 1.33 2005/10/31 15:41:24 rwatson Exp $
+ * $FreeBSD: src/sys/ia64/ia64/sscdisk.c,v 1.33.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  *
  */
 
@@ -196,7 +196,7 @@ ssc_drvinit(void *unused)
 	ssccreate(-1);
 }
 
-SYSINIT(sscdev,SI_SUB_DRIVERS,SI_ORDER_MIDDLE, ssc_drvinit,NULL)
+SYSINIT(sscdev,SI_SUB_DRIVERS,SI_ORDER_MIDDLE, ssc_drvinit,NULL);
 
 static void
 ssc_takeroot(void *junk)

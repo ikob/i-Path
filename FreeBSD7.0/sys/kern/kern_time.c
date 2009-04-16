@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_time.c,v 1.142 2007/06/09 21:48:44 attilio Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_time.c,v 1.142.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -201,6 +201,7 @@ kern_clock_gettime(struct thread *td, clockid_t clock_id, struct timespec *ats)
 {
 	struct timeval sys, user;
 	struct proc *p;
+	uint64_t runtime, curtime, switchtime;
 
 	p = td->td_proc;
 	switch (clock_id) {
@@ -241,6 +242,16 @@ kern_clock_gettime(struct thread *td, clockid_t clock_id, struct timespec *ats)
 	case CLOCK_SECOND:
 		ats->tv_sec = time_second;
 		ats->tv_nsec = 0;
+		break;
+	case CLOCK_THREAD_CPUTIME_ID:
+		critical_enter();
+		switchtime = PCPU_GET(switchtime);
+		curtime = cpu_ticks();
+		runtime = td->td_runtime;
+		critical_exit();
+		runtime = cputick2usec(runtime + curtime - switchtime);
+		ats->tv_sec = runtime / 1000000;
+		ats->tv_nsec = runtime % 1000000 * 1000;
 		break;
 	default:
 		return (EINVAL);
@@ -1225,6 +1236,12 @@ realtimer_delete(struct itimer *it)
 {
 	mtx_assert(&it->it_mtx, MA_OWNED);
 	
+	/*
+	 * clear timer's value and interval to tell realtimer_expire
+	 * to not rearm the timer.
+	 */
+	timespecclear(&it->it_time.it_value);
+	timespecclear(&it->it_time.it_interval);
 	ITIMER_UNLOCK(it);
 	callout_drain(&it->it_callout);
 	ITIMER_LOCK(it);
@@ -1374,9 +1391,11 @@ realtimer_expire(void *arg)
 			callout_reset(&it->it_callout, tvtohz(&tv),
 				 realtimer_expire, it);
 		}
+		itimer_enter(it);
 		ITIMER_UNLOCK(it);
 		itimer_fire(it);
 		ITIMER_LOCK(it);
+		itimer_leave(it);
 	} else if (timespecisset(&it->it_time.it_value)) {
 		ts = it->it_time.it_value;
 		timespecsub(&ts, &cts);

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/_types.h,v 1.23 2006/03/01 06:29:34 davidxu Exp $
+ * $FreeBSD: src/sys/sys/_types.h,v 1.23.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS__TYPES_H_
@@ -61,6 +61,9 @@ typedef	struct __timer	*__timer_t;	/* timer_gettime()... */
 typedef	struct __mq	*__mqd_t;	/* mq_open()... */
 typedef	__uint32_t	__uid_t;
 typedef	unsigned int	__useconds_t;	/* microseconds (unsigned) */
+typedef	int		__cpuwhich_t;	/* which parameter for cpuset. */
+typedef	int		__cpulevel_t;	/* level parameter for cpuset. */
+typedef int		__cpusetid_t;	/* cpuset identifier. */
 
 /*
  * Unusual type definitions.

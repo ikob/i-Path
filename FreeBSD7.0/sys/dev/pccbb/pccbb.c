@@ -75,7 +75,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/pccbb/pccbb.c,v 1.165 2007/09/30 11:05:15 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/pccbb/pccbb.c,v 1.165.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/bus.h>

@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/powerpc/powerpc/trap.c,v 1.67 2007/08/07 18:40:02 marcel Exp $");
+__FBSDID("$FreeBSD: src/sys/powerpc/powerpc/trap.c,v 1.67.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_ktrace.h"
 

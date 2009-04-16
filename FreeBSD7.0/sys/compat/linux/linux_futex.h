@@ -30,7 +30,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/compat/linux/linux_futex.h,v 1.2 2007/02/25 12:40:35 netchild Exp $
+ * $FreeBSD: src/sys/compat/linux/linux_futex.h,v 1.2.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _LINUX_FUTEX_H
@@ -42,6 +42,11 @@
 #define LINUX_FUTEX_REQUEUE	3
 #define LINUX_FUTEX_CMP_REQUEUE	4
 #define LINUX_FUTEX_WAKE_OP	5
+#define LINUX_FUTEX_LOCK_PI	6
+#define LINUX_FUTEX_UNLOCK_PI	7
+#define LINUX_FUTEX_TRYLOCK_PI	8
+
+#define LINUX_FUTEX_PRIVATE_FLAG	128
 
 #define FUTEX_OP_SET            0	/* *(int *)UADDR2 = OPARG; */
 #define FUTEX_OP_ADD            1	/* *(int *)UADDR2 += OPARG; */

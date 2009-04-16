@@ -1,8 +1,8 @@
-# $FreeBSD: src/sys/modules/scc/Makefile,v 1.2 2006/04/01 04:54:47 marcel Exp $
+# $FreeBSD: src/sys/modules/scc/Makefile,v 1.2.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../dev/scc
 
-.if ${MACHINE_ARCH} == "sparc64"
+.if ${MACHINE} == "sparc64"
 scc_bfe= scc_bfe_ebus.c scc_bfe_sbus.c
 .endif
 .if ${MACHINE_ARCH} == "powerpc"

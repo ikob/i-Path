@@ -37,7 +37,7 @@
 #include "opt_inet6.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/contrib/pf/net/pf_if.c,v 1.11.2.2 2007/11/25 19:26:46 mlaier Exp $");
+__FBSDID("$FreeBSD: src/sys/contrib/pf/net/pf_if.c,v 1.11.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
 #endif
 
 #include <sys/param.h>
@@ -893,6 +893,9 @@ pfi_attach_ifnet_event(void *arg __unused, struct ifnet *ifp)
 {
 	PF_LOCK();
 	pfi_attach_ifnet(ifp);
+#ifdef ALTQ
+	pf_altq_ifnet_event(ifp, 0);
+#endif
 	PF_UNLOCK();
 }
 
@@ -901,6 +904,9 @@ pfi_detach_ifnet_event(void *arg __unused, struct ifnet *ifp)
 {
 	PF_LOCK();
 	pfi_detach_ifnet(ifp);
+#ifdef ALTQ
+	pf_altq_ifnet_event(ifp, 1);
+#endif
 	PF_UNLOCK();
 }
 

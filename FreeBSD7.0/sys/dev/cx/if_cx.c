@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/cx/if_cx.c,v 1.57 2007/07/27 11:59:56 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/cx/if_cx.c,v 1.57.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 
@@ -358,7 +358,7 @@ static void cx_led_off (void *arg)
 }
 
 /*
- * Activate interupt handler from DDK.
+ * Activate interrupt handler from DDK.
  */
 static void cx_intr (void *arg)
 {
@@ -1102,10 +1102,14 @@ static int cx_sioctl (struct ifnet *ifp, u_long cmd, caddr_t data)
 	if (error)
 		return error;
 
+	s = splhigh ();
+	CX_LOCK (bd);
 	if (! (ifp->if_flags & IFF_DEBUG))
 		d->chan->debug = 0;
-	else if (! d->chan->debug)
-		d->chan->debug = 1;
+	else
+		d->chan->debug = d->chan->debug_shadow;
+	CX_UNLOCK (bd);
+	splx (s);
 
 	switch (cmd) {
 	default:	   CX_DEBUG2 (d, ("ioctl 0x%lx\n", cmd)); return 0;
@@ -1745,6 +1749,8 @@ static int cx_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 			cx_enable_receive (c, 0);
 			cx_enable_transmit (c, 0);
 		} else if (c->mode == M_ASYNC && *(int*)data == SERIAL_HDLC) {
+			if (d->ifp->if_flags & IFF_DEBUG)
+				c->debug = c->debug_shadow;
 			cx_set_mode (c, M_HDLC);
 			cx_enable_receive (c, 1);
 			cx_enable_transmit (c, 1);
@@ -1913,15 +1919,24 @@ static int cx_ioctl (struct cdev *dev, u_long cmd, caddr_t data, int flag, struc
 			return error;
 		s = splhigh ();
 		CX_LOCK (bd);
+#ifndef	NETGRAPH
+		if (c->mode == M_ASYNC) {
+			c->debug = *(int*)data;
+		} else {
+			/*
+			 * The debug_shadow is always greater than zero for
+			 * logic simplicity.  For switching debug off the
+			 * IFF_DEBUG is responsible (for !M_ASYNC mode).
+			 */
+			c->debug_shadow = (*(int*)data) ? (*(int*)data) : 1;
+			if (d->ifp->if_flags & IFF_DEBUG)
+				c->debug = c->debug_shadow;
+		}
+#else
 		c->debug = *(int*)data;
+#endif
 		CX_UNLOCK (bd);
 		splx (s);
-#ifndef	NETGRAPH
-		if (d->chan->debug)
-			d->ifp->if_flags |= IFF_DEBUG;
-		else
-			d->ifp->if_flags &= (~IFF_DEBUG);
-#endif
 		return 0;
 	}
 

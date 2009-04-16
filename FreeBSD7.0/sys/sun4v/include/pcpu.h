@@ -24,13 +24,11 @@
  * SUCH DAMAGE.
  *
  *	from: FreeBSD: src/sys/i386/include/globaldata.h,v 1.27 2001/04/27
- * $FreeBSD: src/sys/sun4v/include/pcpu.h,v 1.9 2007/06/12 21:19:12 kmacy Exp $
+ * $FreeBSD: src/sys/sun4v/include/pcpu.h,v 1.9.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef	_MACHINE_PCPU_H_
 #define	_MACHINE_PCPU_H_
-
-#ifdef _KERNEL
 
 #include <machine/asmacros.h>
 #include <machine/frame.h>
@@ -74,7 +72,7 @@ struct pmap;
 	u_int   pc_kwbuf_full;                                          \
 	struct rwindow pc_tsbwbuf[2];                                   \
         uint16_t pc_cpulist[MAXCPU];                                    \
-        uint64_t pad[11];
+	uint64_t pad[6];
 
 	/* XXX SUN4V_FIXME - as we access the *_ra and *_size fields in quick
 	 * succession we _really_ want them to be L1 cache line size aligned
@@ -82,6 +80,9 @@ struct pmap;
 	 * be L2 cache aligned - they're surrounded by per-cpu data, so there is
 	 * no possibility of false sharing, but this might help in reducing misses
 	 */
+
+#ifdef _KERNEL
+
 struct pcpu;
 
 register struct pcpu *pcpup __asm__(__XSTRING(PCPU_REG));

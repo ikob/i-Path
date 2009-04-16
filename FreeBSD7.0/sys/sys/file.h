@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)file.h	8.3 (Berkeley) 1/9/95
- * $FreeBSD: src/sys/sys/file.h,v 1.73 2007/01/05 19:59:46 jhb Exp $
+ * $FreeBSD: src/sys/sys/file.h,v 1.73.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS_FILE_H_
@@ -101,6 +101,7 @@ struct fileops {
  *
  * (fl)	filelist_lock
  * (f)	f_mtx in struct file
+ * (d) cdevpriv_mtx
  * none	not locked
  */
 
@@ -140,6 +141,7 @@ struct file {
 				 * offset of next expected read or write
 				 */
 	void	*f_label;	/* Place-holder for struct label pointer. */
+	struct cdev_privdata *f_cdevpriv; /* (d) Private data for the cdev. */
 };
 
 #endif /* _KERNEL */

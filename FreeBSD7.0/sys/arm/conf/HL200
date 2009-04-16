@@ -16,7 +16,7 @@
 # If you are in doubt as to the purpose or necessity of a line, check first 
 # in NOTES.
 #
-# $FreeBSD: src/sys/arm/conf/HL200,v 1.2.2.1 2007/12/02 14:19:37 cognet Exp $
+# $FreeBSD: src/sys/arm/conf/HL200,v 1.2.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
 
 machine		arm
 ident		HL200
@@ -51,6 +51,7 @@ options 	FFS			#Berkeley Fast Filesystem
 #options 	ROOTDEVNAME=\"ufs:/dev/mmcsd0s1a\"
 options 	NFSCLIENT		#Network Filesystem Client
 #options 	NFSSERVER		#Network Filesystem Server
+#options 	NFSLOCKD		#Network Lock Manager
 options 	NFS_ROOT		#NFS usable as /, requires NFSCLIENT
 options	BOOTP_NFSROOT
 options	BOOTP

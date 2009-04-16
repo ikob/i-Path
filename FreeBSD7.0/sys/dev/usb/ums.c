@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/ums.c,v 1.96 2007/07/25 06:43:06 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/ums.c,v 1.96.2.5.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * HID spec: http://www.usb.org/developers/devclass_docs/HID1_11.pdf
@@ -96,7 +96,7 @@ struct ums_softc {
 	u_char *sc_ibuf;
 	u_int8_t sc_iid;
 	int sc_isize;
-	struct hid_location sc_loc_x, sc_loc_y, sc_loc_z, sc_loc_t;
+	struct hid_location sc_loc_x, sc_loc_y, sc_loc_z, sc_loc_t, sc_loc_w;
 	struct hid_location *sc_loc_btn;
 
 	struct callout callout_handle;	/* for spurious button ups */
@@ -108,6 +108,7 @@ struct ums_softc {
 #define UMS_Z		0x01	/* z direction available */
 #define UMS_SPUR_BUT_UP	0x02	/* spurious button up events */
 #define UMS_T		0x04	/* aa direction available (tilt) */
+#define UMS_REVZ	0x08	/* Z-axis is reversed */
 	int nbuttons;
 #define MAX_BUTTONS	31	/* chosen because sc_buttons is int */
 
@@ -197,7 +198,10 @@ ums_match(device_t self)
 	if (err)
 		return (UMATCH_NONE);
 
-	if (id->bInterfaceClass == UICLASS_HID &&
+	if (hid_is_collection(desc, size,
+			      HID_USAGE2(HUP_GENERIC_DESKTOP, HUG_MOUSE)))
+		ret = UMATCH_IFACECLASS;
+	else if (id->bInterfaceClass == UICLASS_HID &&
 	    id->bInterfaceSubClass == UISUBCLASS_BOOT &&
 	    id->bInterfaceProtocol == UIPROTO_MOUSE)
 		ret = UMATCH_IFACECLASS;
@@ -220,7 +224,7 @@ ums_attach(device_t self)
 	void *desc;
 	usbd_status err;
 	u_int32_t flags;
-	int i;
+	int i, wheel;
 	struct hid_location loc_btn;
 
 	sc->sc_disconnected = 1;
@@ -276,14 +280,47 @@ ums_attach(device_t self)
 		return ENXIO;
 	}
 
-	/* try to guess the Z activator: first check Z, then WHEEL */
-	if (hid_locate(desc, size, HID_USAGE2(HUP_GENERIC_DESKTOP, HUG_Z),
-		       hid_input, &sc->sc_loc_z, &flags) ||
-	    hid_locate(desc, size, HID_USAGE2(HUP_GENERIC_DESKTOP, HUG_WHEEL),
-		       hid_input, &sc->sc_loc_z, &flags) ||
-	    hid_locate(desc, size, HID_USAGE2(HUP_GENERIC_DESKTOP, HUG_TWHEEL),
-		       hid_input, &sc->sc_loc_z, &flags)) {
+	/* Try the wheel first as the Z activator since it's tradition. */
+	wheel = hid_locate(desc, size, HID_USAGE2(HUP_GENERIC_DESKTOP,
+						  HUG_WHEEL),
+			    hid_input, &sc->sc_loc_z, &flags) ||
+		hid_locate(desc, size, HID_USAGE2(HUP_GENERIC_DESKTOP,
+						  HUG_TWHEEL),
+			    hid_input, &sc->sc_loc_z, &flags);
+
+	if (wheel) {
 		if ((flags & MOUSE_FLAGS_MASK) != MOUSE_FLAGS) {
+			printf("\n%s: Wheel report 0x%04x not supported\n",
+			       device_get_nameunit(sc->sc_dev), flags);
+			sc->sc_loc_z.size = 0;	/* Bad Z coord, ignore it */
+		} else {
+			sc->flags |= UMS_Z;
+			if (usbd_get_quirks(uaa->device)->uq_flags &
+			    UQ_MS_REVZ) {
+				/* Some wheels need the Z axis reversed. */
+				sc->flags |= UMS_REVZ;
+			}
+
+		}
+		/*
+		 * We might have both a wheel and Z direction, if so put
+		 * put the Z on the W coordinate.
+		 */
+		if (hid_locate(desc, size, HID_USAGE2(HUP_GENERIC_DESKTOP,
+						      HUG_Z),
+				hid_input, &sc->sc_loc_w, &flags)) {
+			if ((flags & MOUSE_FLAGS_MASK) != MOUSE_FLAGS) {
+				printf("\n%s: Z report 0x%04x not supported\n",
+				       device_get_nameunit(sc->sc_dev), flags);
+				sc->sc_loc_w.size = 0;	/* Bad Z, ignore */
+			}
+		}
+	} else if (hid_locate(desc, size, HID_USAGE2(HUP_GENERIC_DESKTOP,
+						     HUG_Z),
+			       hid_input, &sc->sc_loc_z, &flags)) {
+		if ((flags & MOUSE_FLAGS_MASK) != MOUSE_FLAGS) {
+			printf("\n%s: Z report 0x%04x not supported\n",
+			       device_get_nameunit(sc->sc_dev), flags);
 			sc->sc_loc_z.size = 0;	/* Bad Z coord, ignore it */
 		} else {
 			sc->flags |= UMS_Z;
@@ -325,12 +362,6 @@ ums_attach(device_t self)
 				hid_input, &sc->sc_loc_btn[i-1], 0);
 
 	sc->sc_isize = hid_report_size(desc, size, hid_input, &sc->sc_iid);
-	sc->sc_ibuf = malloc(sc->sc_isize, M_USB, M_NOWAIT);
-	if (!sc->sc_ibuf) {
-		printf("%s: no memory\n", device_get_nameunit(sc->sc_dev));
-		free(sc->sc_loc_btn, M_USB);
-		return ENXIO;
-	}
 
 	/*
 	 * The Microsoft Wireless Notebook Optical Mouse seems to be in worse
@@ -351,6 +382,33 @@ ums_attach(device_t self)
 		sc->sc_loc_btn[0].pos = 8;
 		sc->sc_loc_btn[1].pos = 9;
 		sc->sc_loc_btn[2].pos = 10;
+	}
+
+	/*
+	 * The Microsoft Wireless Notebook Optical Mouse 3000 Model 1049 has
+	 * five Report IDs: 19 23 24 17 18 (in the order they appear in report
+	 * descriptor), it seems that report id 17 contains the necessary
+	 * mouse information(3-buttons,X,Y,wheel) so we specify it manually.
+	 */
+	if (uaa->vendor == USB_VENDOR_MICROSOFT &&
+	    uaa->product == USB_PRODUCT_MICROSOFT_WLNOTEBOOK3) {
+		sc->flags = UMS_Z;
+		sc->nbuttons = 3;
+		sc->sc_isize = 5;
+		sc->sc_iid = 17;
+		sc->sc_loc_x.pos = 8;
+		sc->sc_loc_y.pos = 16;
+		sc->sc_loc_z.pos = 24;
+		sc->sc_loc_btn[0].pos = 0;
+		sc->sc_loc_btn[1].pos = 1;
+		sc->sc_loc_btn[2].pos = 2;
+	}
+
+	sc->sc_ibuf = malloc(sc->sc_isize, M_USB, M_NOWAIT);
+	if (!sc->sc_ibuf) {
+		printf("%s: no memory\n", device_get_nameunit(sc->sc_dev));
+		free(sc->sc_loc_btn, M_USB);
+		return ENXIO;
 	}
 
 	sc->sc_ep_addr = ed->bEndpointAddress;
@@ -449,7 +507,7 @@ ums_intr(usbd_xfer_handle xfer, usbd_private_handle addr, usbd_status status)
 {
 	struct ums_softc *sc = addr;
 	u_char *ibuf;
-	int dx, dy, dz, dt;
+	int dx, dy, dz, dw, dt;
 	int buttons = 0;
 	int i;
 
@@ -507,6 +565,9 @@ ums_intr(usbd_xfer_handle xfer, usbd_private_handle addr, usbd_status status)
 	dx =  hid_get_data(ibuf, &sc->sc_loc_x);
 	dy = -hid_get_data(ibuf, &sc->sc_loc_y);
 	dz = -hid_get_data(ibuf, &sc->sc_loc_z);
+	dw =  hid_get_data(ibuf, &sc->sc_loc_w);
+	if (sc->flags & UMS_REVZ)
+		dz = -dz;
 	if (sc->flags & UMS_T)
 		dt = -hid_get_data(ibuf, &sc->sc_loc_t);
 	else
@@ -515,16 +576,17 @@ ums_intr(usbd_xfer_handle xfer, usbd_private_handle addr, usbd_status status)
 		if (hid_get_data(ibuf, &sc->sc_loc_btn[i]))
 			buttons |= (1 << UMS_BUT(i));
 
-	if (dx || dy || dz || dt || (sc->flags & UMS_Z)
+	if (dx || dy || dz || dt || dw || (sc->flags & UMS_Z)
 	    || buttons != sc->status.button) {
-		DPRINTFN(5, ("ums_intr: x:%d y:%d z:%d t:%d buttons:0x%x\n",
-			dx, dy, dz, dt, buttons));
+		DPRINTFN(5, ("ums_intr: x:%d y:%d z:%d w:%d t:%d buttons:0x%x\n",
+			dx, dy, dz, dw, dt, buttons));
 
 		sc->status.button = buttons;
 		sc->status.dx += dx;
 		sc->status.dy += dy;
 		sc->status.dz += dz;
-		/* sc->status.dt += dt;*/ /* no way to export this yet */
+		/* sc->status.dt += dt; */ /* no way to export this yet */
+		/* sc->status.dw += dw; */ /* idem */
 		
 		/* Discard data in case of full buffer */
 		if (sc->qcount == sizeof(sc->qbuf)) {

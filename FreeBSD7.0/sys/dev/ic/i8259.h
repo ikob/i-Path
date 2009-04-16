@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ic/i8259.h,v 1.2 2005/10/23 09:05:51 glebius Exp $
+ * $FreeBSD: src/sys/dev/ic/i8259.h,v 1.2.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

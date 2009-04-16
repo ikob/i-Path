@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_linker.c,v 1.149 2007/05/31 11:51:51 kib Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_linker.c,v 1.149.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_ddb.h"
 #include "opt_hwpmc_hooks.h"
@@ -97,6 +97,12 @@ linker_file_t linker_kernel_file;
 
 static struct sx kld_sx;	/* kernel linker lock */
 
+/*
+ * Load counter used by clients to determine if a linker file has been
+ * re-loaded. This counter is incremented for each file load.
+ */
+static int loadcnt;
+
 static linker_class_list_t classes;
 static linker_file_list_t linker_files;
 static int next_file_id = 1;
@@ -156,7 +162,7 @@ linker_init(void *arg)
 	TAILQ_INIT(&linker_files);
 }
 
-SYSINIT(linker, SI_SUB_KLD, SI_ORDER_FIRST, linker_init, 0)
+SYSINIT(linker, SI_SUB_KLD, SI_ORDER_FIRST, linker_init, 0);
 
 static void
 linker_stop_class_add(void *arg)
@@ -165,7 +171,7 @@ linker_stop_class_add(void *arg)
 	linker_no_more_classes = 1;
 }
 
-SYSINIT(linker_class, SI_SUB_KLD, SI_ORDER_ANY, linker_stop_class_add, NULL)
+SYSINIT(linker_class, SI_SUB_KLD, SI_ORDER_ANY, linker_stop_class_add, NULL);
 
 int
 linker_add_class(linker_class_t lc)
@@ -357,7 +363,8 @@ linker_init_kernel_modules(void)
 	linker_file_register_modules(linker_kernel_file);
 }
 
-SYSINIT(linker_kernel, SI_SUB_KLD, SI_ORDER_ANY, linker_init_kernel_modules, 0)
+SYSINIT(linker_kernel, SI_SUB_KLD, SI_ORDER_ANY, linker_init_kernel_modules,
+    0);
 
 static int
 linker_load_file(const char *filename, linker_file_t *result)
@@ -534,7 +541,7 @@ linker_make_file(const char *pathname, linker_class_t lc)
 	KLD_LOCK_ASSERT();
 	filename = linker_basename(pathname);
 
-	KLD_DPF(FILE, ("linker_make_file: new file, filename=%s\n", filename));
+	KLD_DPF(FILE, ("linker_make_file: new file, filename='%s' for pathname='%s'\n", filename, pathname));
 	lf = (linker_file_t)kobj_create((kobj_class_t)lc, M_LINKER, M_WAITOK);
 	if (lf == NULL)
 		return (NULL);
@@ -542,9 +549,13 @@ linker_make_file(const char *pathname, linker_class_t lc)
 	lf->userrefs = 0;
 	lf->flags = 0;
 	lf->filename = linker_strdup(filename);
+	lf->pathname = linker_strdup(pathname);
 	LINKER_GET_NEXT_FILE_ID(lf->id);
 	lf->ndeps = 0;
 	lf->deps = NULL;
+	lf->loadcnt = ++loadcnt;
+	lf->sdt_probes = NULL;
+	lf->sdt_nprobes = 0;
 	STAILQ_INIT(&lf->common);
 	TAILQ_INIT(&lf->modules);
 	TAILQ_INSERT_TAIL(&linker_files, lf, link);
@@ -629,8 +640,18 @@ linker_file_unload(linker_file_t file, int flags)
 		free(file->filename, M_LINKER);
 		file->filename = NULL;
 	}
+	if (file->pathname) {
+		free(file->pathname, M_LINKER);
+		file->pathname = NULL;
+	}
 	kobj_delete((kobj_t) file, M_LINKER);
 	return (0);
+}
+
+int
+linker_ctf_get(linker_file_t file, linker_ctf_t *lc)
+{
+	return (LINKER_CTF_GET(file, lc));
 }
 
 static int
@@ -674,6 +695,16 @@ linker_file_lookup_set(linker_file_t file, const char *name,
 	if (!locked)
 		KLD_UNLOCK();
 	return (error);
+}
+
+/*
+ * List all functions in a file.
+ */
+int
+linker_file_function_listall(linker_file_t lf,
+    linker_function_nameval_callback_t callback_func, void *arg)
+{
+	return (LINKER_EACH_FUNCTION_NAMEVAL(lf, callback_func, arg));
 }
 
 caddr_t
@@ -767,18 +798,18 @@ linker_file_lookup_symbol_internal(linker_file_t file, const char *name,
 	return (0);
 }
 
-#ifdef DDB
 /*
- * DDB Helpers.  DDB has to look across multiple files with their own symbol
- * tables and string tables.
+ * Both DDB and stack(9) rely on the kernel linker to provide forward and
+ * backward lookup of symbols.  However, DDB and sometimes stack(9) need to
+ * do this in a lockfree manner.  We provide a set of internal helper
+ * routines to perform these operations without locks, and then wrappers that
+ * optionally lock.
  *
- * Note that we do not obey list locking protocols here.  We really don't need
- * DDB to hang because somebody's got the lock held.  We'll take the chance
- * that the files list is inconsistant instead.
+ * linker_debug_lookup() is ifdef DDB as currently it's only used by DDB.
  */
-
-int
-linker_ddb_lookup(const char *symstr, c_linker_sym_t *sym)
+#ifdef DDB
+static int
+linker_debug_lookup(const char *symstr, c_linker_sym_t *sym)
 {
 	linker_file_t lf;
 
@@ -788,9 +819,10 @@ linker_ddb_lookup(const char *symstr, c_linker_sym_t *sym)
 	}
 	return (ENOENT);
 }
+#endif
 
-int
-linker_ddb_search_symbol(caddr_t value, c_linker_sym_t *sym, long *diffp)
+static int
+linker_debug_search_symbol(caddr_t value, c_linker_sym_t *sym, long *diffp)
 {
 	linker_file_t lf;
 	c_linker_sym_t best, es;
@@ -820,8 +852,8 @@ linker_ddb_search_symbol(caddr_t value, c_linker_sym_t *sym, long *diffp)
 	}
 }
 
-int
-linker_ddb_symbol_values(c_linker_sym_t sym, linker_symval_t *symval)
+static int
+linker_debug_symbol_values(c_linker_sym_t sym, linker_symval_t *symval)
 {
 	linker_file_t lf;
 
@@ -831,7 +863,80 @@ linker_ddb_symbol_values(c_linker_sym_t sym, linker_symval_t *symval)
 	}
 	return (ENOENT);
 }
+
+static int
+linker_debug_search_symbol_name(caddr_t value, char *buf, u_int buflen,
+    long *offset)
+{
+	linker_symval_t symval;
+	c_linker_sym_t sym;
+	int error;
+
+	*offset = 0;
+	error = linker_debug_search_symbol(value, &sym, offset);
+	if (error)
+		return (error);
+	error = linker_debug_symbol_values(sym, &symval);
+	if (error)
+		return (error);
+	strlcpy(buf, symval.name, buflen);
+	return (0);
+}
+
+#ifdef DDB
+/*
+ * DDB Helpers.  DDB has to look across multiple files with their own symbol
+ * tables and string tables.
+ *
+ * Note that we do not obey list locking protocols here.  We really don't need
+ * DDB to hang because somebody's got the lock held.  We'll take the chance
+ * that the files list is inconsistant instead.
+ */
+int
+linker_ddb_lookup(const char *symstr, c_linker_sym_t *sym)
+{
+
+	return (linker_debug_lookup(symstr, sym));
+}
+
+int
+linker_ddb_search_symbol(caddr_t value, c_linker_sym_t *sym, long *diffp)
+{
+
+	return (linker_debug_search_symbol(value, sym, diffp));
+}
+
+int
+linker_ddb_symbol_values(c_linker_sym_t sym, linker_symval_t *symval)
+{
+
+	return (linker_debug_symbol_values(sym, symval));
+}
+
+int
+linker_ddb_search_symbol_name(caddr_t value, char *buf, u_int buflen,
+    long *offset)
+{
+
+	return (linker_debug_search_symbol_name(value, buf, buflen, offset));
+}
 #endif
+
+/*
+ * stack(9) helper for non-debugging environemnts.  Unlike DDB helpers, we do
+ * obey locking protocols, and offer a significantly less complex interface.
+ */
+int
+linker_search_symbol_name(caddr_t value, char *buf, u_int buflen,
+    long *offset)
+{
+	int error;
+
+	KLD_LOCK();
+	error = linker_debug_search_symbol_name(value, buf, buflen, offset);
+	KLD_UNLOCK();
+	return (error);
+}
 
 /*
  * Syscalls.
@@ -920,7 +1025,13 @@ kern_kldunload(struct thread *td, int fileid, int flags)
 	lf = linker_find_file_by_id(fileid);
 	if (lf) {
 		KLD_DPF(FILE, ("kldunload: lf->userrefs=%d\n", lf->userrefs));
-		if (lf->userrefs == 0) {
+
+		/* Check if there are DTrace probes enabled on this file. */
+		if (lf->nenabled > 0) {
+			printf("kldunload: attempt to unload file that has"
+			    " DTrace probes enabled\n");
+			error = EBUSY;
+		} else if (lf->userrefs == 0) {
 			/*
 			 * XXX: maybe LINKER_UNLOAD_FORCE should override ?
 			 */
@@ -1041,15 +1152,18 @@ kldstat(struct thread *td, struct kldstat_args *uap)
 {
 	struct kld_file_stat stat;
 	linker_file_t lf;
-	int error, namelen;
+	int error, namelen, version, version_num;
 
 	/*
 	 * Check the version of the user's structure.
 	 */
-	error = copyin(uap->stat, &stat, sizeof(struct kld_file_stat));
-	if (error)
+	if ((error = copyin(&uap->stat->version, &version, sizeof(version))) != 0)
 		return (error);
-	if (stat.version != sizeof(struct kld_file_stat))
+	if (version == sizeof(struct kld_file_stat_1))
+		version_num = 1;
+	else if (version == sizeof(struct kld_file_stat))
+		version_num = 2;
+	else
 		return (EINVAL);
 
 #ifdef MAC
@@ -1065,6 +1179,7 @@ kldstat(struct thread *td, struct kldstat_args *uap)
 		return (ENOENT);
 	}
 
+	/* Version 1 fields: */
 	namelen = strlen(lf->filename) + 1;
 	if (namelen > MAXPATHLEN)
 		namelen = MAXPATHLEN;
@@ -1073,11 +1188,18 @@ kldstat(struct thread *td, struct kldstat_args *uap)
 	stat.id = lf->id;
 	stat.address = lf->address;
 	stat.size = lf->size;
+	if (version_num > 1) {
+		/* Version 2 fields: */
+		namelen = strlen(lf->pathname) + 1;
+		if (namelen > MAXPATHLEN)
+			namelen = MAXPATHLEN;
+		bcopy(lf->pathname, &stat.pathname[0], namelen);
+	}
 	KLD_UNLOCK();
 
 	td->td_retval[0] = 0;
 
-	return (copyout(&stat, uap->stat, sizeof(struct kld_file_stat)));
+	return (copyout(&stat, uap->stat, version));
 }
 
 int
@@ -1444,7 +1566,7 @@ restart:
 	/* woohoo! we made it! */
 }
 
-SYSINIT(preload, SI_SUB_KLD, SI_ORDER_MIDDLE, linker_preload, 0)
+SYSINIT(preload, SI_SUB_KLD, SI_ORDER_MIDDLE, linker_preload, 0);
 
 /*
  * Search for a not-loaded module by name.

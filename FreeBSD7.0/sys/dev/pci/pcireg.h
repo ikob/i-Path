@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/pci/pcireg.h,v 1.64 2007/09/19 13:05:58 sepotvin Exp $
+ * $FreeBSD: src/sys/dev/pci/pcireg.h,v 1.64.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  *
  */
 
@@ -180,6 +180,9 @@
 #define	PCIR_PMLIMITL_1	0x26
 #define	PCIR_PMBASEH_1	0x28
 #define	PCIR_PMLIMITH_1	0x2c
+#define	PCIM_BRPM_32		0x0
+#define	PCIM_BRPM_64		0x1
+#define	PCIM_BRPM_MASK		0xf
 
 #define	PCIR_BRIDGECTL_1 0x3e
 

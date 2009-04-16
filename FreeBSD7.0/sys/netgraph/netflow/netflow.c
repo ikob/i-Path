@@ -28,7 +28,7 @@
  */
 
 static const char rcs_id[] =
-    "@(#) $FreeBSD: src/sys/netgraph/netflow/netflow.c,v 1.25.4.1 2008/01/30 21:29:10 mav Exp $";
+    "@(#) $FreeBSD: src/sys/netgraph/netflow/netflow.c,v 1.25.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $";
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -270,7 +270,8 @@ hash_insert(priv_p priv, struct flow_hash_entry  *hsh, struct flow_rec *r,
 	sin->sin_len = sizeof(*sin);
 	sin->sin_family = AF_INET;
 	sin->sin_addr = fle->f.r.r_dst;
-	rtalloc_ign(&ro, RTF_CLONING);
+	/* XXX MRT 0 as a default.. need the m here to get fib */
+	rtalloc_ign_fib(&ro, RTF_CLONING, 0);
 	if (ro.ro_rt != NULL) {
 		struct rtentry *rt = ro.ro_rt;
 
@@ -298,7 +299,7 @@ hash_insert(priv_p priv, struct flow_hash_entry  *hsh, struct flow_rec *r,
 	sin->sin_len = sizeof(*sin);
 	sin->sin_family = AF_INET;
 	sin->sin_addr = fle->f.r.r_src;
-	rtalloc_ign(&ro, RTF_CLONING);
+	rtalloc_ign_fib(&ro, RTF_CLONING, 0); /* XXX MRT */
 	if (ro.ro_rt != NULL) {
 		struct rtentry *rt = ro.ro_rt;
 
@@ -633,13 +634,8 @@ export_add(item_p item, struct flow_entry *fle)
 	struct netflow_v5_header *header = &dgram->header;
 	struct netflow_v5_record *rec;
 
-	if (header->count == 0 ) {	/* first record */
-		rec = &dgram->r[0];
-		header->count = 1;
-	} else {			/* continue filling datagram */
-		rec = &dgram->r[header->count];
-		header->count ++;
-	}
+	rec = &dgram->r[header->count];
+	header->count ++;
 
 	KASSERT(header->count <= NETFLOW_V5_MAX_RECORDS,
 	    ("ng_netflow: export too big"));

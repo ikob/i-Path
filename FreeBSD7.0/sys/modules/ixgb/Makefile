@@ -1,4 +1,4 @@
-#$FreeBSD: src/sys/modules/ixgb/Makefile,v 1.3 2005/09/27 18:10:35 mlaier Exp $
+#$FreeBSD: src/sys/modules/ixgb/Makefile,v 1.3.6.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../dev/ixgb
 

@@ -20,7 +20,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/si/si_isa.c,v 1.8 2007/02/23 19:33:07 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/si/si_isa.c,v 1.8.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_debug_si.h"
 

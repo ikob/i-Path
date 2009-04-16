@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/fs/msdosfs/msdosfs_vfsops.c,v 1.174 2007/08/15 17:40:09 jhb Exp $ */
+/* $FreeBSD: src/sys/fs/msdosfs/msdosfs_vfsops.c,v 1.174.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $ */
 /*	$NetBSD: msdosfs_vfsops.c,v 1.51 1997/11/17 15:36:58 ws Exp $	*/
 
 /*-
@@ -492,14 +492,13 @@ mountmsdosfs(struct vnode *devvp, struct mount *mp, struct thread *td)
 	/* calculate the ratio of sector size to DEV_BSIZE */
 	pmp->pm_BlkPerSec = pmp->pm_BytesPerSec / DEV_BSIZE;
 
-	/* XXX - We should probably check more values here */
-	if (!pmp->pm_BytesPerSec || !SecPerClust
-		|| !pmp->pm_Heads
-#ifdef PC98
-    		|| !pmp->pm_SecPerTrack || pmp->pm_SecPerTrack > 255) {
-#else
-		|| !pmp->pm_SecPerTrack || pmp->pm_SecPerTrack > 63) {
-#endif
+	/*
+	 * We don't check pm_Heads nor pm_SecPerTrack, because
+	 * these may not be set for EFI file systems. We don't
+	 * use these anyway, so we're unaffected if they are
+	 * invalid.
+	 */
+	if (!pmp->pm_BytesPerSec || !SecPerClust) {
 		error = EINVAL;
 		goto error_exit;
 	}

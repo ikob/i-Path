@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/hpfs/hpfs_subr.c,v 1.7 2004/12/06 20:14:20 phk Exp $
+ * $FreeBSD: src/sys/fs/hpfs/hpfs_subr.c,v 1.7.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include <sys/param.h>

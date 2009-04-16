@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/hatm/if_hatm_intr.c,v 1.22 2007/06/08 01:37:47 mjacob Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/hatm/if_hatm_intr.c,v 1.22.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * ForeHE driver.

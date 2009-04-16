@@ -24,13 +24,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/ia64/include/pcpu.h,v 1.20 2007/06/04 21:38:47 attilio Exp $
+ * $FreeBSD: src/sys/ia64/include/pcpu.h,v 1.20.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef	_MACHINE_PCPU_H_
 #define	_MACHINE_PCPU_H_
-
-#ifdef _KERNEL
 
 #include <machine/pcb.h>
 
@@ -42,6 +40,8 @@
 	uint64_t	pc_clockadj;		/* Clock adjust. */	\
 	uint32_t	pc_awake:1;		/* CPU is awake? */	\
 	uint32_t	pc_acpi_id		/* ACPI CPU id. */
+
+#ifdef _KERNEL
 
 struct pcpu;
 

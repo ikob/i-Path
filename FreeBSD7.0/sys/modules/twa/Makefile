@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/twa/Makefile,v 1.8 2007/05/09 04:16:31 scottl Exp $
+# $FreeBSD: src/sys/modules/twa/Makefile,v 1.8.6.1 2008/11/25 02:59:29 kensmith Exp $
 #
 # Copyright (c) 2004-06 Applied Micro Circuits Corporation.
 # All rights reserved.

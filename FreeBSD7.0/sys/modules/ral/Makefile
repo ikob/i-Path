@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/ral/Makefile,v 1.3 2006/03/05 20:38:55 damien Exp $
+# $FreeBSD: src/sys/modules/ral/Makefile,v 1.3.6.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../dev/ral
 

@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/powerpc/powerpc/fpu.c,v 1.7 2005/01/07 02:29:20 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/powerpc/powerpc/fpu.c,v 1.7.18.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/proc.h>

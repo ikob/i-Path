@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/aac/aac_disk.c,v 1.43 2005/05/02 22:56:52 scottl Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/aac/aac_disk.c,v 1.43.10.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_aac.h"
 
@@ -106,7 +106,7 @@ aac_disk_open(struct disk *dp)
 {
 	struct aac_disk	*sc;
 
-	debug_called(4);
+	fwprintf(NULL, HBA_FLAGS_DBG_FUNCTION_ENTRY_B, "");
 
 	sc = (struct aac_disk *)dp->d_drv1;
 	
@@ -134,7 +134,7 @@ aac_disk_close(struct disk *dp)
 {
 	struct aac_disk	*sc;
 
-	debug_called(4);
+	fwprintf(NULL, HBA_FLAGS_DBG_FUNCTION_ENTRY_B, "");
 
 	sc = (struct aac_disk *)dp->d_drv1;
 	
@@ -153,9 +153,8 @@ aac_disk_strategy(struct bio *bp)
 {
 	struct aac_disk	*sc;
 
-	debug_called(4);
-
 	sc = (struct aac_disk *)bp->bio_disk->d_drv1;
+	fwprintf(NULL, HBA_FLAGS_DBG_FUNCTION_ENTRY_B, "");
 
 	/* bogus disk? */
 	if (sc == NULL) {
@@ -184,9 +183,6 @@ aac_disk_strategy(struct bio *bp)
 
 /*
  * Map the S/G elements for doing a dump.
- *
- * XXX This does not handle >4GB of RAM.  Fixing it is possible except on
- *     adapters that cannot do 64bit s/g lists.
  */
 static void
 aac_dump_map_sg(void *arg, bus_dma_segment_t *segs, int nsegs, int error)
@@ -213,6 +209,31 @@ aac_dump_map_sg(void *arg, bus_dma_segment_t *segs, int nsegs, int error)
 }
 
 /*
+ * Map the S/G elements for doing a dump on 64-bit capable devices.
+ */
+static void
+aac_dump_map_sg64(void *arg, bus_dma_segment_t *segs, int nsegs, int error)
+{
+	struct aac_fib *fib;
+	struct aac_blockwrite64 *bw;
+	struct aac_sg_table64 *sg;
+	int i;
+
+	fib = (struct aac_fib *)arg;
+	bw = (struct aac_blockwrite64 *)&fib->data[0];
+	sg = &bw->SgMap64;
+
+	if (sg != NULL) {
+		sg->SgCount = nsegs;
+		for (i = 0; i < nsegs; i++) {
+			sg->SgEntry64[i].SgAddress = segs[i].ds_addr;
+			sg->SgEntry64[i].SgByteCount = segs[i].ds_len;
+		}
+		fib->Header.Size = nsegs * sizeof(struct aac_sg_entry64);
+	}
+}
+
+/*
  * Dump memory out to an array
  *
  * Send out one command at a time with up to AAC_MAXIO of data.
@@ -223,12 +244,13 @@ aac_disk_dump(void *arg, void *virtual, vm_offset_t physical, off_t offset, size
 	struct aac_disk *ad;
 	struct aac_softc *sc;
 	struct aac_fib *fib;
-	struct aac_blockwrite *bw;
 	size_t len;
 	int size;
 	static bus_dmamap_t dump_datamap;
 	static int first = 0;
 	struct disk *dp;
+	bus_dmamap_callback_t *callback;
+	u_int32_t command;
 
 	dp = arg;
 	ad = dp->d_drv1;
@@ -248,15 +270,33 @@ aac_disk_dump(void *arg, void *virtual, vm_offset_t physical, off_t offset, size
 
 	/* Skip aac_alloc_sync_fib().  We don't want to mess with sleep locks */
 	fib = &sc->aac_common->ac_sync_fib;
-	bw = (struct aac_blockwrite *)&fib->data[0];
 
 	while (length > 0) {
 		len = (length > AAC_MAXIO) ? AAC_MAXIO : length;
-		bw->Command = VM_CtBlockWrite;
-		bw->ContainerId = ad->ad_container->co_mntobj.ObjectId;
-		bw->BlockNumber = offset / AAC_BLOCK_SIZE;
-		bw->ByteCount = len;
-		bw->Stable = CUNSTABLE;
+		if ((sc->flags & AAC_FLAGS_SG_64BIT) == 0) {
+			struct aac_blockwrite *bw;
+			bw = (struct aac_blockwrite *)&fib->data[0];
+			bw->Command = VM_CtBlockWrite;
+			bw->ContainerId = ad->ad_container->co_mntobj.ObjectId;
+			bw->BlockNumber = offset / AAC_BLOCK_SIZE;
+			bw->ByteCount = len;
+			bw->Stable = CUNSTABLE;
+			command = ContainerCommand;
+			callback = aac_dump_map_sg;
+			size = sizeof(struct aac_blockwrite);
+		} else {
+			struct aac_blockwrite64 *bw;
+			bw = (struct aac_blockwrite64 *)&fib->data[0];
+			bw->Command = VM_CtHostWrite64;
+			bw->ContainerId = ad->ad_container->co_mntobj.ObjectId;
+			bw->BlockNumber = offset / AAC_BLOCK_SIZE;
+			bw->SectorCount = len / AAC_BLOCK_SIZE;
+			bw->Pad = 0;
+			bw->Flags = 0;
+			command = ContainerCommand64;
+			callback = aac_dump_map_sg64;
+			size = sizeof(struct aac_blockwrite64);
+		}
 
 		/*
 		 * There really isn't any way to recover from errors or
@@ -265,16 +305,16 @@ aac_disk_dump(void *arg, void *virtual, vm_offset_t physical, off_t offset, size
 		 * is too much required context.
 		 */
 		if (bus_dmamap_load(sc->aac_buffer_dmat, dump_datamap, virtual,
-		    len, aac_dump_map_sg, fib, BUS_DMA_NOWAIT) != 0)
+		    len, callback, fib, BUS_DMA_NOWAIT) != 0)
 			return (ENOMEM);
 
 		bus_dmamap_sync(sc->aac_buffer_dmat, dump_datamap,
 		    BUS_DMASYNC_PREWRITE);
 
 		/* fib->Header.Size is set in aac_dump_map_sg */
-		size = fib->Header.Size + sizeof(struct aac_blockwrite);
+		size += fib->Header.Size;
 
-		if (aac_sync_fib(sc, ContainerCommand, 0, fib, size)) {
+		if (aac_sync_fib(sc, command, 0, fib, size)) {
 			printf("Error dumping block 0x%jx\n",
 			       (uintmax_t)physical);
 			return (EIO);
@@ -301,9 +341,8 @@ aac_biodone(struct bio *bp)
 {
 	struct aac_disk	*sc;
 
-	debug_called(4);
-
 	sc = (struct aac_disk *)bp->bio_disk->d_drv1;
+	fwprintf(NULL, HBA_FLAGS_DBG_FUNCTION_ENTRY_B, "");
 
 	if (bp->bio_flags & BIO_ERROR)
 		disk_err(bp, "hard error", -1, 1);
@@ -318,7 +357,7 @@ static int
 aac_disk_probe(device_t dev)
 {
 
-	debug_called(2);
+	fwprintf(NULL, HBA_FLAGS_DBG_FUNCTION_ENTRY_B, "");
 
 	return (0);
 }
@@ -331,9 +370,8 @@ aac_disk_attach(device_t dev)
 {
 	struct aac_disk	*sc;
 	
-	debug_called(1);
-
 	sc = (struct aac_disk *)device_get_softc(dev);
+	fwprintf(NULL, HBA_FLAGS_DBG_FUNCTION_ENTRY_B, "");
 
 	/* initialise our softc */
 	sc->ad_controller =
@@ -346,6 +384,9 @@ aac_disk_attach(device_t dev)
 	 * disk!
 	 */
 	sc->ad_size = sc->ad_container->co_mntobj.Capacity;
+	if (sc->ad_controller->flags & AAC_FLAGS_LBA_64BIT)
+		sc->ad_size += (u_int64_t)
+			sc->ad_container->co_mntobj.CapacityHigh << 32;
 	if (sc->ad_size >= (2 * 1024 * 1024)) {		/* 2GB */
 		sc->ad_heads = 255;
 		sc->ad_sectors = 63;
@@ -358,9 +399,9 @@ aac_disk_attach(device_t dev)
 	}
 	sc->ad_cylinders = (sc->ad_size / (sc->ad_heads * sc->ad_sectors));
 
-	device_printf(dev, "%uMB (%u sectors)\n",
-		      sc->ad_size / ((1024 * 1024) / AAC_BLOCK_SIZE),
-		      sc->ad_size);
+	device_printf(dev, "%juMB (%ju sectors)\n",
+		      (intmax_t)sc->ad_size / ((1024 * 1024) / AAC_BLOCK_SIZE),
+		      (intmax_t)sc->ad_size);
 
 	/* attach a generic disk device to ourselves */
 	sc->unit = device_get_unit(dev);
@@ -390,9 +431,8 @@ aac_disk_detach(device_t dev)
 {
 	struct aac_disk *sc;
 
-	debug_called(2);
-
 	sc = (struct aac_disk *)device_get_softc(dev);
+	fwprintf(NULL, HBA_FLAGS_DBG_FUNCTION_ENTRY_B, "");
 
 	if (sc->ad_flags & AAC_DISK_OPEN)
 		return(EBUSY);

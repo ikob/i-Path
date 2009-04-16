@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/in_cksum.c,v 1.28.10.1 2007/10/26 07:15:04 bz Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/i386/in_cksum.c,v 1.28.10.1.4.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * MPsafe: alfred

@@ -33,7 +33,7 @@
  *
  *	from: @(#)asm.h	5.5 (Berkeley) 5/7/91
  *
- * $FreeBSD: src/sys/arm/include/asm.h,v 1.6 2007/05/19 16:20:37 cognet Exp $
+ * $FreeBSD: src/sys/arm/include/asm.h,v 1.6.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _MACHINE_ASM_H_
@@ -137,8 +137,13 @@
 
 #if defined (_ARM_ARCH_6) || defined (__ARM_ARCH_5__) || \
     defined (__ARM_ARCH_5T__) || defined (__ARM_ARCH_5TE__) || \
-    defined (__ARM_ARCH_5TEJ__)
+    defined (__ARM_ARCH_5TEJ__) || defined (__ARM_ARCH_5E__)
 #define _ARM_ARCH_5
+#endif
+
+#if defined (_ARM_ARCH_6) || defined(__ARM_ARCH_5TE__) || \
+    defined(__ARM_ARCH_5TEJ__) || defined(__ARM_ARCH_5E__)
+#define _ARM_ARCH_5E
 #endif
 
 #if defined (_ARM_ARCH_5) || defined (__ARM_ARCH_4T__)

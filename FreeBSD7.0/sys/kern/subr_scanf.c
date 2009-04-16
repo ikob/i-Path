@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/subr_scanf.c,v 1.17 2004/04/05 21:03:35 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/subr_scanf.c,v 1.17.26.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

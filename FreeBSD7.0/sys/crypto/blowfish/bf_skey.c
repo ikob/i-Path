@@ -60,7 +60,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/crypto/blowfish/bf_skey.c,v 1.6 2003/06/10 21:38:38 obrien Exp $");
+__FBSDID("$FreeBSD: src/sys/crypto/blowfish/bf_skey.c,v 1.6.28.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/types.h>
 #include <sys/time.h>

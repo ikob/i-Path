@@ -30,7 +30,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)sysctl.h	8.1 (Berkeley) 6/2/93
- * $FreeBSD: src/sys/sys/sysctl.h,v 1.148 2007/06/04 18:14:28 dwmalone Exp $
+ * $FreeBSD: src/sys/sys/sysctl.h,v 1.148.2.3.2.2 2008/12/06 20:36:46 peter Exp $
  */
 
 #ifndef _SYS_SYSCTL_H_
@@ -322,6 +322,13 @@ TAILQ_HEAD(sysctl_ctx_list, sysctl_ctx_entry);
 	sysctl_add_oid(ctx, parent, nbr, name, (access),			    \
 	ptr, arg, handler, fmt, __DESCR(descr))
 
+/*
+ * A macro to generate a read-only sysctl to indicate the presense of optional
+ * kernel features.
+ */
+#define	FEATURE(name, desc)						\
+	SYSCTL_INT(_kern_features, OID_AUTO, name, CTLFLAG_RD, 0, 1, desc)
+	
 #endif /* _KERNEL */
 
 /*
@@ -456,10 +463,16 @@ TAILQ_HEAD(sysctl_ctx_list, sysctl_ctx_entry);
 #define	KERN_PROC_RGID		10	/* by real group id */
 #define	KERN_PROC_GID		11	/* by effective group id */
 #define	KERN_PROC_PATHNAME	12	/* path to executable */
+#define	KERN_PROC_OVMMAP	13	/* Old VM map entries for process */
+#define	KERN_PROC_OFILEDESC	14	/* Old file descriptors for process */
+#define	KERN_PROC_KSTACK	15	/* Kernel stacks for process */
 #define	KERN_PROC_INC_THREAD	0x10	/*
 					 * modifier for pid, pgrp, tty,
 					 * uid, ruid, gid, rgid and proc
+					 * This effectively uses 16-31
 					 */
+#define	KERN_PROC_VMMAP		32	/* VM map entries for process */
+#define	KERN_PROC_FILEDESC	33	/* File descriptors for process */
 
 /*
  * KERN_IPC identifiers
@@ -617,7 +630,9 @@ TAILQ_HEAD(sysctl_ctx_list, sysctl_ctx_entry);
  */
 extern struct sysctl_oid_list sysctl__children;
 SYSCTL_DECL(_kern);
+SYSCTL_DECL(_kern_features);
 SYSCTL_DECL(_kern_ipc);
+SYSCTL_DECL(_kern_proc);
 SYSCTL_DECL(_sysctl);
 SYSCTL_DECL(_vm);
 SYSCTL_DECL(_vm_stats);

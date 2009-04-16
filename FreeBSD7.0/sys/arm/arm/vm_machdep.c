@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/arm/vm_machdep.c,v 1.34 2007/09/15 18:47:01 alc Exp $");
+__FBSDID("$FreeBSD: src/sys/arm/arm/vm_machdep.c,v 1.34.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -77,7 +77,7 @@ __FBSDID("$FreeBSD: src/sys/arm/arm/vm_machdep.c,v 1.34 2007/09/15 18:47:01 alc 
 
 #ifndef ARM_USE_SMALL_ALLOC
 static void     sf_buf_init(void *arg);
-SYSINIT(sock_sf, SI_SUB_MBUF, SI_ORDER_ANY, sf_buf_init, NULL)
+SYSINIT(sock_sf, SI_SUB_MBUF, SI_ORDER_ANY, sf_buf_init, NULL);
 
 LIST_HEAD(sf_head, sf_buf);
 	
@@ -333,7 +333,7 @@ cpu_thread_exit(struct thread *td)
 }
 
 void
-cpu_thread_setup(struct thread *td)
+cpu_thread_alloc(struct thread *td)
 {
 	td->td_pcb = (struct pcb *)(td->td_kstack + td->td_kstack_pages * 
 	    PAGE_SIZE) - 1;
@@ -344,8 +344,13 @@ cpu_thread_setup(struct thread *td)
 	pmap_use_minicache(td->td_kstack, td->td_kstack_pages * PAGE_SIZE);
 #endif
 #endif  
-		
 }
+
+void
+cpu_thread_free(struct thread *td)
+{
+}
+
 void
 cpu_thread_clean(struct thread *td)
 {
@@ -405,10 +410,9 @@ void *
 arm_remap_nocache(void *addr, vm_size_t size)
 {
 	int i, j;
-	
+
 	size = round_page(size);
-	for (i = 0; i < MIN(ARM_NOCACHE_KVA_SIZE / (PAGE_SIZE * BITS_PER_INT),
-	    ARM_TP_ADDRESS); i++) {
+	for (i = 0; i < ARM_NOCACHE_KVA_SIZE / PAGE_SIZE; i++) {
 		if (!(arm_nocache_allocated[i / BITS_PER_INT] & (1 << (i % 
 		    BITS_PER_INT)))) {
 			for (j = i; j < i + (size / (PAGE_SIZE)); j++)
@@ -419,8 +423,7 @@ arm_remap_nocache(void *addr, vm_size_t size)
 				break;
 		}
 	}
-	if (i < MIN(ARM_NOCACHE_KVA_SIZE / (PAGE_SIZE * BITS_PER_INT), 
-	    ARM_TP_ADDRESS)) {
+	if (i < ARM_NOCACHE_KVA_SIZE / PAGE_SIZE) {
 		vm_offset_t tomap = arm_nocache_startaddr + i * PAGE_SIZE;
 		void *ret = (void *)tomap;
 		vm_paddr_t physaddr = vtophys((vm_offset_t)addr);
@@ -433,6 +436,7 @@ arm_remap_nocache(void *addr, vm_size_t size)
 		}
 		return (ret);
 	}
+
 	return (NULL);
 }
 

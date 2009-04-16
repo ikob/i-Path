@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/event.h,v 1.37.4.1 2008/01/28 10:43:11 dumbbell Exp $
+ * $FreeBSD: src/sys/sys/event.h,v 1.37.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS_EVENT_H_
@@ -205,6 +205,7 @@ struct proc;
 struct knlist;
 
 extern void	knote(struct knlist *list, long hint, int islocked);
+extern void	knote_fork(struct knlist *list, int pid);
 extern void	knlist_add(struct knlist *knl, struct knote *kn, int islocked);
 extern void	knlist_remove(struct knlist *knl, struct knote *kn, int islocked);
 extern void	knlist_remove_inevent(struct knlist *knl, struct knote *kn);

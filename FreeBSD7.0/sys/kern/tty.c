@@ -71,7 +71,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/tty.c,v 1.273.4.1 2008/01/12 00:20:06 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/tty.c,v 1.273.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_compat.h"
 #include "opt_tty.h"
@@ -269,11 +269,12 @@ tty_gettp(struct cdev *dev)
 	struct cdevsw *csw;
 
 	csw = dev_refthread(dev);
-	KASSERT(csw != NULL, ("No cdevsw in ttycode (%s)", devtoname(dev)));
+	if (csw == NULL)
+		return (NULL);
 	KASSERT(csw->d_flags & D_TTY,
 	    ("non D_TTY (%s) in tty code", devtoname(dev)));
-	dev_relthread(dev);
 	tp = dev->si_tty;
+	dev_relthread(dev);
 	KASSERT(tp != NULL,
 	    ("no tty pointer on (%s) in tty code", devtoname(dev)));
 	return (tp);
@@ -1319,7 +1320,7 @@ ttykqfilter(struct cdev *dev, struct knote *kn)
 	int s;
 
 	tp = tty_gettp(dev);
-	if (tp->t_state & TS_GONE)
+	if (tp == NULL || (tp->t_state & TS_GONE))
 		return (ENODEV);
 
 	switch (kn->kn_filter) {
@@ -3050,9 +3051,10 @@ ttyfree(struct tty *tp)
 	ttygone(tp);
 	unit = tp->t_devunit;
 	dev = tp->t_mdev;
+	dev->si_tty = NULL;
 	tp->t_dev = NULL;
-	ttyrel(tp);
 	destroy_dev(dev);
+	ttyrel(tp);
 	free_unr(tty_unit, unit);
 }
 
@@ -3069,6 +3071,8 @@ sysctl_kern_ttys(SYSCTL_HANDLER_ARGS)
 	if (tp != NULL)
 		ttyref(tp);
 	while (tp != NULL) {
+		if (tp->t_state & TS_GONE)
+			goto nexttp;
 		bzero(&xt, sizeof xt);
 		xt.xt_size = sizeof xt;
 #define XT_COPY(field) xt.xt_##field = tp->t_##field
@@ -3117,7 +3121,7 @@ sysctl_kern_ttys(SYSCTL_HANDLER_ARGS)
 			return (error);
 		}
 		mtx_lock(&tty_list_mutex);
-		tp2 = TAILQ_NEXT(tp, t_list);
+nexttp:		tp2 = TAILQ_NEXT(tp, t_list);
 		if (tp2 != NULL)
 			ttyref(tp2);
 		mtx_unlock(&tty_list_mutex);
@@ -3175,7 +3179,7 @@ open_top:
 				return (EBUSY);
 			error =	tsleep(&tp->t_actout,
 				       TTIPRI | PCATCH, "ttybi", 0);
-			if (error != 0 || (tp->t_flags & TS_GONE))
+			if (error != 0 || (tp->t_state & TS_GONE))
 				goto out;
 			goto open_top;
 		}
@@ -3249,7 +3253,7 @@ ttyread(struct cdev *dev, struct uio *uio, int flag)
 
 	tp = tty_gettp(dev);
 
-	if (tp->t_state & TS_GONE)
+	if (tp == NULL || (tp->t_state & TS_GONE))
 		return (ENODEV);
 	return (ttyld_read(tp, uio, flag));
 }
@@ -3261,7 +3265,7 @@ ttywrite(struct cdev *dev, struct uio *uio, int flag)
 
 	tp = tty_gettp(dev);
 
-	if (tp->t_state & TS_GONE)
+	if (tp == NULL || (tp->t_state & TS_GONE))
 		return (ENODEV);
 	return (ttyld_write(tp, uio, flag));
 }

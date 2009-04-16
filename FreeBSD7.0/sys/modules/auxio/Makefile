@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/auxio/Makefile,v 1.2 2005/02/25 06:59:56 yongari Exp $
+# $FreeBSD: src/sys/modules/auxio/Makefile,v 1.2.18.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../dev/auxio
 

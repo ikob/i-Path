@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/sound/driver/csa/Makefile,v 1.4 2003/02/07 13:56:31 nyan Exp $
+# $FreeBSD: src/sys/modules/sound/driver/csa/Makefile,v 1.4.30.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../../../dev/sound/pci
 

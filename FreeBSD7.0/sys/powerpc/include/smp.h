@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/powerpc/include/smp.h,v 1.1 2001/06/16 07:14:04 benno Exp $ */
+/* $FreeBSD: src/sys/powerpc/include/smp.h,v 1.1.24.1 2008/11/25 02:59:29 kensmith Exp $ */
 
 /*
  * An empty file now,

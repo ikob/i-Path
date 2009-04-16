@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/pci/pci_pci.c,v 1.50 2007/09/30 11:05:15 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/pci/pci_pci.c,v 1.50.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * PCI:PCI bridge support.
@@ -181,10 +181,22 @@ pcib_attach_common(device_t dev)
     if (sc->command & PCIM_CMD_MEMEN) {
 	sc->membase   = PCI_PPBMEMBASE(0, pci_read_config(dev, PCIR_MEMBASE_1, 2));
 	sc->memlimit  = PCI_PPBMEMLIMIT(0, pci_read_config(dev, PCIR_MEMLIMIT_1, 2));
-	sc->pmembase  = PCI_PPBMEMBASE(pci_read_config(dev, PCIR_PMBASEH_1, 4),
-	    pci_read_config(dev, PCIR_PMBASEL_1, 2));
-	sc->pmemlimit = PCI_PPBMEMLIMIT(pci_read_config(dev, PCIR_PMLIMITH_1, 4),
-	    pci_read_config(dev, PCIR_PMLIMITL_1, 2));
+	iolow = pci_read_config(dev, PCIR_PMBASEL_1, 1);
+	if ((iolow & PCIM_BRPM_MASK) == PCIM_BRPM_64)
+	    sc->pmembase = PCI_PPBMEMBASE(
+		pci_read_config(dev, PCIR_PMBASEH_1, 4),
+		pci_read_config(dev, PCIR_PMBASEL_1, 2));
+	else
+	    sc->pmembase = PCI_PPBMEMBASE(0,
+		pci_read_config(dev, PCIR_PMBASEL_1, 2));
+	iolow = pci_read_config(dev, PCIR_PMLIMITL_1, 1);
+	if ((iolow & PCIM_BRPM_MASK) == PCIM_BRPM_64)	
+	    sc->pmemlimit = PCI_PPBMEMLIMIT(
+		pci_read_config(dev, PCIR_PMLIMITH_1, 4),
+		pci_read_config(dev, PCIR_PMLIMITL_1, 2));
+	else
+	    sc->pmemlimit = PCI_PPBMEMLIMIT(0,
+		pci_read_config(dev, PCIR_PMLIMITL_1, 2));
     }
 
     /*
@@ -607,9 +619,15 @@ pcib_map_msi(device_t pcib, device_t dev, int irq, uint64_t *addr,
     uint32_t *data)
 {
 	device_t bus;
+	int error;
 
 	bus = device_get_parent(pcib);
-	return (PCIB_MAP_MSI(device_get_parent(bus), dev, irq, addr, data));
+	error = PCIB_MAP_MSI(device_get_parent(bus), dev, irq, addr, data);
+	if (error)
+		return (error);
+
+	pci_ht_map_msi(pcib, *addr);
+	return (0);
 }
 
 /*

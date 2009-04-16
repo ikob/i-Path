@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ofw/ofw_bus_subr.c,v 1.1 2005/11/22 16:37:45 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ofw/ofw_bus_subr.c,v 1.1.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

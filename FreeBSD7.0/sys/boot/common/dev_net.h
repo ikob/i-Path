@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/boot/common/dev_net.h,v 1.2 1999/08/28 00:39:46 peter Exp $
+ * $FreeBSD: src/sys/boot/common/dev_net.h,v 1.2.52.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 extern struct devsw netdev;

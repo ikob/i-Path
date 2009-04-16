@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/mac_biba/Makefile,v 1.2 2002/10/22 17:10:14 rwatson Exp $
+# $FreeBSD: src/sys/modules/mac_biba/Makefile,v 1.2.32.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../security/mac_biba
 

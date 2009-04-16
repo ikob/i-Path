@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/cpufreq/powernow.c,v 1.4 2007/01/23 19:20:30 bruno Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/cpufreq/powernow.c,v 1.4.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -894,7 +894,7 @@ pn_identify(driver_t *driver, device_t parent)
 	}
 	if (device_find_child(parent, "powernow", -1) != NULL)
 		return;
-	if ((child = BUS_ADD_CHILD(parent, 0, "powernow", -1)) == NULL)
+	if ((child = BUS_ADD_CHILD(parent, 10, "powernow", -1)) == NULL)
 		device_printf(parent, "powernow: add child failed\n");
 }
 
@@ -983,6 +983,5 @@ static int
 pn_detach(device_t dev)
 {
 
-	cpufreq_unregister(dev);
-	return (0);
+	return (cpufreq_unregister(dev));
 }

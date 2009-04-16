@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/tmpfs/Makefile,v 1.2 2007/06/29 05:23:15 delphij Exp $
+# $FreeBSD: src/sys/modules/tmpfs/Makefile,v 1.2.6.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../fs/tmpfs
 

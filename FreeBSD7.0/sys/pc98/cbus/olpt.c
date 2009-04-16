@@ -46,7 +46,7 @@
  * SUCH DAMAGE.
  *
  *	from: unknown origin, 386BSD 0.1
- * $FreeBSD: src/sys/pc98/cbus/olpt.c,v 1.31 2007/02/23 20:11:27 piso Exp $
+ * $FreeBSD: src/sys/pc98/cbus/olpt.c,v 1.31.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

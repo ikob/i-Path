@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)limits.h	8.3 (Berkeley) 1/4/94
- * $FreeBSD: src/sys/powerpc/include/limits.h,v 1.28 2005/03/02 21:33:28 joerg Exp $
+ * $FreeBSD: src/sys/powerpc/include/limits.h,v 1.28.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _MACHINE_LIMITS_H_

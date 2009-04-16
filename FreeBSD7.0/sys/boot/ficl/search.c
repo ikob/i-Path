@@ -41,7 +41,7 @@
 ** SUCH DAMAGE.
 */
 
-/* $FreeBSD: src/sys/boot/ficl/search.c,v 1.2 2002/04/09 17:45:11 dcs Exp $ */
+/* $FreeBSD: src/sys/boot/ficl/search.c,v 1.2.32.1 2008/11/25 02:59:29 kensmith Exp $ */
 
 #include <string.h>
 #include "ficl.h"

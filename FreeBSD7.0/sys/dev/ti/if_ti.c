@@ -77,7 +77,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ti/if_ti.c,v 1.128 2007/03/04 03:38:08 csjp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ti/if_ti.c,v 1.128.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_ti.h"
 
@@ -195,7 +195,7 @@ static void ti_init_locked(void *);
 static void ti_init2(struct ti_softc *);
 static void ti_stop(struct ti_softc *);
 static void ti_watchdog(struct ifnet *);
-static void ti_shutdown(device_t);
+static int ti_shutdown(device_t);
 static int ti_ifmedia_upd(struct ifnet *);
 static void ti_ifmedia_sts(struct ifnet *, struct ifmediareq *);
 
@@ -2498,6 +2498,7 @@ ti_attach(dev)
 	ifp->if_start = ti_start;
 	ifp->if_watchdog = ti_watchdog;
 	ifp->if_init = ti_init;
+	ifp->if_baudrate = 1000000000;
 	ifp->if_mtu = ETHERMTU;
 	ifp->if_snd.ifq_maxlen = TI_TX_RING_CNT - 1;
 
@@ -3874,7 +3875,7 @@ ti_stop(sc)
  * Stop all chip I/O so that the kernel's probe routines don't
  * get confused by errant DMAs when rebooting.
  */
-static void
+static int
 ti_shutdown(dev)
 	device_t		dev;
 {
@@ -3884,4 +3885,6 @@ ti_shutdown(dev)
 	TI_LOCK(sc);
 	ti_chipinit(sc);
 	TI_UNLOCK(sc);
+
+	return (0);
 }

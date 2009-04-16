@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/dc/if_dc.c,v 1.192 2007/08/05 11:28:19 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/dc/if_dc.c,v 1.192.2.5.2.2 2008/12/15 21:37:40 marius Exp $");
 
 /*
  * DEC "tulip" clone ethernet driver. Supports the DEC/Intel 21143
@@ -148,7 +148,7 @@ MODULE_DEPEND(dc, miibus, 1, 1, 1);
 /*
  * Various supported device vendors/types and their names.
  */
-static struct dc_type dc_devs[] = {
+static const struct dc_type dc_devs[] = {
 	{ DC_DEVID(DC_VENDORID_DEC, DC_DEVICEID_21143), 0,
 		"Intel 21143 10/100BaseTX" },
 	{ DC_DEVID(DC_VENDORID_DAVICOM, DC_DEVICEID_DM9009), 0,
@@ -200,7 +200,7 @@ static struct dc_type dc_devs[] = {
 	{ DC_DEVID(DC_VENDORID_ACCTON, DC_DEVICEID_EN2242), 0,
 		"Accton EN2242 MiniPCI 10/100BaseTX" },
 	{ DC_DEVID(DC_VENDORID_XIRCOM, DC_DEVICEID_X3201), 0,
-	  	"Xircom X3201 10/100BaseTX" },
+		"Xircom X3201 10/100BaseTX" },
 	{ DC_DEVID(DC_VENDORID_DLINK, DC_DEVICEID_DRP32TXD), 0,
 		"Neteasy DRP-32TXD Cardbus 10/100" },
 	{ DC_DEVID(DC_VENDORID_ABOCOM, DC_DEVICEID_FE2500), 0,
@@ -231,7 +231,7 @@ static int dc_attach(device_t);
 static int dc_detach(device_t);
 static int dc_suspend(device_t);
 static int dc_resume(device_t);
-static struct dc_type *dc_devtype(device_t);
+static const struct dc_type *dc_devtype(device_t);
 static int dc_newbuf(struct dc_softc *, int, int);
 static int dc_encap(struct dc_softc *, struct mbuf **);
 static void dc_pnic_rx_bug_war(struct dc_softc *, int);
@@ -248,7 +248,7 @@ static void dc_init(void *);
 static void dc_init_locked(struct dc_softc *);
 static void dc_stop(struct dc_softc *);
 static void dc_watchdog(void *);
-static void dc_shutdown(device_t);
+static int dc_shutdown(device_t);
 static int dc_ifmedia_upd(struct ifnet *);
 static void dc_ifmedia_sts(struct ifnet *, struct ifmediareq *);
 
@@ -292,8 +292,6 @@ static void dc_decode_leaf_sia(struct dc_softc *, struct dc_eblock_sia *);
 static void dc_decode_leaf_mii(struct dc_softc *, struct dc_eblock_mii *);
 static void dc_decode_leaf_sym(struct dc_softc *, struct dc_eblock_sym *);
 static void dc_apply_fixup(struct dc_softc *, int);
-
-static void dc_dma_map_txbuf(void *, bus_dma_segment_t *, int, bus_size_t, int);
 
 #ifdef DC_USEIOSPACE
 #define DC_RES			SYS_RES_IOPORT
@@ -609,15 +607,22 @@ dc_read_eeprom(struct dc_softc *sc, caddr_t dest, int off, int cnt, int be)
 static void
 dc_mii_writebit(struct dc_softc *sc, int bit)
 {
+	uint32_t reg;
 
-	if (bit)
-		CSR_WRITE_4(sc, DC_SIO,
-		    DC_SIO_ROMCTL_WRITE | DC_SIO_MII_DATAOUT);
-	else
-		CSR_WRITE_4(sc, DC_SIO, DC_SIO_ROMCTL_WRITE);
+	reg = DC_SIO_ROMCTL_WRITE | (bit != 0 ? DC_SIO_MII_DATAOUT : 0);
+	CSR_WRITE_4(sc, DC_SIO, reg);
+	CSR_BARRIER_4(sc, DC_SIO,
+	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
+	DELAY(1);
 
-	DC_SETBIT(sc, DC_SIO, DC_SIO_MII_CLK);
-	DC_CLRBIT(sc, DC_SIO, DC_SIO_MII_CLK);
+	CSR_WRITE_4(sc, DC_SIO, reg | DC_SIO_MII_CLK);
+	CSR_BARRIER_4(sc, DC_SIO,
+	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
+	DELAY(1);
+	CSR_WRITE_4(sc, DC_SIO, reg);
+	CSR_BARRIER_4(sc, DC_SIO,
+	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
+	DELAY(1);
 }
 
 /*
@@ -626,11 +631,22 @@ dc_mii_writebit(struct dc_softc *sc, int bit)
 static int
 dc_mii_readbit(struct dc_softc *sc)
 {
+	uint32_t reg;
 
-	CSR_WRITE_4(sc, DC_SIO, DC_SIO_ROMCTL_READ | DC_SIO_MII_DIR);
-	CSR_READ_4(sc, DC_SIO);
-	DC_SETBIT(sc, DC_SIO, DC_SIO_MII_CLK);
-	DC_CLRBIT(sc, DC_SIO, DC_SIO_MII_CLK);
+	reg = DC_SIO_ROMCTL_READ | DC_SIO_MII_DIR;
+	CSR_WRITE_4(sc, DC_SIO, reg);
+	CSR_BARRIER_4(sc, DC_SIO,
+	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
+	DELAY(1);
+	(void)CSR_READ_4(sc, DC_SIO);
+	CSR_WRITE_4(sc, DC_SIO, reg | DC_SIO_MII_CLK);
+	CSR_BARRIER_4(sc, DC_SIO,
+	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
+	DELAY(1);
+	CSR_WRITE_4(sc, DC_SIO, reg);
+	CSR_BARRIER_4(sc, DC_SIO,
+	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
+	DELAY(1);
 	if (CSR_READ_4(sc, DC_SIO) & DC_SIO_MII_DATAIN)
 		return (1);
 
@@ -646,6 +662,9 @@ dc_mii_sync(struct dc_softc *sc)
 	int i;
 
 	CSR_WRITE_4(sc, DC_SIO, DC_SIO_ROMCTL_WRITE);
+	CSR_BARRIER_4(sc, DC_SIO,
+	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE);
+	DELAY(1);
 
 	for (i = 0; i < 32; i++)
 		dc_mii_writebit(sc, 1);
@@ -669,15 +688,13 @@ dc_mii_send(struct dc_softc *sc, u_int32_t bits, int cnt)
 static int
 dc_mii_readreg(struct dc_softc *sc, struct dc_mii_frame *frame)
 {
-	int i, ack;
+	int i;
 
 	/*
 	 * Set up frame for RX.
 	 */
 	frame->mii_stdelim = DC_MII_STARTDELIM;
 	frame->mii_opcode = DC_MII_READOP;
-	frame->mii_turnaround = 0;
-	frame->mii_data = 0;
 
 	/*
 	 * Sync the PHYs.
@@ -692,38 +709,28 @@ dc_mii_readreg(struct dc_softc *sc, struct dc_mii_frame *frame)
 	dc_mii_send(sc, frame->mii_phyaddr, 5);
 	dc_mii_send(sc, frame->mii_regaddr, 5);
 
-#ifdef notdef
-	/* Idle bit */
-	dc_mii_writebit(sc, 1);
-	dc_mii_writebit(sc, 0);
-#endif
-
-	/* Check for ack. */
-	ack = dc_mii_readbit(sc);
-
 	/*
-	 * Now try reading data bits. If the ack failed, we still
+	 * Now try reading data bits.  If the turnaround failed, we still
 	 * need to clock through 16 cycles to keep the PHY(s) in sync.
 	 */
-	if (ack) {
+	frame->mii_turnaround = dc_mii_readbit(sc);
+	if (frame->mii_turnaround != 0) {
 		for (i = 0; i < 16; i++)
 			dc_mii_readbit(sc);
 		goto fail;
 	}
-
 	for (i = 0x8000; i; i >>= 1) {
-		if (!ack) {
-			if (dc_mii_readbit(sc))
-				frame->mii_data |= i;
-		}
+		if (dc_mii_readbit(sc))
+			frame->mii_data |= i;
 	}
 
 fail:
 
+	/* Clock the idle bits. */
 	dc_mii_writebit(sc, 0);
 	dc_mii_writebit(sc, 0);
 
-	if (ack)
+	if (frame->mii_turnaround != 0)
 		return (1);
 	return (0);
 }
@@ -738,7 +745,6 @@ dc_mii_writereg(struct dc_softc *sc, struct dc_mii_frame *frame)
 	/*
 	 * Set up frame for TX.
 	 */
-
 	frame->mii_stdelim = DC_MII_STARTDELIM;
 	frame->mii_opcode = DC_MII_WRITEOP;
 	frame->mii_turnaround = DC_MII_TURNAROUND;
@@ -755,7 +761,7 @@ dc_mii_writereg(struct dc_softc *sc, struct dc_mii_frame *frame)
 	dc_mii_send(sc, frame->mii_turnaround, 2);
 	dc_mii_send(sc, frame->mii_data, 16);
 
-	/* Idle bit. */
+	/* Clock the idle bits. */
 	dc_mii_writebit(sc, 0);
 	dc_mii_writebit(sc, 0);
 
@@ -1143,7 +1149,7 @@ dc_setfilt_21143(struct dc_softc *sc)
 static void
 dc_setfilt_admtek(struct dc_softc *sc)
 {
-	uint32_t eaddr[(ETHER_ADDR_LEN+3)/4];
+	uint8_t eaddr[ETHER_ADDR_LEN];
 	struct ifnet *ifp;
 	struct ifmultiaddr *ifma;
 	int h = 0;
@@ -1153,8 +1159,9 @@ dc_setfilt_admtek(struct dc_softc *sc)
 
 	/* Init our MAC address. */
 	bcopy(IF_LLADDR(sc->dc_ifp), eaddr, ETHER_ADDR_LEN);
-	CSR_WRITE_4(sc, DC_AL_PAR0, eaddr[0]);
-	CSR_WRITE_4(sc, DC_AL_PAR1, eaddr[1]);
+	CSR_WRITE_4(sc, DC_AL_PAR0, eaddr[3] << 24 | eaddr[2] << 16 |
+	    eaddr[1] << 8 | eaddr[0]);
+	CSR_WRITE_4(sc, DC_AL_PAR1, eaddr[5] << 8 | eaddr[4]);
 
 	/* If we want promiscuous mode, set the allframes bit. */
 	if (ifp->if_flags & IFF_PROMISC)
@@ -1394,9 +1401,7 @@ dc_setcfg(struct dc_softc *sc, int media)
 				    __func__);
 			if (!((isr & DC_ISR_RX_STATE) == DC_RXSTATE_STOPPED ||
 			    (isr & DC_ISR_RX_STATE) == DC_RXSTATE_WAIT) &&
-			    !(DC_IS_CENTAUR(sc) || DC_IS_CONEXANT(sc) ||
-			    (DC_IS_DAVICOM(sc) && pci_get_revid(sc->dc_dev) >=
-			    DC_REVISION_DM9102A)))
+			    !DC_HAS_BROKEN_RXSTATE(sc))
 				device_printf(sc->dc_dev,
 				    "%s: failed to force rx to idle state\n",
 				    __func__);
@@ -1562,10 +1567,10 @@ dc_reset(struct dc_softc *sc)
 	}
 }
 
-static struct dc_type *
+static const struct dc_type *
 dc_devtype(device_t dev)
 {
-	struct dc_type *t;
+	const struct dc_type *t;
 	u_int32_t devid;
 	u_int8_t rev;
 
@@ -1594,7 +1599,7 @@ dc_devtype(device_t dev)
 static int
 dc_probe(device_t dev)
 {
-	struct dc_type *t;
+	const struct dc_type *t;
 
 	t = dc_devtype(dev);
 
@@ -1796,7 +1801,8 @@ dc_dma_map_addr(void *arg, bus_dma_segment_t *segs, int nseg, int error)
 {
 	u_int32_t *paddr;
 
-	KASSERT(nseg == 1, ("wrong number of segments, should be 1"));
+	KASSERT(nseg == 1,
+	    ("%s: wrong number of segments (%d)", __func__, nseg));
 	paddr = arg;
 	*paddr = segs->ds_addr;
 }
@@ -1813,7 +1819,7 @@ dc_attach(device_t dev)
 	u_int32_t command;
 	struct dc_softc *sc;
 	struct ifnet *ifp;
-	u_int32_t revision;
+	u_int32_t reg, revision;
 	int error = 0, rid, mac_offset;
 	int i;
 	u_int8_t *mac;
@@ -2053,8 +2059,15 @@ dc_attach(device_t dev)
 		break;
 	case DC_TYPE_AL981:
 	case DC_TYPE_AN985:
-		eaddr[0] = CSR_READ_4(sc, DC_AL_PAR0);
-		eaddr[1] = CSR_READ_4(sc, DC_AL_PAR1);
+		reg = CSR_READ_4(sc, DC_AL_PAR0);
+		mac = (uint8_t *)&eaddr[0];
+		mac[0] = (reg >> 0) & 0xff;
+		mac[1] = (reg >> 8) & 0xff;
+		mac[2] = (reg >> 16) & 0xff;
+		mac[3] = (reg >> 24) & 0xff;
+		reg = CSR_READ_4(sc, DC_AL_PAR1);
+		mac[4] = (reg >> 0) & 0xff;
+		mac[5] = (reg >> 8) & 0xff;
 		break;
 	case DC_TYPE_CONEXANT:
 		bcopy(sc->dc_srom + DC_CONEXANT_EE_NODEADDR, &eaddr,
@@ -2132,7 +2145,7 @@ dc_attach(device_t dev)
 	/* Allocate a busdma tag for mbufs. */
 	error = bus_dma_tag_create(bus_get_dma_tag(dev), 1, 0,
 	    BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR, NULL, NULL,
-	    MCLBYTES, DC_TX_LIST_CNT, MCLBYTES,
+	    MCLBYTES * DC_MAXFRAGS, DC_MAXFRAGS, MCLBYTES,
 	    0, NULL, NULL, &sc->dc_mtag);
 	if (error) {
 		device_printf(dev, "failed to allocate busdma tag\n");
@@ -2457,11 +2470,12 @@ dc_newbuf(struct dc_softc *sc, int i, int alloc)
 	if (alloc) {
 		error = bus_dmamap_load_mbuf_sg(sc->dc_mtag, sc->dc_sparemap,
 		    m_new, segs, &nseg, 0);
-		KASSERT(nseg == 1, ("wrong number of segments, should be 1"));
 		if (error) {
 			m_freem(m_new);
 			return (error);
 		}
+		KASSERT(nseg == 1,
+		    ("%s: wrong number of segments (%d)", __func__, nseg));
 		sc->dc_ldata->dc_rx_list[i].dc_data = htole32(segs->ds_addr);
 		bus_dmamap_unload(sc->dc_mtag, sc->dc_cdata.dc_rx_map[i]);
 		tmp = sc->dc_cdata.dc_rx_map[i];
@@ -2741,7 +2755,6 @@ dc_rxeof(struct dc_softc *sc)
  * A frame was downloaded to the chip. It's safe for us to clean up
  * the list buffers.
  */
-
 static void
 dc_txeof(struct dc_softc *sc)
 {
@@ -2877,8 +2890,12 @@ dc_tick(void *xsc)
 			if (sc->dc_link == 0)
 				mii_tick(mii);
 		} else {
-			r = CSR_READ_4(sc, DC_ISR);
-			if ((r & DC_ISR_RX_STATE) == DC_RXSTATE_WAIT &&
+			/*
+			 * For NICs which never report DC_RXSTATE_WAIT, we
+			 * have to bite the bullet...
+			 */
+			if ((DC_HAS_BROKEN_RXSTATE(sc) || (CSR_READ_4(sc,
+			    DC_ISR) & DC_ISR_RX_STATE) == DC_RXSTATE_WAIT) &&
 			    sc->dc_cdata.dc_tx_cnt == 0) {
 				mii_tick(mii);
 				if (!(mii->mii_media_status & IFM_ACTIVE))
@@ -3121,21 +3138,83 @@ dc_intr(void *arg)
 	DC_UNLOCK(sc);
 }
 
-static void
-dc_dma_map_txbuf(arg, segs, nseg, mapsize, error)
-	void *arg;
-	bus_dma_segment_t *segs;
-	int nseg;
-	bus_size_t mapsize;
-	int error;
+/*
+ * Encapsulate an mbuf chain in a descriptor by coupling the mbuf data
+ * pointers to the fragment pointers.
+ */
+static int
+dc_encap(struct dc_softc *sc, struct mbuf **m_head)
 {
-	struct dc_softc *sc;
+	bus_dma_segment_t segs[DC_MAXFRAGS];
 	struct dc_desc *f;
-	int cur, first, frag, i;
+	struct mbuf *m;
+	int cur, defragged, error, first, frag, i, idx, nseg;
 
-	sc = arg;
-	if (error)
-		return;
+	/*
+	 * If there's no way we can send any packets, return now.
+	 */
+	if (DC_TX_LIST_CNT - sc->dc_cdata.dc_tx_cnt <= DC_TX_LIST_RSVD)
+		return (ENOBUFS);
+
+	m = NULL;
+	defragged = 0;
+	if (sc->dc_flags & DC_TX_COALESCE &&
+	    ((*m_head)->m_next != NULL || sc->dc_flags & DC_TX_ALIGN)) {
+		m = m_defrag(*m_head, M_DONTWAIT);
+		defragged = 1;
+	} else {
+		/*
+		 * Count the number of frags in this chain to see if we
+		 * need to m_collapse.  Since the descriptor list is shared
+		 * by all packets, we'll m_collapse long chains so that they
+		 * do not use up the entire list, even if they would fit.
+		 */
+		i = 0;
+		for (m = *m_head; m != NULL; m = m->m_next)
+			i++;
+		if (i > DC_TX_LIST_CNT / 4 ||
+		    DC_TX_LIST_CNT - i + sc->dc_cdata.dc_tx_cnt <=
+		    DC_TX_LIST_RSVD) {
+			m = m_collapse(*m_head, M_DONTWAIT, DC_MAXFRAGS);
+			defragged = 1;
+		}
+	}
+	if (defragged != 0) {
+		if (m == NULL) {
+			m_freem(*m_head);
+			*m_head = NULL;
+			return (ENOBUFS);
+		}
+		*m_head = m;
+	}
+
+	idx = sc->dc_cdata.dc_tx_prod;
+	error = bus_dmamap_load_mbuf_sg(sc->dc_mtag,
+	    sc->dc_cdata.dc_tx_map[idx], *m_head, segs, &nseg, 0);
+	if (error == EFBIG) {
+		if (defragged != 0 || (m = m_collapse(*m_head, M_DONTWAIT,
+		    DC_MAXFRAGS)) == NULL) {
+			m_freem(*m_head);
+			*m_head = NULL;
+			return (defragged != 0 ? error : ENOBUFS);
+		}
+		*m_head = m;
+		error = bus_dmamap_load_mbuf_sg(sc->dc_mtag,
+		    sc->dc_cdata.dc_tx_map[idx], *m_head, segs, &nseg, 0);
+		if (error != 0) {
+			m_freem(*m_head);
+			*m_head = NULL;
+			return (error);
+		}
+	} else if (error != 0)
+		return (error);
+	KASSERT(nseg <= DC_MAXFRAGS,
+	    ("%s: wrong number of segments (%d)", __func__, nseg));
+	if (nseg == 0) {
+		m_freem(*m_head);
+		*m_head = NULL;
+		return (EIO);
+	}
 
 	first = cur = frag = sc->dc_cdata.dc_tx_prod;
 	for (i = 0; i < nseg; i++) {
@@ -3144,8 +3223,9 @@ dc_dma_map_txbuf(arg, segs, nseg, mapsize, error)
 		    (first != sc->dc_cdata.dc_tx_first)) {
 			bus_dmamap_unload(sc->dc_mtag,
 			    sc->dc_cdata.dc_tx_map[first]);
-			sc->dc_cdata.dc_tx_err = ENOBUFS;
-			return;
+			m_freem(*m_head);
+			*m_head = NULL;
+			return (ENOBUFS);
 		}
 
 		f = &sc->dc_ldata->dc_tx_list[frag];
@@ -3160,11 +3240,10 @@ dc_dma_map_txbuf(arg, segs, nseg, mapsize, error)
 		DC_INC(frag, DC_TX_LIST_CNT);
 	}
 
-	sc->dc_cdata.dc_tx_err = 0;
 	sc->dc_cdata.dc_tx_prod = frag;
 	sc->dc_cdata.dc_tx_cnt += nseg;
+	sc->dc_cdata.dc_tx_chain[cur] = *m_head;
 	sc->dc_ldata->dc_tx_list[cur].dc_ctl |= htole32(DC_TXCTL_LASTFRAG);
-	sc->dc_cdata.dc_tx_chain[cur] = sc->dc_cdata.dc_tx_mapping;
 	if (sc->dc_flags & DC_TX_INTR_FIRSTFRAG)
 		sc->dc_ldata->dc_tx_list[first].dc_ctl |=
 		    htole32(DC_TXCTL_FINT);
@@ -3173,70 +3252,13 @@ dc_dma_map_txbuf(arg, segs, nseg, mapsize, error)
 	if (sc->dc_flags & DC_TX_USE_TX_INTR && sc->dc_cdata.dc_tx_cnt > 64)
 		sc->dc_ldata->dc_tx_list[cur].dc_ctl |= htole32(DC_TXCTL_FINT);
 	sc->dc_ldata->dc_tx_list[first].dc_status = htole32(DC_TXSTAT_OWN);
-}
 
-/*
- * Encapsulate an mbuf chain in a descriptor by coupling the mbuf data
- * pointers to the fragment pointers.
- */
-static int
-dc_encap(struct dc_softc *sc, struct mbuf **m_head)
-{
-	struct mbuf *m;
-	int error, idx, chainlen = 0;
-
-	/*
-	 * If there's no way we can send any packets, return now.
-	 */
-	if (DC_TX_LIST_CNT - sc->dc_cdata.dc_tx_cnt <= DC_TX_LIST_RSVD)
-		return (ENOBUFS);
-
-	/*
-	 * Count the number of frags in this chain to see if
-	 * we need to m_defrag.  Since the descriptor list is shared
-	 * by all packets, we'll m_defrag long chains so that they
-	 * do not use up the entire list, even if they would fit.
-	 */
-	for (m = *m_head; m != NULL; m = m->m_next)
-		chainlen++;
-
-	m = NULL;
-	if ((sc->dc_flags & DC_TX_COALESCE && ((*m_head)->m_next != NULL ||
-	    sc->dc_flags & DC_TX_ALIGN)) || (chainlen > DC_TX_LIST_CNT / 4) ||
-	    (DC_TX_LIST_CNT - (chainlen + sc->dc_cdata.dc_tx_cnt) <=
-	    DC_TX_LIST_RSVD)) {
-		m = m_defrag(*m_head, M_DONTWAIT);
-		if (m == NULL) {
-			m_freem(*m_head);
-			*m_head = NULL;
-			return (ENOBUFS);
-		}
-		*m_head = m;
-	}
-	idx = sc->dc_cdata.dc_tx_prod;
-	sc->dc_cdata.dc_tx_mapping = *m_head;
-	error = bus_dmamap_load_mbuf(sc->dc_mtag, sc->dc_cdata.dc_tx_map[idx],
-	    *m_head, dc_dma_map_txbuf, sc, 0);
-	if (error != 0 || sc->dc_cdata.dc_tx_err != 0) {
-		if (m != NULL) {
-			m_freem(m);
-			*m_head = NULL;
-		}
-		return (error != 0 ? error : sc->dc_cdata.dc_tx_err);
-	}
 	bus_dmamap_sync(sc->dc_mtag, sc->dc_cdata.dc_tx_map[idx],
 	    BUS_DMASYNC_PREWRITE);
 	bus_dmamap_sync(sc->dc_ltag, sc->dc_lmap,
 	    BUS_DMASYNC_PREWRITE | BUS_DMASYNC_PREREAD);
 	return (0);
 }
-
-/*
- * Main transmit routine. To avoid having to do mbuf copies, we put pointers
- * to the mbuf data regions directly in the transmit lists. We also save a
- * copy of the pointers since the transmit list fragment pointers are
- * physical addresses.
- */
 
 static void
 dc_start(struct ifnet *ifp)
@@ -3249,6 +3271,13 @@ dc_start(struct ifnet *ifp)
 	DC_UNLOCK(sc);
 }
 
+/*
+ * Main transmit routine
+ * To avoid having to do mbuf copies, we put pointers to the mbuf data
+ * regions directly in the transmit lists.  We also save a copy of the
+ * pointers since the transmit list fragment pointers are physical
+ * addresses.
+ */
 static void
 dc_start_locked(struct ifnet *ifp)
 {
@@ -3605,7 +3634,6 @@ dc_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 			ifp->if_capenable |= IFCAP_POLLING;
 			DC_UNLOCK(sc);
 			return (error);
-			
 		}
 		if (!(ifr->ifr_reqcap & IFCAP_POLLING) &&
 		    ifp->if_capenable & IFCAP_POLLING) {
@@ -3761,7 +3789,7 @@ dc_resume(device_t dev)
  * Stop all chip I/O so that the kernel's probe routines don't
  * get confused by errant DMAs when rebooting.
  */
-static void
+static int
 dc_shutdown(device_t dev)
 {
 	struct dc_softc *sc;
@@ -3771,4 +3799,6 @@ dc_shutdown(device_t dev)
 	DC_LOCK(sc);
 	dc_stop(sc);
 	DC_UNLOCK(sc);
+
+	return (0);
 }

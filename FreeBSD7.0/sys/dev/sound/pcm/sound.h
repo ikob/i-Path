@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/sound/pcm/sound.h,v 1.78 2007/06/16 03:37:28 ariff Exp $
+ * $FreeBSD: src/sys/dev/sound/pcm/sound.h,v 1.78.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

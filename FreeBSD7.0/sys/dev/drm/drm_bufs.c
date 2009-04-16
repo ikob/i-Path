@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/drm/drm_bufs.c,v 1.3 2005/11/28 23:13:52 anholt Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/drm/drm_bufs.c,v 1.3.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "dev/pci/pcireg.h"
 

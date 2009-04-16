@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/kern_sysctl.c,v 1.177 2007/09/02 09:59:33 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/kern_sysctl.c,v 1.177.6.2 2008/12/19 16:08:40 kib Exp $");
 
 #include "opt_compat.h"
 #include "opt_mac.h"
@@ -52,6 +52,7 @@ __FBSDID("$FreeBSD: src/sys/kern/kern_sysctl.c,v 1.177 2007/09/02 09:59:33 rwats
 #include <sys/mutex.h>
 #include <sys/sx.h>
 #include <sys/sysproto.h>
+#include <sys/uio.h>
 
 #include <security/mac/mac_framework.h>
 
@@ -1395,11 +1396,14 @@ userland_sysctl(struct thread *td, int *name, u_int namelen, void *old,
 
 	SYSCTL_LOCK();
 
-	do {
+	for (;;) {
 		req.oldidx = 0;
 		req.newidx = 0;
 		error = sysctl_root(0, name, namelen, &req);
-	} while (error == EAGAIN);
+		if (error != EAGAIN)
+			break;
+		uio_yield();
+	}
 
 	if (req.lock == REQ_WIRED && req.validlen > 0)
 		vsunlock(req.oldptr, req.validlen);

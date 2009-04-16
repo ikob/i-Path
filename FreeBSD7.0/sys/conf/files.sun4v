@@ -1,7 +1,7 @@
 # This file tells config what files go into building a kernel,
 # files marked standard are always included.
 #
-# $FreeBSD: src/sys/conf/files.sun4v,v 1.11 2007/07/03 12:13:42 gnn Exp $
+# $FreeBSD: src/sys/conf/files.sun4v,v 1.11.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
 #
 # The long compile-with and dependency lines are required because of
 # limitations in config: backslash-newline doesn't work in strings, and
@@ -35,7 +35,6 @@ libkern/flsl.c			standard
 sparc64/sparc64/autoconf.c	standard
 sun4v/sun4v/bus_machdep.c	standard
 sparc64/sparc64/clock.c		standard
-sparc64/sparc64/counter.c	standard
 sparc64/sparc64/db_disasm.c	optional	ddb
 sun4v/sun4v/db_interface.c	optional	ddb
 sun4v/sun4v/db_trace.c	optional	ddb
@@ -49,7 +48,6 @@ sun4v/sun4v/trap_trace.S	optional	trap_tracing
 sparc64/pci/ofw_pcib.c		optional	pci
 sparc64/pci/ofw_pcib_subr.c	optional	pci
 sparc64/pci/ofw_pcibus.c	optional	pci
-sparc64/pci/ofw_pci_if.m	optional	pci
 
 # XXX hvcons should be optional
 sun4v/sun4v/hvcons.c	standard	
@@ -74,6 +72,7 @@ sparc64/sparc64/prof_machdep.c	optional	profiling-routine
 sparc64/sparc64/rwindow.c		standard
 sun4v/sun4v/rtc.c		standard
 sun4v/sun4v/simdisk.c		optional	simulator
+sun4v/sun4v/stack_machdep.c	optional	ddb | stack
 sun4v/sun4v/support.S		standard
 sparc64/sparc64/sys_machdep.c	standard
 sun4v/sun4v/swtch.S		standard

@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sun4v/sun4v/machdep.c,v 1.15.4.1 2008/01/19 18:15:06 kib Exp $");
+__FBSDID("$FreeBSD: src/sys/sun4v/sun4v/machdep.c,v 1.15.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_compat.h"
 #include "opt_ddb.h"
@@ -510,7 +510,8 @@ sparc64_init(caddr_t mdp, u_long o1, u_long o2, u_long o3, ofw_vec_t *vec)
 
 #ifdef KDB
 	if (boothowto & RB_KDB)
-		kdb_enter("Boot flags requested debugger");
+		kdb_enter_why(KDB_WHY_BOOTFLAGS,
+		    "Boot flags requested debugger");
 #endif
 	BVPRINTF("sparc64_init done\n");
 }

@@ -16,7 +16,7 @@
 # If you are in doubt as to the purpose or necessity of a line, check first 
 # in NOTES.
 #
-# $FreeBSD: src/sys/powerpc/conf/GENERIC,v 1.71.2.2 2007/10/29 00:07:03 marcel Exp $
+# $FreeBSD: src/sys/powerpc/conf/GENERIC,v 1.71.2.8.2.1 2008/11/25 02:59:29 kensmith Exp $
 
 cpu		OEA
 ident		GENERIC
@@ -42,6 +42,7 @@ options 	UFS_GJOURNAL		#Enable gjournal-based UFS journaling
 options 	MD_ROOT			#MD is a potential root device
 options 	NFSCLIENT		#Network Filesystem Client
 options 	NFSSERVER		#Network Filesystem Server
+options 	NFSLOCKD		#Network Lock Manager
 options 	NFS_ROOT		#NFS usable as root device
 options 	MSDOSFS			#MSDOS Filesystem
 options 	CD9660			#ISO 9660 Filesystem
@@ -55,6 +56,7 @@ options 	COMPAT_FREEBSD5		#Compatible with FreeBSD5
 options 	COMPAT_FREEBSD6		#Compatible with FreeBSD6
 options 	SCSI_DELAY=5000		#Delay (in ms) before probing SCSI 
 options 	KTRACE			#ktrace(1) syscall trace support
+options 	STACK			#stack(9) support
 options 	SYSVSHM			#SYSV-style shared memory
 options 	SYSVMSG			#SYSV-style message queues
 options 	SYSVSEM			#SYSV-style semaphores
@@ -84,8 +86,8 @@ device		pass		# Passthrough device (direct SCSI access)
 # syscons is the default console driver, resembling an SCO console
 device		sc
 device		kbdmux
-options		SC_OFWFB	# OFW frame buffer
-options		SC_DFLT_FONT	# compile font in
+options 	SC_OFWFB	# OFW frame buffer
+options 	SC_DFLT_FONT	# compile font in
 makeoptions	SC_DFLT_FONT=cp437
 
 # Serial (COM) ports
@@ -95,6 +97,7 @@ device		uart
 # PCI Ethernet NICs that use the common MII bus controller code.
 device		miibus		# MII bus support
 device		bge		# Broadcom BCM570xx Gigabit Ethernet
+device		bm		# Apple BMAC Ethernet
 device		gem		# Sun GEM/Sun ERI/Apple GMAC
 device		dc		# DEC/Intel 21143 and various workalikes
 device		fxp		# Intel EtherExpress PRO/100B (82557, 82558)

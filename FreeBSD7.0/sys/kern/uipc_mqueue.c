@@ -43,7 +43,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/uipc_mqueue.c,v 1.25 2007/06/12 00:11:59 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/uipc_mqueue.c,v 1.25.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

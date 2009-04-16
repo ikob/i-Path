@@ -32,7 +32,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/lge/if_lge.c,v 1.50 2007/02/23 12:18:45 piso Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/lge/if_lge.c,v 1.50.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * Level 1 LXT1001 gigabit ethernet driver for FreeBSD. Public
@@ -138,7 +138,7 @@ static void lge_init(void *);
 static void lge_init_locked(struct lge_softc *);
 static void lge_stop(struct lge_softc *);
 static void lge_watchdog(struct ifnet *);
-static void lge_shutdown(device_t);
+static int lge_shutdown(device_t);
 static int lge_ifmedia_upd(struct ifnet *);
 static void lge_ifmedia_upd_locked(struct ifnet *);
 static void lge_ifmedia_sts(struct ifnet *, struct ifmediareq *);
@@ -535,7 +535,6 @@ lge_attach(dev)
 	ifp = sc->lge_ifp = if_alloc(IFT_ETHER);
 	if (ifp == NULL) {
 		device_printf(dev, "can not if_alloc()\n");
-		lge_free_jumbo_mem(sc);
 		error = ENOSPC;
 		goto fail;
 	}
@@ -562,7 +561,6 @@ lge_attach(dev)
 	if (mii_phy_probe(dev, &sc->lge_miibus,
 	    lge_ifmedia_upd, lge_ifmedia_sts)) {
 		device_printf(dev, "MII without any PHY!\n");
-		lge_free_jumbo_mem(sc);
 		error = ENXIO;
 		goto fail;
 	}
@@ -583,6 +581,7 @@ lge_attach(dev)
 	return (0);
 
 fail:
+	lge_free_jumbo_mem(sc);
 	if (sc->lge_ldata)
 		contigfree(sc->lge_ldata,
 		    sizeof(struct lge_list_data), M_DEVBUF);
@@ -804,10 +803,19 @@ static void
 lge_free_jumbo_mem(sc)
 	struct lge_softc	*sc;
 {
-	int			i;
 	struct lge_jpool_entry	*entry;
 
-	for (i = 0; i < LGE_JSLOTS; i++) {
+	if (sc->lge_cdata.lge_jumbo_buf == NULL)
+		return;
+
+	while ((entry = SLIST_FIRST(&sc->lge_jinuse_listhead))) {
+		device_printf(sc->lge_dev,
+		    "asked to free buffer that is in use!\n");
+		SLIST_REMOVE_HEAD(&sc->lge_jinuse_listhead, jpool_entries);
+		SLIST_INSERT_HEAD(&sc->lge_jfree_listhead, entry,
+		    jpool_entries);
+	}
+	while (!SLIST_EMPTY(&sc->lge_jfree_listhead)) {
 		entry = SLIST_FIRST(&sc->lge_jfree_listhead);
 		SLIST_REMOVE_HEAD(&sc->lge_jfree_listhead, jpool_entries);
 		free(entry, M_DEVBUF);
@@ -1579,7 +1587,7 @@ lge_stop(sc)
  * Stop all chip I/O so that the kernel's probe routines don't
  * get confused by errant DMAs when rebooting.
  */
-static void
+static int
 lge_shutdown(dev)
 	device_t		dev;
 {
@@ -1592,5 +1600,5 @@ lge_shutdown(dev)
 	lge_stop(sc);
 	LGE_UNLOCK(sc);
 
-	return;
+	return (0);
 }

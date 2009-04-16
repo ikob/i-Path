@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/common/panic.c,v 1.8 2006/09/29 20:57:38 ru Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/common/panic.c,v 1.8.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <stand.h>
 #include <machine/stdarg.h>

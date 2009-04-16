@@ -6,7 +6,7 @@
  * this stuff is worth it, you can buy me a beer in return.   Poul-Henning Kamp
  * ----------------------------------------------------------------------------
  *
- * $FreeBSD: src/sys/sys/smp.h,v 1.85 2005/10/24 21:04:19 jhb Exp $
+ * $FreeBSD: src/sys/sys/smp.h,v 1.85.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS_SMP_H_
@@ -103,7 +103,13 @@ void	smp_rendezvous_action(void);
 extern	struct mtx smp_ipi_mtx;
 
 #endif /* SMP */
+void	smp_no_rendevous_barrier(void *);
 void	smp_rendezvous(void (*)(void *), 
+		       void (*)(void *),
+		       void (*)(void *),
+		       void *arg);
+void	smp_rendezvous_cpus(cpumask_t,
+		       void (*)(void *), 
 		       void (*)(void *),
 		       void (*)(void *),
 		       void *arg);

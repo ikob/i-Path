@@ -52,7 +52,7 @@
  * SUCH DAMAGE.
  *
  *
- *	$FreeBSD: src/sys/dev/amr/amrio.h,v 1.7 2005/12/14 03:26:49 scottl Exp $
+ *	$FreeBSD: src/sys/dev/amr/amrio.h,v 1.7.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/de/if_de.c,v 1.183 2007/06/07 00:28:47 yongari Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/de/if_de.c,v 1.183.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #define	TULIP_HDR_DATA
 
@@ -4053,7 +4053,8 @@ tulip_txput(tulip_softc_t * const sc, struct mbuf *m)
     /*
      * bounce a copy to the bpf listener, if any.
      */
-    BPF_MTAP(sc->tulip_ifp, m);
+    if (!(sc->tulip_flags & TULIP_DEVICEPROBE))
+	    BPF_MTAP(sc->tulip_ifp, m);
 
     /*
      * The descriptors have been filled in.  Now get ready
@@ -4437,13 +4438,16 @@ tulip_attach(tulip_softc_t * const sc)
     ifmedia_init(&sc->tulip_ifmedia, 0,
 		 tulip_ifmedia_change,
 		 tulip_ifmedia_status);
-    sc->tulip_flags &= ~TULIP_DEVICEPROBE;
     tulip_ifmedia_add(sc);
 
     tulip_reset(sc);
     TULIP_UNLOCK(sc);
 
     ether_ifattach(sc->tulip_ifp, sc->tulip_enaddr);
+
+    TULIP_LOCK(sc);
+    sc->tulip_flags &= ~TULIP_DEVICEPROBE;
+    TULIP_UNLOCK(sc);
 }
 
 /* Release memory for a single descriptor ring. */

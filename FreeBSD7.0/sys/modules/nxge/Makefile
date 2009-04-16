@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/nxge/Makefile,v 1.1.2.1 2007/11/02 00:52:34 rwatson Exp $
+# $FreeBSD: src/sys/modules/nxge/Makefile,v 1.1.2.1.4.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../dev/nxge
 VPATH = ${.CURDIR}/../../dev/nxge/xgehal

@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/sound/midi/sequencer.h,v 1.9 2007/02/25 13:51:52 netchild Exp $
+ * $FreeBSD: src/sys/dev/sound/midi/sequencer.h,v 1.9.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

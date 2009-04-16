@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/powerpc/include/sigframe.h,v 1.4 2002/09/19 04:46:36 grehan Exp $
+ * $FreeBSD: src/sys/powerpc/include/sigframe.h,v 1.4.24.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _MACHINE_SIGFRAME_H_

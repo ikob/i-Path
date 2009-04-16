@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/syscons/scterm.c,v 1.6 2003/08/24 18:17:24 obrien Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/syscons/scterm.c,v 1.6.28.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_syscons.h"
 

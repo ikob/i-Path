@@ -41,7 +41,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/vm/vm_mmap.c,v 1.213 2007/08/20 12:05:45 kib Exp $");
+__FBSDID("$FreeBSD: src/sys/vm/vm_mmap.c,v 1.213.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_compat.h"
 #include "opt_hwpmc_hooks.h"
@@ -104,7 +104,8 @@ SYSCTL_INT(_vm, OID_AUTO, max_proc_mmap, CTLFLAG_RW, &max_proc_mmap, 0, "");
  * multi-threaded processes are not unduly inconvenienced.
  */
 static void vmmapentry_rsrc_init(void *);
-SYSINIT(vmmersrc, SI_SUB_KVM_RSRC, SI_ORDER_FIRST, vmmapentry_rsrc_init, NULL)
+SYSINIT(vmmersrc, SI_SUB_KVM_RSRC, SI_ORDER_FIRST, vmmapentry_rsrc_init,
+    NULL);
 
 static void
 vmmapentry_rsrc_init(dummy)
@@ -372,8 +373,10 @@ mmap(td, uap)
 		goto done;
 	}
 
+	td->td_fpop = fp;
 	error = vm_mmap(&vms->vm_map, &addr, size, prot, maxprot,
 	    flags, handle_type, handle, pos);
+	td->td_fpop = NULL;
 #ifdef HWPMC_HOOKS
 	/* inform hwpmc(4) if an executable is being mapped */
 	if (error == 0 && handle_type == OBJT_VNODE &&
@@ -555,13 +558,6 @@ munmap(td, uap)
 	if (addr < vm_map_min(map) || addr + size > vm_map_max(map))
 		return (EINVAL);
 	vm_map_lock(map);
-	/*
-	 * Make sure entire range is allocated.
-	 */
-	if (!vm_map_check_protection(map, addr, addr + size, VM_PROT_NONE)) {
-		vm_map_unlock(map);
-		return (EINVAL);
-	}
 #ifdef HWPMC_HOOKS
 	/*
 	 * Inform hwpmc if the address range being unmapped contains
@@ -1142,6 +1138,7 @@ vm_mmap_vnode(struct thread *td, vm_size_t objsize,
 	void *handle;
 	vm_object_t obj;
 	struct mount *mp;
+	struct cdevsw *dsw;
 	int error, flags, type;
 	int vfslocked;
 
@@ -1172,13 +1169,19 @@ vm_mmap_vnode(struct thread *td, vm_size_t objsize,
 		type = OBJT_DEVICE;
 		handle = vp->v_rdev;
 
-		/* XXX: lack thredref on device */
-		if(vp->v_rdev->si_devsw->d_flags & D_MMAP_ANON) {
+		dsw = dev_refthread(handle);
+		if (dsw == NULL) {
+			error = ENXIO;
+			goto done;
+		}
+		if (dsw->d_flags & D_MMAP_ANON) {
+			dev_relthread(handle);
 			*maxprotp = VM_PROT_ALL;
 			*flagsp |= MAP_ANON;
 			error = 0;
 			goto done;
 		}
+		dev_relthread(handle);
 		/*
 		 * cdevs does not provide private mappings of any kind.
 		 */
@@ -1255,16 +1258,21 @@ vm_mmap_cdev(struct thread *td, vm_size_t objsize,
     struct cdev *cdev, vm_ooffset_t foff, vm_object_t *objp)
 {
 	vm_object_t obj;
+	struct cdevsw *dsw;
 	int flags;
 
 	flags = *flagsp;
 
-	/* XXX: lack thredref on device */
-	if (cdev->si_devsw->d_flags & D_MMAP_ANON) {
+	dsw = dev_refthread(cdev);
+	if (dsw == NULL)
+		return (ENXIO);
+	if (dsw->d_flags & D_MMAP_ANON) {
+		dev_relthread(cdev);
 		*maxprotp = VM_PROT_ALL;
 		*flagsp |= MAP_ANON;
 		return (0);
 	}
+	dev_relthread(cdev);
 	/*
 	 * cdevs does not provide private mappings of any kind.
 	 */

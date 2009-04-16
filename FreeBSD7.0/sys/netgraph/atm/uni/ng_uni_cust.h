@@ -28,7 +28,7 @@
  *
  * Customisation of signalling source to the NG environment.
  *
- * $FreeBSD: src/sys/netgraph/atm/uni/ng_uni_cust.h,v 1.6 2006/06/02 09:08:51 dds Exp $
+ * $FreeBSD: src/sys/netgraph/atm/uni/ng_uni_cust.h,v 1.6.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include <sys/param.h>

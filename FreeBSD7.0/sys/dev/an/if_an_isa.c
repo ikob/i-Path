@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/an/if_an_isa.c,v 1.17 2007/02/23 12:18:31 piso Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/an/if_an_isa.c,v 1.17.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_inet.h"
 

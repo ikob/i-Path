@@ -12,7 +12,7 @@
  * all derivative works or modified versions.
  *
  * Cronyx Id: ctddk.h,v 1.1.2.3 2003/12/11 17:33:44 rik Exp $
- * $FreeBSD: src/sys/dev/ctau/ctddk.h,v 1.2 2005/01/06 01:42:33 imp Exp $
+ * $FreeBSD: src/sys/dev/ctau/ctddk.h,v 1.2.10.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 #define NBRD		3	/* the maximum number of installed boards */
 #define NPORT		32	/* the number of i/o ports per board */
@@ -412,6 +412,7 @@ typedef struct _ct_chan_t {
 	void *attach [NBUF];		/* system dependent data per buffer */
 	void *sys;			/* system dependent data per channel */
 	int debug;
+	int debug_shadow;
 
 	int e1_first_int;
 	unsigned char *sccrx, *scctx;  /* pointers to SCC rx and tx buffers */

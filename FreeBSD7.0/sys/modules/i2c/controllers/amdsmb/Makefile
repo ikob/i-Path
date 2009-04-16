@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/i2c/controllers/amdsmb/Makefile,v 1.1 2005/12/21 15:49:51 ru Exp $
+# $FreeBSD: src/sys/modules/i2c/controllers/amdsmb/Makefile,v 1.1.8.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../../../pci
 

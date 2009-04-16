@@ -44,7 +44,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/common/ufsread.c,v 1.14.10.1 2007/11/08 21:31:38 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/common/ufsread.c,v 1.14.10.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <ufs/ufs/dinode.h>
 #include <ufs/ffs/fs.h>
@@ -249,7 +249,7 @@ fsread(ino_t inode, void *buf, size_t nbyte)
 		} else if (lbn < NDADDR + NINDIR(fs)) {
 			n = INDIRPERVBLK(fs);
 			addr = DIP(di_ib[0]);
-			u = (u_int)(lbn - NDADDR) / (n * DBPERVBLK);
+			u = (u_int)(lbn - NDADDR) / n * DBPERVBLK;
 			vbaddr = fsbtodb(fs, addr) + u;
 			if (indmap != vbaddr) {
 				if (dskread(indbuf, vbaddr, DBPERVBLK))

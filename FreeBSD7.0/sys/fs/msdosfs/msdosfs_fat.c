@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/fs/msdosfs/msdosfs_fat.c,v 1.48 2007/09/23 14:49:32 bde Exp $ */
+/* $FreeBSD: src/sys/fs/msdosfs/msdosfs_fat.c,v 1.48.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $ */
 /*	$NetBSD: msdosfs_fat.c,v 1.28 1997/11/17 15:36:49 ws Exp $	*/
 
 /*-
@@ -1068,13 +1068,13 @@ extendfile(dep, count, bpp, ncp, flags)
 					    pmp->pm_bpcluster, 0, 0, 0);
 				else {
 					bp = getblk(DETOV(dep),
-					    de_cn2bn(pmp, frcn++),
+					    frcn++,
 					    pmp->pm_bpcluster, 0, 0, 0);
 					/*
 					 * Do the bmap now, as in msdosfs_write
 					 */
 					if (pcbmap(dep,
-					    de_bn2cn(pmp, bp->b_lblkno),
+					    bp->b_lblkno,
 					    &blkno, 0, 0))
 						bp->b_blkno = -1;
 					if (bp->b_blkno == -1)

@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 1999-2005 Apple Computer, Inc.
+/*-
+ * Copyright (c) 1999-2005 Apple Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -10,7 +10,7 @@
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+ * 3.  Neither the name of Apple Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
  *     from this software without specific prior written permission.
  *
@@ -25,9 +25,10 @@
  * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
- * $FreeBSD: src/sys/security/audit/audit_arg.c,v 1.15 2007/06/27 17:01:14 csjp Exp $
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: src/sys/security/audit/audit_arg.c,v 1.15.2.7.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/filedesc.h>
@@ -232,7 +233,7 @@ audit_arg_suid(uid_t suid)
 void
 audit_arg_groupset(gid_t *gidset, u_int gidset_size)
 {
-	int i;
+	u_int i;
 	struct kaudit_record *ar;
 
 	ar = currecord();
@@ -428,7 +429,7 @@ audit_arg_sockaddr(struct thread *td, struct sockaddr *sa)
 
 	case AF_UNIX:
 		audit_arg_upath(td, ((struct sockaddr_un *)sa)->sun_path,
-				ARG_UPATH1);
+		    ARG_UPATH1);
 		ARG_SET_VALID(ar, ARG_SADDRUNIX);
 		break;
 	/* XXXAUDIT: default:? */
@@ -648,7 +649,7 @@ audit_arg_file(struct proc *p, struct file *fp)
 			    so->so_proto->pr_protocol;
 			SOCK_UNLOCK(so);
 			pcb = (struct inpcb *)so->so_pcb;
-			INP_LOCK(pcb);
+			INP_RLOCK(pcb);
 			ar->k_ar.ar_arg_sockinfo.so_raddr =
 			    pcb->inp_faddr.s_addr;
 			ar->k_ar.ar_arg_sockinfo.so_laddr =
@@ -657,7 +658,7 @@ audit_arg_file(struct proc *p, struct file *fp)
 			    pcb->inp_fport;
 			ar->k_ar.ar_arg_sockinfo.so_lport =
 			    pcb->inp_lport;
-			INP_UNLOCK(pcb);
+			INP_RUNLOCK(pcb);
 			ARG_SET_VALID(ar, ARG_SOCKINFO);
 		}
 		break;
@@ -670,9 +671,9 @@ audit_arg_file(struct proc *p, struct file *fp)
 
 /*
  * Store a path as given by the user process for auditing into the audit
- * record stored on the user thread. This function will allocate the memory
- * to store the path info if not already available. This memory will be freed
- * when the audit record is freed.
+ * record stored on the user thread.  This function will allocate the memory
+ * to store the path info if not already available.  This memory will be
+ * freed when the audit record is freed.
  *
  * XXXAUDIT: Possibly assert that the memory isn't already allocated?
  */
@@ -702,7 +703,7 @@ audit_arg_upath(struct thread *td, char *upath, u_int64_t flag)
 	if (*pathp == NULL)
 		*pathp = malloc(MAXPATHLEN, M_AUDITPATH, M_WAITOK);
 
-	canon_path(td, upath, *pathp);
+	audit_canon_path(td, upath, *pathp);
 
 	ARG_SET_VALID(ar, flag);
 }

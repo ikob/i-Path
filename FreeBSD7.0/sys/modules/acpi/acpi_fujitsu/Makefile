@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/acpi/acpi_fujitsu/Makefile,v 1.1 2005/03/18 08:48:10 philip Exp $
+# $FreeBSD: src/sys/modules/acpi/acpi_fujitsu/Makefile,v 1.1.18.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH:	${.CURDIR}/../../../dev/acpi_support
 

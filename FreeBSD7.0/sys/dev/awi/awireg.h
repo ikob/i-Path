@@ -1,5 +1,5 @@
 /* $NetBSD: awireg.h,v 1.8 2003/01/20 05:30:06 simonb Exp $ */
-/* $FreeBSD: src/sys/dev/awi/awireg.h,v 1.2 2004/01/15 10:04:20 onoe Exp $ */
+/* $FreeBSD: src/sys/dev/awi/awireg.h,v 1.2.26.1 2008/11/25 02:59:29 kensmith Exp $ */
 
 /*-
  * Copyright (c) 1999 The NetBSD Foundation, Inc.

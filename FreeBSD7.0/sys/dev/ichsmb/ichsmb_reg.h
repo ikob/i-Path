@@ -35,7 +35,7 @@
  *
  * Author: Archie Cobbs <archie@freebsd.org>
  *
- * $FreeBSD: src/sys/dev/ichsmb/ichsmb_reg.h,v 1.2 2005/01/06 01:42:45 imp Exp $
+ * $FreeBSD: src/sys/dev/ichsmb/ichsmb_reg.h,v 1.2.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _DEV_ICHSMB_ICHSMB_REG_H_

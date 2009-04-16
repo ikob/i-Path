@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)systm.h	8.7 (Berkeley) 3/29/95
- * $FreeBSD: src/sys/sys/systm.h,v 1.260.2.1 2007/12/06 14:19:43 kib Exp $
+ * $FreeBSD: src/sys/sys/systm.h,v 1.260.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS_SYSTM_H_
@@ -116,6 +116,7 @@ extern char **kenvp;
  * General function declarations.
  */
 
+struct inpcb;
 struct lock_object;
 struct malloc_type;
 struct mtx;
@@ -217,12 +218,6 @@ u_long	 casuword(volatile u_long *p, u_long oldval, u_long newval);
 
 void	realitexpire(void *);
 
-/*
- * Cyclic clock function type definition used to hook the cyclic 
- * subsystem into the appropriate timer interrupt.
- */
-typedef	void (*cyclic_clock_func_t)(void);
-
 void	hardclock(int usermode, uintfptr_t pc);
 void	hardclock_cpu(int usermode);
 void	softclock(void *);
@@ -236,6 +231,7 @@ void	cpu_stopprofclock(void);
 
 int	cr_cansee(struct ucred *u1, struct ucred *u2);
 int	cr_canseesocket(struct ucred *cred, struct socket *so);
+int	cr_canseeinpcb(struct ucred *cred, struct inpcb *inp);
 
 char	*getenv(const char *name);
 void	freeenv(char *env);

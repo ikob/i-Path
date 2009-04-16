@@ -28,15 +28,15 @@
 # SUCH DAMAGE.
 #
 #	@(#)newvers.sh	8.1 (Berkeley) 4/20/94
-# $FreeBSD: src/sys/conf/newvers.sh,v 1.72.2.5.2.4 2008/02/24 05:45:16 kensmith Exp $
+# $FreeBSD: src/sys/conf/newvers.sh,v 1.72.2.9.2.4 2008/12/31 17:19:19 kensmith Exp $
 
 TYPE="FreeBSD"
-REVISION="7.0"
+REVISION="7.1"
 BRANCH="RELEASE"
 if [ "X${BRANCH_OVERRIDE}" != "X" ]; then
 	BRANCH=${BRANCH_OVERRIDE}
 fi
-RELEASE=7.0-RELEASE
+RELEASE=7.1-RELEASE
 VERSION="${TYPE} ${RELEASE}"
 
 if [ "X${PARAMFILE}" != "X" ]; then
@@ -86,10 +86,26 @@ fi
 touch version
 v=`cat version` u=${USER:-root} d=`pwd` h=${HOSTNAME:-`hostname`} t=`date`
 i=`${MAKE:-make} -V KERN_IDENT`
+
+for dir in /bin /usr/bin /usr/local/bin; do
+	if [ -x "${dir}/svnversion" ]; then
+		svnversion=${dir}/svnversion
+		SRCDIR=${d##*obj}
+		SRCDIR=${SRCDIR%%/sys/*}
+		break
+	fi
+done
+
+if [ -n "$svnversion" -a -d "${SRCDIR}/.svn" ] ; then
+	svn=" r`cd $SRCDIR && $svnversion`"
+else
+	svn=""
+fi
+
 cat << EOF > vers.c
 $COPYRIGHT
-#define SCCSSTR "@(#)${VERSION} #${v}: ${t}"
-#define VERSTR "${VERSION} #${v}: ${t}\\n    ${u}@${h}:${d}\\n"
+#define SCCSSTR "@(#)${VERSION} #${v}${svn}: ${t}"
+#define VERSTR "${VERSION} #${v}${svn}: ${t}\\n    ${u}@${h}:${d}\\n"
 #define RELSTR "${RELEASE}"
 
 char sccs[sizeof(SCCSSTR) > 128 ? sizeof(SCCSSTR) : 128] = SCCSSTR;

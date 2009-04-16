@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/scc/scc_bfe_macio.c,v 1.2 2007/03/22 23:45:25 marcel Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/scc/scc_bfe_macio.c,v 1.2.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -61,10 +61,17 @@ scc_macio_probe(device_t dev)
 	return (ENXIO);
 }
 
+static int
+scc_macio_attach(device_t dev)
+{
+
+	return (scc_bfe_attach(dev, 3));
+}
+
 static device_method_t scc_macio_methods[] = {
 	/* Device interface */
 	DEVMETHOD(device_probe,		scc_macio_probe),
-	DEVMETHOD(device_attach,	scc_bfe_attach),
+	DEVMETHOD(device_attach,	scc_macio_attach),
 	DEVMETHOD(device_detach,	scc_bfe_detach),
 
 	DEVMETHOD(bus_alloc_resource,	scc_bus_alloc_resource),

@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/uark/Makefile,v 1.1 2006/11/15 09:13:25 maxim Exp $
+# $FreeBSD: src/sys/modules/uark/Makefile,v 1.1.8.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../dev/usb
 

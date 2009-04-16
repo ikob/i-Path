@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/include/pcpu.h,v 1.50 2007/06/04 21:38:46 attilio Exp $
+ * $FreeBSD: src/sys/i386/include/pcpu.h,v 1.50.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _MACHINE_PCPU_H_
@@ -32,8 +32,6 @@
 #ifndef _SYS_CDEFS_H_
 #error "sys/cdefs.h is a prerequisite for this file"
 #endif
-
-#ifdef _KERNEL
 
 #include <machine/segments.h>
 #include <machine/tss.h>
@@ -56,6 +54,9 @@
 	u_int   pc_acpi_id;		/* ACPI CPU id */		\
 	u_int	pc_apic_id;						\
 	int	pc_private_tss		/* Flag indicating private tss */
+
+
+#ifdef _KERNEL
 
 #ifdef lint
 

@@ -18,7 +18,7 @@
 #
 # For hardware specific information check HARDWARE.TXT
 #
-# $FreeBSD: src/sys/sparc64/conf/GENERIC,v 1.127.2.1 2007/10/11 06:20:27 kensmith Exp $
+# $FreeBSD: src/sys/sparc64/conf/GENERIC,v 1.127.2.6.2.1 2008/11/25 02:59:29 kensmith Exp $
 
 cpu		SUN4U
 ident		GENERIC
@@ -44,6 +44,7 @@ options 	UFS_GJOURNAL		# Enable gjournal-based UFS journaling
 options 	MD_ROOT			# MD is a potential root device
 options 	NFSCLIENT		# Network Filesystem Client
 options 	NFSSERVER		# Network Filesystem Server
+options 	NFSLOCKD		# Network Lock Manager
 options 	NFS_ROOT		# NFS usable as /, requires NFSCLIENT
 #options 	MSDOSFS			# MSDOS Filesystem
 options 	CD9660			# ISO 9660 Filesystem
@@ -56,6 +57,7 @@ options 	COMPAT_FREEBSD5		# Compatible with FreeBSD5
 options 	COMPAT_FREEBSD6		# Compatible with FreeBSD6
 options 	SCSI_DELAY=5000		# Delay (in ms) before probing SCSI
 options 	KTRACE			# ktrace(1) support
+options 	STACK			# stack(9) support
 options 	SYSVSHM			# SYSV-style shared memory
 options 	SYSVMSG			# SYSV-style message queues
 options 	SYSVSEM			# SYSV-style semaphores
@@ -116,6 +118,8 @@ device		atkbdc		# AT keyboard controller
 device		atkbd		# AT keyboard
 device		psm		# PS/2 mouse
 
+device		kbdmux		# keyboard multiplexer
+
 # syscons is the default console driver, resembling an SCO console
 device		sc
 device		creator		# Creator, Creator3D and Elite3D framebuffers
@@ -146,7 +150,7 @@ device		uart		# Multi-uart driver
 #device		plip		# TCP/IP over parallel
 #device		ppi		# Parallel port interface device
 #device		vpo		# Requires scbus and da
- 
+
 # PCI Ethernet NICs.
 #device		de		# DEC/Intel DC21x4x (``Tulip'')
 device		em		# Intel PRO/1000 adapter Gigabit Ethernet Card
@@ -167,7 +171,7 @@ device		hme		# Sun HME (Happy Meal Ethernet)
 #device		pcn		# AMD Am79C97x PCI 10/100 (precedence over 'le')
 device		re		# RealTek 8139C+/8169/8169S/8110S
 device		rl		# RealTek 8129/8139
-#device		sf		# Adaptec AIC-6915 (``Starfire'')
+device		sf		# Adaptec AIC-6915 (``Starfire'')
 #device		sis		# Silicon Integrated Systems SiS 900/SiS 7016
 device		sk		# SysKonnect SK-984x & SK-982x gigabit Ethernet
 #device		ste		# Sundance ST201 (D-Link DFE-550TX)
@@ -175,7 +179,7 @@ device		stge		# Sundance/Tamarack TC9021 gigabit Ethernet
 device		ti		# Alteon Networks Tigon I/II gigabit Ethernet
 #device		tl		# Texas Instruments ThunderLAN
 #device		tx		# SMC EtherPower II (83c170 ``EPIC'')
-#device		vr		# VIA Rhine, Rhine II
+device		vr		# VIA Rhine, Rhine II
 #device		wb		# Winbond W89C840F
 device		xl		# 3Com 3c90x (``Boomerang'', ``Cyclone'')
 

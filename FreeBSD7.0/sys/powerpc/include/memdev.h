@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/powerpc/include/memdev.h,v 1.1 2004/08/16 13:07:40 ssouhlal Exp $
+ * $FreeBSD: src/sys/powerpc/include/memdev.h,v 1.1.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #define CDEV_MAJOR	2

@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/identcpu.c,v 1.180 2007/05/29 19:39:18 des Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/i386/identcpu.c,v 1.180.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_cpu.h"
 
@@ -86,6 +86,7 @@ static void print_INTEL_info(void);
 static void print_INTEL_TLB(u_int data);
 static void print_AMD_assoc(int i);
 static void print_transmeta_info(void);
+static void print_via_padlock_info(void);
 
 int	cpu_class;
 u_int	cpu_exthigh;		/* Highest arg to extended CPUID */
@@ -157,6 +158,7 @@ init_exthigh(void)
 		    strcmp(cpu_vendor, "AuthenticAMD") == 0 ||
 		    strcmp(cpu_vendor, "GenuineTMx86") == 0 ||
 		    strcmp(cpu_vendor, "TransmetaCPU") == 0 ||
+		    strcmp(cpu_vendor, "CentaurHauls") == 0 ||
 		    strcmp(cpu_vendor, "Geode by NSC") == 0)) {
 			do_cpuid(0x80000000, regs);
 			if (regs[0] >= 0x80000000)
@@ -580,29 +582,10 @@ printcpuinfo(void)
 			break;
 		case 0x690:
 			strcpy(cpu_model, "VIA C3 Nehemiah");
-			if ((cpu_id & 0xf) < 3)
-				break;
-			goto via_common;
+			break;
 		case 0x6a0:
+		case 0x6d0:
 			strcpy(cpu_model, "VIA C7 Esther");
-via_common:
-			do_cpuid(0xc0000000, regs);
-			i = regs[0];
-			if (i >= 0xC0000001) {
-				do_cpuid(0xc0000001, regs);
-				i = regs[3];
-			} else
-				i = 0;
-			if (i & VIA_CPUID_HAS_RNG)
-				strcat(cpu_model, "+RNG");
-			if (i & VIA_CPUID_HAS_ACE)
-				strcat(cpu_model, "+AES");
-			if (i & VIA_CPUID_HAS_ACE2)
-				strcat(cpu_model, "+AES-CTR");
-			if (i & VIA_CPUID_HAS_PHE)
-				strcat(cpu_model, "+SHA1+SHA256");
-			if (i & VIA_CPUID_HAS_PMM)
-				strcat(cpu_model, "+RSA");
 			break;
 		default:
 			strcpy(cpu_model, "VIA/IDT Unknown");
@@ -737,7 +720,7 @@ via_common:
 				"\020"
 				"\001SSE3"	/* SSE3 */
 				"\002<b1>"
-				"\003RSVD2"	/* "Reserved" bit 2 */
+				"\003DTES64"	/* 64-bit Debug Trace */
 				"\004MON"	/* MONITOR/MWAIT Instructions */
 				"\005DS_CPL"	/* CPL Qualified Debug Store */
 				"\006VMX"	/* Virtual Machine Extensions */
@@ -754,11 +737,11 @@ via_common:
 				"\021<b16>"
 				"\022<b17>"
 				"\023DCA"	/* Direct Cache Access */
-				"\024<b19>"
-				"\025<b20>"
-				"\026<b21>"
+				"\024SSE4.1"
+				"\025SSE4.2"
+				"\026x2APIC"	/* xAPIC Extensions */
 				"\027<b22>"
-				"\030<b23>"
+				"\030POPCNT"
 				"\031<b24>"
 				"\032<b25>"
 				"\033<b26>"
@@ -808,7 +791,7 @@ via_common:
 				"\030<s23>"	/* Same */
 				"\031<s24>"	/* Same */
 				"\032FFXSR"	/* Fast FXSAVE/FXRSTOR */
-				"\033<b26>"	/* Undefined */
+				"\033Page1GB"	/* 1-GB large page support */
 				"\034RDTSCP"	/* RDTSCP */
 				"\035<b28>"	/* Undefined */
 				"\036LM"	/* 64 bit long mode */
@@ -889,6 +872,9 @@ via_common:
 			printf("\n  CPU cache: write-through mode");
 #endif
 	}
+	if (strcmp(cpu_vendor, "CentaurHauls") == 0)
+		print_via_padlock_info();
+
 	/* Avoid ugly blank lines: only print newline when we have to. */
 	if (*cpu_vendor || cpu_id)
 		printf("\n");
@@ -1473,7 +1459,8 @@ print_INTEL_TLB(u_int data)
 
 
 static void
-setPQL2_AMD(int *const size, int *const ways) {
+setPQL2_AMD(int *const size, int *const ways)
+{
 	if (cpu_exthigh >= 0x80000006) {
 		u_int regs[4];
 
@@ -1765,7 +1752,7 @@ setPQL2(int *const size, int *const ways)
 }
 
 static void
-print_transmeta_info()
+print_transmeta_info(void)
 {
 	u_int regs[4], nreg = 0;
 
@@ -1797,4 +1784,37 @@ print_transmeta_info()
 		info[64] = 0;
 		printf("  %s\n", info);
 	}
+}
+
+static void
+print_via_padlock_info(void)
+{
+	u_int regs[4];
+
+	/* Check for supported models. */
+	switch (cpu_id & 0xff0) {
+	case 0x690:
+		if ((cpu_id & 0xf) < 3)
+			return;
+	case 0x6a0:
+	case 0x6d0:
+		break;
+	default:
+		return;
+	}
+	
+	do_cpuid(0xc0000000, regs);
+	if (regs[0] >= 0xc0000001)
+		do_cpuid(0xc0000001, regs);
+	else
+		return;
+
+	printf("\n  VIA Padlock Features=0x%b", regs[3],
+	"\020"
+	"\003RNG"		/* RNG */
+	"\007AES"		/* ACE */
+	"\011AES-CTR"		/* ACE2 */
+	"\013SHA1,SHA256"	/* PHE */
+	"\015RSA"		/* PMM */
+	);
 }

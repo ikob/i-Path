@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/fs/cd9660/cd9660_vnops.c,v 1.113 2007/02/15 22:08:34 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/fs/cd9660/cd9660_vnops.c,v 1.113.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -495,6 +495,7 @@ cd9660_readdir(ap)
 	}
 	idp->eofflag = 1;
 	idp->curroff = uio->uio_offset;
+	idp->uio_off = uio->uio_offset;
 
 	if ((entryoffsetinblock = idp->curroff & bmask) &&
 	    (error = cd9660_blkatoff(vdp, (off_t)idp->curroff, NULL, &bp))) {

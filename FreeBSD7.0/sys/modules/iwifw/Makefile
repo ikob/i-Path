@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/iwifw/Makefile,v 1.1 2007/03/02 11:42:55 flz Exp $
+# $FreeBSD: src/sys/modules/iwifw/Makefile,v 1.1.6.1 2008/11/25 02:59:29 kensmith Exp $
 
 SUBDIR=	iwi_bss	\
 	iwi_ibss \

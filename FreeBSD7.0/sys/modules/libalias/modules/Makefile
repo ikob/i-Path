@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/libalias/modules/Makefile,v 1.2 2006/09/27 12:30:27 ru Exp $
+# $FreeBSD: src/sys/modules/libalias/modules/Makefile,v 1.2.6.1 2008/11/25 02:59:29 kensmith Exp $
 
 .include "${.CURDIR}/modules.inc"
 

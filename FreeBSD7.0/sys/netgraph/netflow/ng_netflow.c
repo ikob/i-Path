@@ -28,7 +28,7 @@
  */
 
 static const char rcs_id[] =
-    "@(#) $FreeBSD: src/sys/netgraph/netflow/ng_netflow.c,v 1.14 2007/03/28 13:59:13 glebius Exp $";
+    "@(#) $FreeBSD: src/sys/netgraph/netflow/ng_netflow.c,v 1.14.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $";
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -184,7 +184,7 @@ ng_netflow_constructor(node_p node)
 	priv->info.nfinfo_act_t = ACTIVE_TIMEOUT;
 
 	/* Initialize callout handle */
-	callout_init(&priv->exp_callout, 1);
+	callout_init(&priv->exp_callout, CALLOUT_MPSAFE);
 
 	/* Allocate memory and set up flow cache */
 	if ((error = ng_netflow_cache_init(priv)))

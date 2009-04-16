@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  */
 
-/* $FreeBSD: src/sys/arm/include/sysarch.h,v 1.4 2005/02/26 18:59:01 cognet Exp $ */
+/* $FreeBSD: src/sys/arm/include/sysarch.h,v 1.4.18.1 2008/11/25 02:59:29 kensmith Exp $ */
 
 #ifndef _ARM_SYSARCH_H_
 #define _ARM_SYSARCH_H_

@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/cardbus/cardbusreg.h,v 1.11 2005/10/28 06:03:53 imp Exp $
+ * $FreeBSD: src/sys/dev/cardbus/cardbusreg.h,v 1.11.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

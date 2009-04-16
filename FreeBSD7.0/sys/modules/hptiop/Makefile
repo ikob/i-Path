@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/hptiop/Makefile,v 1.1 2007/05/09 07:07:26 scottl Exp $
+# $FreeBSD: src/sys/modules/hptiop/Makefile,v 1.1.6.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../dev/hptiop
 

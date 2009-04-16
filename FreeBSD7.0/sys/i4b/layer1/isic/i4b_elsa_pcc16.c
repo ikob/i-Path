@@ -32,7 +32,7 @@
  *---------------------------------------------------------------------------*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i4b/layer1/isic/i4b_elsa_pcc16.c,v 1.12 2007/07/06 07:17:20 bz Exp $");
+__FBSDID("$FreeBSD: src/sys/i4b/layer1/isic/i4b_elsa_pcc16.c,v 1.12.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_i4b.h"
 
@@ -354,7 +354,7 @@ isic_probe_Epcc16(device_t dev)
 			break;
 	}
 
-	/* register interupt routine */
+	/* register interrupt routine */
 	bus_setup_intr(dev,sc->sc_resources.irq,INTR_TYPE_NET,
 			NULL, (void(*)(void *))(isicintr),
 			sc,&ih);

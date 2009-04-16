@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/mcd/Makefile,v 1.2 2003/03/29 16:13:11 mdodd Exp $
+# $FreeBSD: src/sys/modules/mcd/Makefile,v 1.2.30.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../dev/mcd
 

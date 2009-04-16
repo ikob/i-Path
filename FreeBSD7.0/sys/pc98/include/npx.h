@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/pc98/include/npx.h,v 1.2 2005/05/12 12:47:41 nyan Exp $
+ * $FreeBSD: src/sys/pc98/include/npx.h,v 1.2.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _PC98_INCLUDE_NPX_H_

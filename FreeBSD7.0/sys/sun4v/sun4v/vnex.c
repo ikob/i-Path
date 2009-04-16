@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sun4v/sun4v/vnex.c,v 1.6 2007/05/20 09:31:31 marius Exp $");
+__FBSDID("$FreeBSD: src/sys/sun4v/sun4v/vnex.c,v 1.6.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -42,7 +42,6 @@ __FBSDID("$FreeBSD: src/sys/sun4v/sun4v/vnex.c,v 1.6 2007/05/20 09:31:31 marius 
 #include <dev/ofw/openfirm.h>
 
 #include <machine/bus.h>
-#include <machine/bus_common.h>
 #include <machine/hypervisorvar.h>
 #include <machine/hv_api.h>
 #include <machine/intr_machdep.h>

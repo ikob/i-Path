@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/boot/efi/Makefile.inc,v 1.7 2004/02/12 08:10:33 ru Exp $
+# $FreeBSD: src/sys/boot/efi/Makefile.inc,v 1.7.26.1 2008/11/25 02:59:29 kensmith Exp $
 
 BINDIR?=	/boot
 

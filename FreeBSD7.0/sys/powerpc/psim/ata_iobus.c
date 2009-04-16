@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/powerpc/psim/ata_iobus.c,v 1.14 2005/11/11 09:36:38 grehan Exp $
+ * $FreeBSD: src/sys/powerpc/psim/ata_iobus.c,v 1.14.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

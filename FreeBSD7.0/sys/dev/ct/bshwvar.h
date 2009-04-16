@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/dev/ct/bshwvar.h,v 1.4 2005/01/06 01:42:33 imp Exp $ */
+/* $FreeBSD: src/sys/dev/ct/bshwvar.h,v 1.4.18.1 2008/11/25 02:59:29 kensmith Exp $ */
 /*	$NecBSD: bshwvar.h,v 1.3.14.3 2001/06/21 04:07:37 honda Exp $	*/
 /*	$NetBSD$	*/
 

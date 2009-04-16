@@ -26,7 +26,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/priv.h,v 1.15 2007/06/18 07:54:27 rwatson Exp $
+ * $FreeBSD: src/sys/sys/priv.h,v 1.15.2.5.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*
@@ -187,6 +187,7 @@
 #define	PRIV_SCHED_SETPOLICY	203	/* Can set scheduler policy. */
 #define	PRIV_SCHED_SET		204	/* Can set thread scheduler. */
 #define	PRIV_SCHED_SETPARAM	205	/* Can set thread scheduler params. */
+#define	PRIV_SCHED_CPUSET	206	/* Can manipulate cpusets. */
 
 /*
  * POSIX semaphore privileges.
@@ -277,6 +278,7 @@
 #define	PRIV_VFS_STICKYFILE	341	/* Can set sticky bit on file. */
 #define	PRIV_VFS_SYSFLAGS	342	/* Can modify system flags. */
 #define	PRIV_VFS_UNMOUNT	343	/* Can unmount(). */
+#define	PRIV_VFS_STAT		344	/* Override vnode MAC stat perm. */
 
 /*
  * Virtual memory privileges.
@@ -374,6 +376,7 @@
 #define	PRIV_NETINET_ALIFETIME6	502	/* Administer IPv6 address lifetimes. */
 #define	PRIV_NETINET_IPSEC	503	/* Administer IPSEC. */
 #define	PRIV_NETINET_REUSEPORT	504	/* Allow [rapid] port/address reuse. */
+#define	PRIV_NETINET_SETHDROPTS	505	/* Set certain IPv4/6 header options. */
 
 /*
  * IPX/SPX privileges.
@@ -442,9 +445,19 @@
 #define	PRIV_MODULE15		615
 
 /*
+ * DDB(4) privileges.
+ */
+#define	PRIV_DDB_CAPTURE	620	/* Allow reading of DDB capture log. */
+
+/*
+ * Arla/nnpfs privileges.
+ */
+#define	PRIV_NNPFS_DEBUG	630	/* Perforn ARLA_VIOC_NNPFSDEBUG. */
+
+/*
  * Track end of privilege list.
  */
-#define	_PRIV_HIGHEST		616
+#define	_PRIV_HIGHEST		631
 
 /*
  * Validate that a named privilege is known by the privilege system.  Invalid

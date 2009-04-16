@@ -4,7 +4,7 @@
 # This file contains machine dependent kernel configuration notes.  For
 # machine independent notes, look in /sys/conf/NOTES.
 #
-# $FreeBSD: src/sys/i386/conf/NOTES,v 1.1244.2.3.2.1 2008/02/06 03:24:28 scottl Exp $
+# $FreeBSD: src/sys/i386/conf/NOTES,v 1.1244.2.6.2.1 2008/11/25 02:59:29 kensmith Exp $
 #
 
 #
@@ -404,6 +404,8 @@ options 	VESA
 # Turn on extra debugging checks and output for VESA support.
 options 	VESA_DEBUG
 
+device		dpms		# DPMS suspend & resume via VESA BIOS
+
 #
 # The Numeric Processing eXtension driver.  This is non-optional.
 device		npx
@@ -752,6 +754,12 @@ device		ips
 device		safe		# SafeNet 1141
 options 	SAFE_DEBUG	# enable debugging support: hw.safe.debug
 options 	SAFE_RNDTEST	# enable rndtest support
+
+#
+# glxsb is a driver for the Security Block in AMD Geode LX processors.
+# Requires 'device crypto'.
+#
+device		glxsb		# AMD Geode LX Security Block
 
 #####################################################################
 

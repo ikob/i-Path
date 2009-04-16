@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/pc98/cbus/sio.c,v 1.245 2007/07/11 22:30:13 mjacob Exp $
+ * $FreeBSD: src/sys/pc98/cbus/sio.c,v 1.245.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  *	from: @(#)com.c	7.5 (Berkeley) 5/16/91
  *	from: i386/isa sio.c,v 1.234
  */
@@ -1069,7 +1069,7 @@ sioprobe(dev, xrid, rclk, noprobe)
 	}
 
 	/*
-	 * Enable the interrupt gate and disable device interupts.  This
+	 * Enable the interrupt gate and disable device interrupts.  This
 	 * should leave the device driving the interrupt line low and
 	 * guarantee an edge trigger if an interrupt can be generated.
 	 */
@@ -2369,7 +2369,8 @@ more_intr:
 #ifdef ALT_BREAK_TO_DEBUGGER
 			if (com->unit == comconsole &&
 			    kdb_alt_break(recv_data, &com->alt_brk_state) != 0)
-				kdb_enter("Break sequence on console");
+				kdb_enter_why(KDB_WHY_BREAK,
+				    "Break sequence on console");
 #endif /* ALT_BREAK_TO_DEBUGGER */
 #endif /* KDB */
 			if (line_status & (LSR_BI | LSR_FE | LSR_PE)) {
@@ -2388,7 +2389,8 @@ more_intr:
 				if (line_status & LSR_BI) {
 #if defined(KDB) && defined(BREAK_TO_DEBUGGER)
 					if (com->unit == comconsole) {
-						kdb_enter("Line break on console");
+						kdb_enter_why(KDB_WHY_BREAK,
+						    "Line break on console");
 						goto cont;
 					}
 #endif

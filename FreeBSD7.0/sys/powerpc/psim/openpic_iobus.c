@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/powerpc/psim/openpic_iobus.c,v 1.7 2007/08/11 19:25:32 marcel Exp $");
+__FBSDID("$FreeBSD: src/sys/powerpc/psim/openpic_iobus.c,v 1.7.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

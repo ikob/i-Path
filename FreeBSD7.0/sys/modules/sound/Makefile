@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/sound/Makefile,v 1.2 2004/07/16 03:58:46 tanimura Exp $
+# $FreeBSD: src/sys/modules/sound/Makefile,v 1.2.26.1 2008/11/25 02:59:29 kensmith Exp $
 
 SUBDIR =
 SUBDIR += sound

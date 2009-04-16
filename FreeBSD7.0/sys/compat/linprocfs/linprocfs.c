@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/linprocfs/linprocfs.c,v 1.115 2007/06/05 00:00:50 jeff Exp $");
+__FBSDID("$FreeBSD: src/sys/compat/linprocfs/linprocfs.c,v 1.115.2.3.2.3 2008/12/19 16:11:04 kib Exp $");
 
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -74,6 +74,7 @@ __FBSDID("$FreeBSD: src/sys/compat/linprocfs/linprocfs.c,v 1.115 2007/06/05 00:0
 #include <net/if.h>
 
 #include <vm/vm.h>
+#include <vm/vm_extern.h>
 #include <vm/pmap.h>
 #include <vm/vm_map.h>
 #include <vm/vm_param.h>
@@ -114,7 +115,7 @@ __FBSDID("$FreeBSD: src/sys/compat/linprocfs/linprocfs.c,v 1.115 2007/06/05 00:0
  *
  * The linux procfs state field displays one of the characters RSDZTW to
  * denote running, sleeping in an interruptible wait, waiting in an
- * uninteruptible disk sleep, a zombie process, process is being traced
+ * uninterruptible disk sleep, a zombie process, process is being traced
  * or stopped, or process is paging respectively.
  *
  * Our struct kinfo_proc contains the variable ki_stat which contains a
@@ -269,8 +270,7 @@ linprocfs_docpuinfo(PFS_FILL_ARGS)
 		/* XXX per-cpu vendor / class / model / id? */
 	}
 
-	sbuf_cat(sb,
-	    "flags\t\t:");
+	sbuf_cat(sb, "flags\t\t:");
 
 	if (!strcmp(cpu_vendor, "AuthenticAMD") && (class < 6)) {
 		flags[16] = "fcmov";
@@ -374,19 +374,28 @@ linprocfs_domtab(PFS_FILL_ARGS)
 static int
 linprocfs_dostat(PFS_FILL_ARGS)
 {
+	struct pcpu *pcpu;
+	long cp_time[CPUSTATES];
+	long *cp;
 	int i;
 
+	read_cpu_time(cp_time);
 	sbuf_printf(sb, "cpu %ld %ld %ld %ld\n",
 	    T2J(cp_time[CP_USER]),
 	    T2J(cp_time[CP_NICE]),
 	    T2J(cp_time[CP_SYS] /*+ cp_time[CP_INTR]*/),
 	    T2J(cp_time[CP_IDLE]));
-	for (i = 0; i < mp_ncpus; ++i)
+	for (i = 0; i <= mp_maxid; ++i) {
+		if (CPU_ABSENT(i))
+			continue;
+		pcpu = pcpu_find(i);
+		cp = pcpu->pc_cp_time;
 		sbuf_printf(sb, "cpu%d %ld %ld %ld %ld\n", i,
-		    T2J(cp_time[CP_USER]) / mp_ncpus,
-		    T2J(cp_time[CP_NICE]) / mp_ncpus,
-		    T2J(cp_time[CP_SYS]) / mp_ncpus,
-		    T2J(cp_time[CP_IDLE]) / mp_ncpus);
+		    T2J(cp[CP_USER]),
+		    T2J(cp[CP_NICE]),
+		    T2J(cp[CP_SYS] /*+ cp[CP_INTR]*/),
+		    T2J(cp[CP_IDLE]));
+	}
 	sbuf_printf(sb,
 	    "disk 0 0 0 0\n"
 	    "page %u %u\n"
@@ -410,9 +419,11 @@ linprocfs_dostat(PFS_FILL_ARGS)
 static int
 linprocfs_douptime(PFS_FILL_ARGS)
 {
+	long cp_time[CPUSTATES];
 	struct timeval tv;
 
 	getmicrouptime(&tv);
+	read_cpu_time(cp_time);
 	sbuf_printf(sb, "%lld.%02ld %ld.%02ld\n",
 	    (long long)tv.tv_sec, tv.tv_usec / 10000,
 	    T2S(cp_time[CP_IDLE]), T2J(cp_time[CP_IDLE]) % 100);
@@ -858,16 +869,16 @@ linprocfs_doprocenviron(PFS_FILL_ARGS)
 static int
 linprocfs_doprocmaps(PFS_FILL_ARGS)
 {
-	char mebuffer[512];
-	vm_map_t map = &p->p_vmspace->vm_map;
+	struct vmspace *vm;
+	vm_map_t map;
 	vm_map_entry_t entry, tmp_entry;
 	vm_object_t obj, tobj, lobj;
-	vm_offset_t saved_end;
+	vm_offset_t e_start, e_end;
 	vm_ooffset_t off = 0;
-	char *name = "", *freename = NULL;
-	size_t len;
-	ino_t ino;
+	vm_prot_t e_prot;
 	unsigned int last_timestamp;
+	char *name = "", *freename = NULL;
+	ino_t ino;
 	int ref_count, shadow_count, flags;
 	int error;
 	struct vnode *vp;
@@ -883,19 +894,21 @@ linprocfs_doprocmaps(PFS_FILL_ARGS)
 	if (uio->uio_rw != UIO_READ)
 		return (EOPNOTSUPP);
 
-	if (uio->uio_offset != 0)
-		return (0);
-
 	error = 0;
+	vm = vmspace_acquire_ref(p);
+	if (vm == NULL)
+		return (ESRCH);
+	map = &vm->vm_map;
 	vm_map_lock_read(map);
-	for (entry = map->header.next;
-	    ((uio->uio_resid > 0) && (entry != &map->header));
+	for (entry = map->header.next; entry != &map->header;
 	    entry = entry->next) {
 		name = "";
 		freename = NULL;
 		if (entry->eflags & MAP_ENTRY_IS_SUB_MAP)
 			continue;
-		saved_end = entry->end;
+		e_prot = entry->protection;
+		e_start = entry->start;
+		e_end = entry->end;
 		obj = entry->object.vm_object;
 		for (lobj = tobj = obj; tobj; tobj = tobj->backing_object) {
 			VM_OBJECT_LOCK(tobj);
@@ -903,6 +916,8 @@ linprocfs_doprocmaps(PFS_FILL_ARGS)
 				VM_OBJECT_UNLOCK(lobj);
 			lobj = tobj;
 		}
+		last_timestamp = map->timestamp;
+		vm_map_unlock_read(map);
 		ino = 0;
 		if (lobj) {
 			off = IDX_TO_OFF(lobj->size);
@@ -938,12 +953,12 @@ linprocfs_doprocmaps(PFS_FILL_ARGS)
 		 * format:
 		 *  start, end, access, offset, major, minor, inode, name.
 		 */
-		snprintf(mebuffer, sizeof mebuffer,
+		error = sbuf_printf(sb,
 		    "%08lx-%08lx %s%s%s%s %08lx %02x:%02x %lu%s%s\n",
-		    (u_long)entry->start, (u_long)entry->end,
-		    (entry->protection & VM_PROT_READ)?"r":"-",
-		    (entry->protection & VM_PROT_WRITE)?"w":"-",
-		    (entry->protection & VM_PROT_EXECUTE)?"x":"-",
+		    (u_long)e_start, (u_long)e_end,
+		    (e_prot & VM_PROT_READ)?"r":"-",
+		    (e_prot & VM_PROT_WRITE)?"w":"-",
+		    (e_prot & VM_PROT_EXECUTE)?"x":"-",
 		    "p",
 		    (u_long)off,
 		    0,
@@ -954,29 +969,23 @@ linprocfs_doprocmaps(PFS_FILL_ARGS)
 		    );
 		if (freename)
 			free(freename, M_TEMP);
-		len = strlen(mebuffer);
-		if (len > uio->uio_resid)
-			len = uio->uio_resid; /*
-					       * XXX We should probably return
-					       * EFBIG here, as in procfs.
-					       */
-		last_timestamp = map->timestamp;
-		vm_map_unlock_read(map);
-		error = uiomove(mebuffer, len, uio);
 		vm_map_lock_read(map);
-		if (error)
+		if (error == -1) {
+			error = 0;
 			break;
+		}
 		if (last_timestamp + 1 != map->timestamp) {
 			/*
 			 * Look again for the entry because the map was
 			 * modified while it was unlocked.  Specifically,
 			 * the entry may have been clipped, merged, or deleted.
 			 */
-			vm_map_lookup_entry(map, saved_end - 1, &tmp_entry);
+			vm_map_lookup_entry(map, e_end - 1, &tmp_entry);
 			entry = tmp_entry;
 		}
 	}
 	vm_map_unlock_read(map);
+	vmspace_free(vm);
 
 	return (error);
 }

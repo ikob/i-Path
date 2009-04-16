@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ida/idavar.h,v 1.17 2005/04/13 05:06:57 mdodd Exp $
+ * $FreeBSD: src/sys/dev/ida/idavar.h,v 1.17.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

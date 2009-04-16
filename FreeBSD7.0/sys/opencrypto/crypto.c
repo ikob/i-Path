@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/opencrypto/crypto.c,v 1.27 2007/03/21 03:42:51 sam Exp $");
+__FBSDID("$FreeBSD: src/sys/opencrypto/crypto.c,v 1.27.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * Cryptographic Subsystem.

@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)resource.h	8.4 (Berkeley) 1/9/95
- * $FreeBSD: src/sys/sys/resource.h,v 1.31 2007/06/01 01:12:45 jeff Exp $
+ * $FreeBSD: src/sys/sys/resource.h,v 1.31.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS_RESOURCE_H_
@@ -154,7 +154,7 @@ struct loadavg {
 #ifdef _KERNEL
 
 extern struct loadavg averunnable;
-extern long cp_time[CPUSTATES];
+void	read_cpu_time(long *cp_time);	/* Writes array of CPUSTATES */
 
 #else
 

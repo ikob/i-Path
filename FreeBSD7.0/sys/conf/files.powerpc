@@ -1,7 +1,7 @@
 # This file tells config what files go into building a kernel,
 # files marked standard are always included.
 #
-# $FreeBSD: src/sys/conf/files.powerpc,v 1.65 2007/07/03 12:13:42 gnn Exp $
+# $FreeBSD: src/sys/conf/files.powerpc,v 1.65.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
 #
 # The long compile-with and dependency lines are required because of
 # limitations in config: backslash-newline doesn't work in strings, and
@@ -25,6 +25,7 @@ opt_ah.h			optional	ath_hal			\
 	clean		"opt_ah.h"
 #
 
+dev/bm/if_bm.c			optional	bm powermac
 dev/fb/fb.c			optional	sc
 dev/hwpmc/hwpmc_powerpc.c	optional	hwpmc
 dev/kbd/kbd.c			optional	sc
@@ -61,6 +62,7 @@ powerpc/powerpc/pmap_dispatch.c	standard
 powerpc/powerpc/sc_machdep.c	optional	sc
 powerpc/powerpc/setjmp.S	standard
 powerpc/powerpc/sigcode.S	standard
+powerpc/powerpc/stack_machdep.c	optional	ddb | stack
 powerpc/powerpc/suswintr.c	standard
 powerpc/powerpc/syncicache.c	standard
 powerpc/powerpc/sys_machdep.c	standard
@@ -109,6 +111,7 @@ powerpc/ofw/ofw_syscons.c	optional	sc
 
 powerpc/powermac/ata_kauai.c	optional	powermac ata
 powerpc/powermac/ata_macio.c	optional	powermac ata
+powerpc/powermac/dbdma.c	optional	powermac pci
 powerpc/powermac/grackle.c	optional	powermac pci
 powerpc/powermac/hrowpic.c	optional	powermac pci
 powerpc/powermac/macio.c	optional	powermac pci

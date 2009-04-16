@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/if_aue.c,v 1.117 2007/06/23 05:59:53 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/if_aue.c,v 1.117.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * ADMtek AN986 Pegasus and AN8511 Pegasus II USB to ethernet driver.
@@ -1204,7 +1204,7 @@ aue_init_body(struct aue_softc *sc)
 	ifp->if_drv_flags |= IFF_DRV_RUNNING;
 	ifp->if_drv_flags &= ~IFF_DRV_OACTIVE;
 
-	callout_init(&sc->aue_tick_callout, 1);
+	callout_init(&sc->aue_tick_callout, CALLOUT_MPSAFE);
 	(void) callout_reset(&sc->aue_tick_callout, hz, aue_tick, sc);
 	return;
 }

@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/pci/if_rl.c,v 1.170.2.1 2007/12/02 08:38:31 remko Exp $");
+__FBSDID("$FreeBSD: src/sys/pci/if_rl.c,v 1.170.2.5.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * RealTek 8129/8139 PCI NIC driver
@@ -144,6 +144,8 @@ static struct rl_type rl_devs[] = {
 		"RealTek 8129 10/100BaseTX" },
 	{ RT_VENDORID, RT_DEVICEID_8139, RL_8139,
 		"RealTek 8139 10/100BaseTX" },
+	{ RT_VENDORID, RT_DEVICEID_8139D, RL_8139,
+		"RealTek 8139 10/100BaseTX" },
 	{ RT_VENDORID, RT_DEVICEID_8138, RL_8139,
 		"RealTek 8139 10/100BaseTX CardBus" },
 	{ RT_VENDORID, RT_DEVICEID_8100, RL_8139,
@@ -175,8 +177,7 @@ static struct rl_type rl_devs[] = {
 	{ LEVEL1_VENDORID, LEVEL1_DEVICEID_FPC0106TX, RL_8139,
 		"LevelOne FPC-0106TX" },
 	{ EDIMAX_VENDORID, EDIMAX_DEVICEID_EP4103DL, RL_8139,
-		"Edimax EP-4103DL CardBus" },
-	{ 0, 0, 0, NULL }
+		"Edimax EP-4103DL CardBus" }
 };
 
 static int rl_attach(device_t);
@@ -210,7 +211,7 @@ static void rl_reset(struct rl_softc *);
 static int rl_resume(device_t);
 static void rl_rxeof(struct rl_softc *);
 static void rl_setmulti(struct rl_softc *);
-static void rl_shutdown(device_t);
+static int rl_shutdown(device_t);
 static void rl_start(struct ifnet *);
 static void rl_start_locked(struct ifnet *);
 static void rl_stop(struct rl_softc *);
@@ -730,48 +731,26 @@ rl_reset(struct rl_softc *sc)
 static int
 rl_probe(device_t dev)
 {
-	struct rl_softc		*sc;
-	struct rl_type		*t = rl_devs;
-	int			rid;
-	uint32_t		hwrev;
+	struct rl_type		*t;
+	uint16_t		devid, revid, vendor;
+	int			i;
+	
+	vendor = pci_get_vendor(dev);
+	devid = pci_get_device(dev);
+	revid = pci_get_revid(dev);
 
-	sc = device_get_softc(dev);
-
-	while (t->rl_name != NULL) {
-		if ((pci_get_vendor(dev) == t->rl_vid) &&
-		    (pci_get_device(dev) == t->rl_did)) {
-			/*
-			 * Temporarily map the I/O space
-			 * so we can read the chip ID register.
-			 */
-			rid = RL_RID;
-			sc->rl_res = bus_alloc_resource_any(dev, RL_RES, &rid,
-			    RF_ACTIVE);
-			if (sc->rl_res == NULL) {
-				device_printf(dev,
-				    "couldn't map ports/memory\n");
-				return (ENXIO);
-			}
-			sc->rl_btag = rman_get_bustag(sc->rl_res);
-			sc->rl_bhandle = rman_get_bushandle(sc->rl_res);
-
-			hwrev = CSR_READ_4(sc, RL_TXCFG) & RL_TXCFG_HWREV;
-			bus_release_resource(dev, RL_RES, RL_RID, sc->rl_res);
-
-			/* Don't attach to 8139C+ or 8169/8110 chips. */
-			if (hwrev == RL_HWREV_8139CPLUS ||
-			    (hwrev == RL_HWREV_8169 &&
-			    t->rl_did == RT_DEVICEID_8169) ||
-			    hwrev == RL_HWREV_8169S ||
-			    hwrev == RL_HWREV_8110S) {
-				t++;
-				continue;
-			}
-
+	if (vendor == RT_VENDORID && devid == RT_DEVICEID_8139) {
+		if (revid == 0x20) {
+			/* 8139C+, let re(4) take care of this device. */
+			return (ENXIO);
+		}
+	}
+	t = rl_devs;
+	for (i = 0; i < sizeof(rl_devs) / sizeof(rl_devs[0]); i++, t++) {
+		if (vendor == t->rl_vid && devid == t->rl_did) {
 			device_set_desc(dev, t->rl_name);
 			return (BUS_PROBE_DEFAULT);
 		}
-		t++;
 	}
 
 	return (ENXIO);
@@ -1140,17 +1119,19 @@ rl_rxeof(struct rl_softc *sc)
 		 * datasheet makes absolutely no mention of this and
 		 * RealTek should be shot for this.
 		 */
-		if ((uint16_t)(rxstat >> 16) == RL_RXSTAT_UNFINISHED)
+		total_len = rxstat >> 16;
+		if (total_len == RL_RXSTAT_UNFINISHED)
 			break;
 
-		if (!(rxstat & RL_RXSTAT_RXOK)) {
+		if (!(rxstat & RL_RXSTAT_RXOK) ||
+		    total_len < ETHER_MIN_LEN ||
+		    total_len > ETHER_MAX_LEN + ETHER_VLAN_ENCAP_LEN) {
 			ifp->if_ierrors++;
 			rl_init_locked(sc);
 			return;
 		}
 
 		/* No errors; receive the packet. */
-		total_len = rxstat >> 16;
 		rx_bytes += total_len + 4;
 
 		/*
@@ -1801,7 +1782,7 @@ rl_resume(device_t dev)
  * Stop all chip I/O so that the kernel's probe routines don't
  * get confused by errant DMAs when rebooting.
  */
-static void
+static int
 rl_shutdown(device_t dev)
 {
 	struct rl_softc		*sc;
@@ -1811,4 +1792,6 @@ rl_shutdown(device_t dev)
 	RL_LOCK(sc);
 	rl_stop(sc);
 	RL_UNLOCK(sc);
+
+	return (0);
 }

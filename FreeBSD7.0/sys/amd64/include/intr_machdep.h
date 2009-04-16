@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/include/intr_machdep.h,v 1.18 2007/05/08 21:29:13 jhb Exp $
+ * $FreeBSD: src/sys/amd64/include/intr_machdep.h,v 1.18.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef __MACHINE_INTR_MACHDEP_H__
@@ -137,6 +137,9 @@ void	intr_add_cpu(u_int cpu);
 int	intr_add_handler(const char *name, int vector, driver_filter_t filter, 
 			 driver_intr_t handler, void *arg, enum intr_type flags, 
 			 void **cookiep);    
+#ifdef SMP
+int	intr_bind(u_int vector, u_char cpu);
+#endif
 int	intr_config_intr(int vector, enum intr_trigger trig,
     enum intr_polarity pol);
 void	intr_execute_handlers(struct intsrc *isrc, struct trapframe *frame);

@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/wlan_xauth/Makefile,v 1.1 2004/12/08 17:38:38 sam Exp $
+# $FreeBSD: src/sys/modules/wlan_xauth/Makefile,v 1.1.18.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../net80211
 

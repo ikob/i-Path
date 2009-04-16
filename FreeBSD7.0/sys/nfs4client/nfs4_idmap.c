@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/nfs4client/nfs4_idmap.c,v 1.5 2005/01/07 01:45:50 imp Exp $ */
+/* $FreeBSD: src/sys/nfs4client/nfs4_idmap.c,v 1.5.10.1.2.1 2008/11/25 02:59:29 kensmith Exp $ */
 /* $Id: nfs4_idmap.c,v 1.4 2003/11/05 14:58:59 rees Exp $ */
 
 /*-
@@ -32,6 +32,7 @@
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
+#include <sys/lock.h>
 #include <sys/lockmgr.h>
 #include <sys/fnv_hash.h>
 #include <sys/proc.h>

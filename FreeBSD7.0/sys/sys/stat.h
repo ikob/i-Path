@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)stat.h	8.12 (Berkeley) 6/16/95
- * $FreeBSD: src/sys/sys/stat.h,v 1.42 2006/08/04 23:47:30 jb Exp $
+ * $FreeBSD: src/sys/sys/stat.h,v 1.42.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS_STAT_H_
@@ -303,14 +303,6 @@ struct nstat {
 #endif
 
 #endif /* __BSD_VISIBLE */
-
-/*
- * Solaris compatibility definitions.
- */
-#ifdef _SOLARIS_C_SOURCE
-#define	stat64	stat
-#define	fstat64	fstat
-#endif
 
 #ifndef _KERNEL
 __BEGIN_DECLS

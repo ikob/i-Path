@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_bmap.c,v 1.66 2007/06/01 01:12:45 jeff Exp $");
+__FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_bmap.c,v 1.66.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -215,7 +215,7 @@ ufs_bmaparray(vp, bn, bnp, nbp, runp, runb)
 		ap->in_exists = 1;
 		bp = getblk(vp, metalbn, mp->mnt_stat.f_iosize, 0, 0, 0);
 		if ((bp->b_flags & B_CACHE) == 0) {
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 			if (!daddr)
 				panic("ufs_bmaparray: indirect block not in cache");
 #endif

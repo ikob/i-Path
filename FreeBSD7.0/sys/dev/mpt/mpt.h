@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/dev/mpt/mpt.h,v 1.42 2007/08/14 19:17:35 scottl Exp $ */
+/* $FreeBSD: src/sys/dev/mpt/mpt.h,v 1.42.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $ */
 /*-
  * Generic defines for LSI '909 FC  adapters.
  * FreeBSD Version.
@@ -767,6 +767,9 @@ struct mpt_softc {
 
 	/* Shutdown Event Handler. */
 	eventhandler_tag         eh;
+
+	/* Userland management interface. */
+	struct cdev		*cdev;
 
 	TAILQ_ENTRY(mpt_softc)	links;
 };

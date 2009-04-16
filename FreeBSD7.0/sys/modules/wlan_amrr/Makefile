@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/wlan_amrr/Makefile,v 1.1 2006/11/26 22:23:30 sam Exp $
+# $FreeBSD: src/sys/modules/wlan_amrr/Makefile,v 1.1.8.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../net80211
 

@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ia64/ia64/machdep.c,v 1.225.4.2 2008/02/14 22:51:51 marcel Exp $");
+__FBSDID("$FreeBSD: src/sys/ia64/ia64/machdep.c,v 1.225.2.7.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_compat.h"
 #include "opt_ddb.h"
@@ -100,9 +100,6 @@ __FBSDID("$FreeBSD: src/sys/ia64/ia64/machdep.c,v 1.225.4.2 2008/02/14 22:51:51 
 
 #include <i386/include/specialreg.h>
 
-/* XXX fc.i kluge (quick fix) */
-extern int ia64_icache_sync_kluge;
-
 u_int64_t processor_frequency;
 u_int64_t bus_frequency;
 u_int64_t itc_frequency;
@@ -126,6 +123,8 @@ struct fpswa_iface *fpswa_iface;
 u_int64_t ia64_pal_base;
 u_int64_t ia64_port_base;
 
+static int ia64_inval_icache_needed;
+
 char machine[] = MACHINE;
 SYSCTL_STRING(_hw, HW_MACHINE, machine, CTLFLAG_RD, machine, 0, "");
 
@@ -142,7 +141,7 @@ extern vm_offset_t ksym_start, ksym_end;
 #endif
 
 static void cpu_startup(void *);
-SYSINIT(cpu, SI_SUB_CPU, SI_ORDER_FIRST, cpu_startup, NULL)
+SYSINIT(cpu, SI_SUB_CPU, SI_ORDER_FIRST, cpu_startup, NULL);
 
 struct msgbuf *msgbufp=0;
 
@@ -225,8 +224,7 @@ identifycpu(void)
 		}
 		break;
 	case 0x20:
-		/* XXX fc.i kluge (quick fix) */
-		ia64_icache_sync_kluge = 1;
+		ia64_inval_icache_needed = 1;
 
 		family_name = "Itanium 2";
 		switch (model) {
@@ -812,7 +810,7 @@ ia64_init(void)
 	 * and make proc0's trapframe pointer point to it for sanity.
 	 * Initialise proc0's backing store to start after u area.
 	 */
-	cpu_thread_setup(&thread0);
+	cpu_thread_alloc(&thread0);
 	thread0.td_frame->tf_flags = FRAME_SYSCALL;
 	thread0.td_pcb->pcb_special.sp =
 	    (u_int64_t)thread0.td_frame - 16;
@@ -830,7 +828,8 @@ ia64_init(void)
 
 #ifdef KDB
 	if (boothowto & RB_KDB)
-		kdb_enter("Boot flags requested debugger\n");
+		kdb_enter_why(KDB_WHY_BOOTFLAGS,
+		    "Boot flags requested debugger\n");
 #endif
 
 	ia64_set_tpr(0);
@@ -1107,7 +1106,7 @@ ia64_flush_dirty(struct thread *td, struct _special *r)
 	struct iovec iov;
 	struct uio uio;
 	uint64_t bspst, kstk, rnat;
-	int error;
+	int error, locked;
 
 	if (r->ndirty == 0)
 		return (0);
@@ -1128,7 +1127,9 @@ ia64_flush_dirty(struct thread *td, struct _special *r)
 		r->rnat = (bspst > kstk && (bspst & 0x1ffL) < (kstk & 0x1ffL))
 		    ? *(uint64_t*)(kstk | 0x1f8L) : rnat;
 	} else {
-		PHOLD(td->td_proc);
+		locked = PROC_LOCKED(td->td_proc);
+		if (!locked)
+			PHOLD(td->td_proc);
 		iov.iov_base = (void*)(uintptr_t)kstk;
 		iov.iov_len = r->ndirty;
 		uio.uio_iov = &iov;
@@ -1146,7 +1147,8 @@ ia64_flush_dirty(struct thread *td, struct _special *r)
 		 */
 		if (uio.uio_resid != 0 && error == 0)
 			error = ENOSPC;
-		PRELE(td->td_proc);
+		if (!locked)
+			PRELE(td->td_proc);
 	}
 
 	r->bspstore += r->ndirty;
@@ -1529,6 +1531,21 @@ ia64_highfp_save(struct thread *td)
 	/* Post-mortem sanity cxhecking. */
 	KASSERT(thr == td, ("Inconsistent high FP state"));
 	return (1);
+}
+
+void
+ia64_invalidate_icache(vm_offset_t va, vm_offset_t sz)
+{
+	vm_offset_t lim;
+
+	if (!ia64_inval_icache_needed)
+		return;
+
+	lim = va + sz;
+	while (va < lim) {
+		__asm __volatile("fc.i %0" :: "r"(va));
+		va += 32;	/* XXX */
+	}
 }
 
 int

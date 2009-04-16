@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ppbus/immio.c,v 1.18 2005/12/21 00:09:11 sam Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ppbus/immio.c,v 1.18.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * Iomega ZIP+ Matchmaker Parallel Port Interface driver

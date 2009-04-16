@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/powerpc/include/resource.h,v 1.4 2005/01/07 02:29:19 imp Exp $ */
+/* $FreeBSD: src/sys/powerpc/include/resource.h,v 1.4.18.1 2008/11/25 02:59:29 kensmith Exp $ */
 /*-
  * Copyright 1998 Massachusetts Institute of Technology
  *

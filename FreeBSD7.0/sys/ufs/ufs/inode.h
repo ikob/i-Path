@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)inode.h	8.9 (Berkeley) 5/14/95
- * $FreeBSD: src/sys/ufs/ufs/inode.h,v 1.51 2006/10/10 09:20:54 kib Exp $
+ * $FreeBSD: src/sys/ufs/ufs/inode.h,v 1.51.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _UFS_UFS_INODE_H_
@@ -75,7 +75,6 @@ struct inode {
 	struct	 fs *i_fs;	/* Associated filesystem superblock. */
 	struct	 dquot *i_dquot[MAXQUOTAS]; /* Dquot structures. */
 	u_quad_t i_modrev;	/* Revision level for NFS lease. */
-	struct	 lockf *i_lockf;/* Head of byte-level lock list. */
 	/*
 	 * Side effects; used during directory lookup.
 	 */

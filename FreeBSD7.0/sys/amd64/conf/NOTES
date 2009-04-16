@@ -4,7 +4,7 @@
 # This file contains machine dependent kernel configuration notes.  For
 # machine independent notes, look in /sys/conf/NOTES.
 #
-# $FreeBSD: src/sys/amd64/conf/NOTES,v 1.69.2.3.2.1 2008/02/06 03:24:29 scottl Exp $
+# $FreeBSD: src/sys/amd64/conf/NOTES,v 1.69.2.5.2.1 2008/11/25 02:59:29 kensmith Exp $
 #
 
 #
@@ -455,8 +455,10 @@ device		ichwd
 # Temperature sensors:
 #
 # coretemp: on-die sensor on Intel Core and newer CPUs
+# k8temp: on-die sensor on AMD K8 CPUs
 #
 device		coretemp
+device		k8temp
 
 #---------------------------------------------------------------------------
 # ISDN4BSD

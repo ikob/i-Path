@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/syscons/sctermvar.h,v 1.4 2002/10/20 22:50:13 robert Exp $
+ * $FreeBSD: src/sys/dev/syscons/sctermvar.h,v 1.4.32.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _DEV_SYSCONS_SCTERMVAR_H_

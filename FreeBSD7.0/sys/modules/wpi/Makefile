@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/wpi/Makefile,v 1.2.2.1 2007/12/08 12:44:57 benjsc Exp $
+# $FreeBSD: src/sys/modules/wpi/Makefile,v 1.2.2.1.4.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH:  ${.CURDIR}/../../dev/wpi
 

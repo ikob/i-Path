@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/initcpu.c,v 1.50 2006/06/19 22:59:28 davidxu Exp $");
+__FBSDID("$FreeBSD: src/sys/amd64/amd64/initcpu.c,v 1.50.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_cpu.h"
 

@@ -55,7 +55,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sun4v/sun4v/mp_machdep.c,v 1.8 2007/07/06 00:41:53 peter Exp $");
+__FBSDID("$FreeBSD: src/sys/sun4v/sun4v/mp_machdep.c,v 1.8.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_trap_trace.h"
 

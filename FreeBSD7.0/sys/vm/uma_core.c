@@ -48,7 +48,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/vm/uma_core.c,v 1.147.2.1 2007/10/18 18:45:17 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/vm/uma_core.c,v 1.147.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /* I should really use ktr.. */
 /*
@@ -751,6 +751,8 @@ finished:
 
 			if (flags & UMA_SLAB_KMEM)
 				obj = kmem_object;
+			else if (flags & UMA_SLAB_KERNEL)
+				obj = kernel_object;
 			else
 				obj = NULL;
 			for (i = 0; i < keg->uk_ppera; i++)
@@ -871,6 +873,8 @@ slab_zalloc(uma_zone_t zone, int wait)
 
 				if (flags & UMA_SLAB_KMEM)
 					obj = kmem_object;
+				else if (flags & UMA_SLAB_KERNEL)
+					obj = kernel_object;
 				else
 					obj = NULL;
 				for (i = 0; i < keg->uk_ppera; i++)

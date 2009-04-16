@@ -34,7 +34,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/arm/xscale/i80321/i80321reg.h,v 1.3 2006/08/24 23:51:28 cognet Exp $
+ * $FreeBSD: src/sys/arm/xscale/i80321/i80321reg.h,v 1.3.6.1 2008/11/25 02:59:29 kensmith Exp $
  *
  */
 

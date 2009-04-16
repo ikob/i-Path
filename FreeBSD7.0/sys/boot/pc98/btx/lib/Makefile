@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/boot/pc98/btx/lib/Makefile,v 1.10 2004/12/21 08:47:18 ru Exp $
+# $FreeBSD: src/sys/boot/pc98/btx/lib/Makefile,v 1.10.18.1 2008/11/25 02:59:29 kensmith Exp $
 
 PROG=	crt0.o
 INTERNALPROG=

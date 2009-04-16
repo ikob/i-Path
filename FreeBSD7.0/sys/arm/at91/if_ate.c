@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/at91/if_ate.c,v 1.20.2.1 2007/12/02 14:19:37 cognet Exp $");
+__FBSDID("$FreeBSD: src/sys/arm/at91/if_ate.c,v 1.20.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -191,7 +191,7 @@ ate_attach(device_t dev)
 	callout_init_mtx(&sc->tick_ch, &sc->sc_mtx, 0);
 
 	if ((err = ate_get_mac(sc, eaddr)) != 0) {
-		device_printf(dev, "No MAC address set");
+		device_printf(dev, "No MAC address set\n");
 		goto out;
 	}
 	ate_set_mac(sc, eaddr);
@@ -668,7 +668,7 @@ ate_intr(void *xsc)
 		ATE_LOCK(sc);
 		/* XXX TSR register should be cleared */
 		if (sc->sent_mbuf[0]) {
-			bus_dmamap_sync(sc->rxtag, sc->tx_map[0],
+			bus_dmamap_sync(sc->mtag, sc->tx_map[0],
 			    BUS_DMASYNC_POSTWRITE);
 			m_freem(sc->sent_mbuf[0]);
 			ifp->if_opackets++;
@@ -676,7 +676,7 @@ ate_intr(void *xsc)
 		}
 		if (sc->sent_mbuf[1]) {
 			if (RD4(sc, ETH_TSR) & ETH_TSR_IDLE) {
-				bus_dmamap_sync(sc->rxtag, sc->tx_map[1],
+				bus_dmamap_sync(sc->mtag, sc->tx_map[1],
 				    BUS_DMASYNC_POSTWRITE);
 				m_freem(sc->sent_mbuf[1]);
 				ifp->if_opackets++;
@@ -996,8 +996,6 @@ ate_miibus_readreg(device_t dev, int phy, int reg)
 	 * XXX to make sure that the clock to the emac is on here
 	 */
 
-	if (phy != 0)
-		return (0xffff);
 	sc = device_get_softc(dev);
 	DELAY(1);	/* Hangs w/o this delay really 30.5us atm */
 	WR4(sc, ETH_MAN, ETH_MAN_REG_RD(phy, reg));

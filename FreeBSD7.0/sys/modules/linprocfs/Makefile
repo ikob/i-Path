@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/linprocfs/Makefile,v 1.14 2006/08/15 13:01:36 netchild Exp $
+# $FreeBSD: src/sys/modules/linprocfs/Makefile,v 1.14.6.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../compat/linprocfs
 

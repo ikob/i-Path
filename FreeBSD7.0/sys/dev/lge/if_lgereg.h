@@ -30,7 +30,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/lge/if_lgereg.h,v 1.9 2006/09/15 15:16:11 glebius Exp $
+ * $FreeBSD: src/sys/dev/lge/if_lgereg.h,v 1.9.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 

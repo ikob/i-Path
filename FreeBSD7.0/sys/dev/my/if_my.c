@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/my/if_my.c,v 1.43 2007/03/11 15:20:04 brueffer Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/my/if_my.c,v 1.43.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -1441,7 +1441,7 @@ my_start_locked(struct ifnet * ifp)
 	/*
 	 * Place the request for the upload interrupt in the last descriptor
 	 * in the chain. This way, if we're chaining several packets at once,
-	 * we'll only get an interupt once for the whole chain rather than
+	 * we'll only get an interrupt once for the whole chain rather than
 	 * once for each packet.
 	 */
 	MY_TXCTL(cur_tx) |= MY_TXIC;

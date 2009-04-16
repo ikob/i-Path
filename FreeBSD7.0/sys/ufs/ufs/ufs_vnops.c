@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_vnops.c,v 1.291 2007/06/12 00:12:01 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_vnops.c,v 1.291.2.6.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_mac.h"
 #include "opt_quota.h"
@@ -91,7 +91,6 @@ __FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_vnops.c,v 1.291 2007/06/12 00:12:01 rwat
 #include <ufs/ffs/ffs_extern.h>
 
 static vop_access_t	ufs_access;
-static vop_advlock_t	ufs_advlock;
 static int ufs_chmod(struct vnode *, int, struct ucred *, struct thread *);
 static int ufs_chown(struct vnode *, uid_t, gid_t, struct ucred *, struct thread *);
 static vop_close_t	ufs_close;
@@ -311,6 +310,9 @@ ufs_access(ap)
 	struct inode *ip = VTOI(vp);
 	mode_t mode = ap->a_mode;
 	int error;
+#ifdef QUOTA
+	int relocked;
+#endif
 #ifdef UFS_ACL
 	struct acl *acl;
 #endif
@@ -327,6 +329,38 @@ ufs_access(ap)
 		case VREG:
 			if (vp->v_mount->mnt_flag & MNT_RDONLY)
 				return (EROFS);
+#ifdef QUOTA
+			/*
+			 * Inode is accounted in the quotas only if struct
+			 * dquot is attached to it. VOP_ACCESS() is called
+			 * from vn_open_cred() and provides a convenient
+			 * point to call getinoquota().
+			 */
+			if (VOP_ISLOCKED(vp, ap->a_td) != LK_EXCLUSIVE) {
+
+				/*
+				 * Upgrade vnode lock, since getinoquota()
+				 * requires exclusive lock to modify inode.
+				 */
+				relocked = 1;
+				vhold(vp);
+				vn_lock(vp, LK_UPGRADE | LK_RETRY, ap->a_td);
+				VI_LOCK(vp);
+				if (vp->v_iflag & VI_DOOMED) {
+					vdropl(vp);
+					error = ENOENT;
+					goto relock;
+				}
+				vdropl(vp);
+			} else
+				relocked = 0;
+			error = getinoquota(ip);
+relock:
+			if (relocked)
+				vn_lock(vp, LK_DOWNGRADE | LK_RETRY, ap->a_td);
+			if (error != 0)
+				return (error);
+#endif
 			break;
 		default:
 			break;
@@ -855,7 +889,7 @@ ufs_link(ap)
 	struct direct newdir;
 	int error;
 
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 	if ((cnp->cn_flags & HASBUF) == 0)
 		panic("ufs_link: no name");
 #endif
@@ -921,7 +955,7 @@ ufs_whiteout(ap)
 
 	case CREATE:
 		/* create a new directory whiteout */
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 		if ((cnp->cn_flags & SAVENAME) == 0)
 			panic("ufs_whiteout: missing name");
 		if (dvp->v_mount->mnt_maxsymlinklen <= 0)
@@ -937,7 +971,7 @@ ufs_whiteout(ap)
 
 	case DELETE:
 		/* remove an existing directory whiteout */
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 		if (dvp->v_mount->mnt_maxsymlinklen <= 0)
 			panic("ufs_whiteout: old format filesystem");
 #endif
@@ -998,7 +1032,7 @@ ufs_rename(ap)
 	int doingdirectory = 0, oldparent = 0, newparent = 0;
 	int error = 0, ioflag;
 
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 	if ((tcnp->cn_flags & HASBUF) == 0 ||
 	    (fcnp->cn_flags & HASBUF) == 0)
 		panic("ufs_rename: no name");
@@ -1382,7 +1416,7 @@ ufs_mkdir(ap)
 	int error, dmode;
 	long blkoff;
 
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 	if ((cnp->cn_flags & HASBUF) == 0)
 		panic("ufs_mkdir: no name");
 #endif
@@ -2164,24 +2198,6 @@ ufs_pathconf(ap)
 }
 
 /*
- * Advisory record locking support
- */
-static int
-ufs_advlock(ap)
-	struct vop_advlock_args /* {
-		struct vnode *a_vp;
-		caddr_t  a_id;
-		int  a_op;
-		struct flock *a_fl;
-		int  a_flags;
-	} */ *ap;
-{
-	struct inode *ip = VTOI(ap->a_vp);
-
-	return (lf_advlock(ap, &(ip->i_lockf), ip->i_size));
-}
-
-/*
  * Initialize the vnode associated with a new inode, handle aliased
  * vnodes.
  */
@@ -2227,7 +2243,7 @@ ufs_makeinode(mode, dvp, vpp, cnp)
 	int error;
 
 	pdir = VTOI(dvp);
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 	if ((cnp->cn_flags & HASBUF) == 0)
 		panic("ufs_makeinode: no name");
 #endif
@@ -2448,7 +2464,6 @@ struct vop_vector ufs_vnodeops = {
 	.vop_reallocblks =	VOP_PANIC,
 	.vop_write =		VOP_PANIC,
 	.vop_access =		ufs_access,
-	.vop_advlock =		ufs_advlock,
 	.vop_bmap =		ufs_bmap,
 	.vop_cachedlookup =	ufs_lookup,
 	.vop_close =		ufs_close,

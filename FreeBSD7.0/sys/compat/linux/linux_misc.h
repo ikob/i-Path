@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/compat/linux/linux_misc.h,v 1.2 2006/12/31 11:56:16 netchild Exp $
+ * $FreeBSD: src/sys/compat/linux/linux_misc.h,v 1.2.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _LINUX_MISC_H_
@@ -41,5 +41,8 @@
 #define	LINUX_PR_GET_NAME	16	/* Get process name. */
 
 #define	LINUX_MAX_COMM_LEN	16	/* Maximum length of the process name. */
+
+#define	LINUX_MREMAP_MAYMOVE	1
+#define	LINUX_MREMAP_FIXED	2
 
 #endif	/* _LINUX_MISC_H_ */

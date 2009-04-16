@@ -40,7 +40,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/arm/uio_machdep.c,v 1.5 2005/01/05 21:58:47 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/arm/arm/uio_machdep.c,v 1.5.10.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -100,8 +100,10 @@ uiomove_fromphys(vm_page_t ma[], vm_offset_t offset, int n, struct uio *uio)
 				error = copyout(cp, iov->iov_base, cnt);
 			else
 				error = copyin(iov->iov_base, cp, cnt);
-			if (error)
+			if (error) {
+				sf_buf_free(sf);
 				goto out;
+			}
 			break;
 		case UIO_SYSSPACE:
 			if (uio->uio_rw == UIO_READ)

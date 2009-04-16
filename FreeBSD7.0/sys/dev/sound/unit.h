@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/sound/unit.h,v 1.1 2007/05/31 18:35:24 ariff Exp $
+ * $FreeBSD: src/sys/dev/sound/unit.h,v 1.1.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SND_UNIT_H_

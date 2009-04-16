@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/vfs_vnops.c,v 1.252 2007/07/26 16:58:09 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/vfs_vnops.c,v 1.252.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_mac.h"
 
@@ -674,11 +674,6 @@ vn_stat(vp, sb, active_cred, file_cred, td)
 		break;
 	case VLNK:
 		mode |= S_IFLNK;
-		/* This is a cosmetic change, symlinks do not have a mode. */
-		if (vp->v_mount->mnt_flag & MNT_NOSYMFOLLOW)
-			sb->st_mode &= ~ACCESSPERMS;	/* 0000 */
-		else
-			sb->st_mode |= ACCESSPERMS;	/* 0777 */
 		break;
 	case VSOCK:
 		mode |= S_IFSOCK;
@@ -805,6 +800,10 @@ _vn_lock(struct vnode *vp, int flags, struct thread *td, char *file, int line)
 	do {
 		if ((flags & LK_INTERLOCK) == 0)
 			VI_LOCK(vp);
+#ifdef DEBUG_VFS_LOCKS
+		KASSERT(vp->v_holdcnt != 0,
+		    ("vn_lock %p: zero hold count", vp));
+#endif
 		if ((flags & LK_NOWAIT || (flags & LK_TYPE_MASK) == 0) &&
 		    vp->v_iflag & VI_DOOMED) {
 			VI_UNLOCK(vp);

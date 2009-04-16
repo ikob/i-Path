@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/cy/cy_isa.c,v 1.148 2007/02/23 12:18:36 piso Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/cy/cy_isa.c,v 1.148.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/dev/snc/dp83932var.h,v 1.6 2005/12/06 11:19:37 ru Exp $	*/
+/*	$FreeBSD: src/sys/dev/snc/dp83932var.h,v 1.6.6.1 2008/11/25 02:59:29 kensmith Exp $	*/
 /*	$NecBSD: dp83932var.h,v 1.3 1999/01/24 01:39:51 kmatsuda Exp $	*/
 /*	$NetBSD: if_snvar.h,v 1.12 1998/05/01 03:42:47 scottr Exp $	*/
 

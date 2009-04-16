@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/fs/ntfs/ntfs_iconv.c,v 1.1 2003/09/26 20:26:23 fjoe Exp $");
+__FBSDID("$FreeBSD: src/sys/fs/ntfs/ntfs_iconv.c,v 1.1.28.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/kernel.h>

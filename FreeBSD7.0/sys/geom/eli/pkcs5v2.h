@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/geom/eli/pkcs5v2.h,v 1.2 2006/02/01 12:05:59 pjd Exp $
+ * $FreeBSD: src/sys/geom/eli/pkcs5v2.h,v 1.2.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _PKCS5V2_H_

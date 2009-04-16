@@ -38,7 +38,7 @@
  *
  *	from: hp300: @(#)pmap.h	7.2 (Berkeley) 12/16/90
  *	from: @(#)pmap.h	7.4 (Berkeley) 5/12/91
- * $FreeBSD: src/sys/i386/include/pmap.h,v 1.128 2007/04/12 17:00:56 alc Exp $
+ * $FreeBSD: src/sys/i386/include/pmap.h,v 1.128.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _MACHINE_PMAP_H_
@@ -95,6 +95,8 @@
  * Size of Kernel address space.  This is the number of page table pages
  * (4MB each) to use for the kernel.  256 pages == 1 Gigabyte.
  * This **MUST** be a multiple of 4 (eg: 252, 256, 260, etc).
+ * For PAE, the page table page unit size is 2MB.  This means that 512 pages
+ * is 1 Gigabyte.  Double everything.  It must be a multiple of 8 for PAE.
  */
 #ifndef KVA_PAGES
 #ifdef PAE
@@ -121,11 +123,7 @@
 #endif
 
 #ifndef NKPDE
-#ifdef SMP
-#define NKPDE	(KVA_PAGES - 1) /* number of page tables/pde's */
-#else
 #define NKPDE	(KVA_PAGES)	/* number of page tables/pde's */
-#endif
 #endif
 
 /*
@@ -133,15 +131,8 @@
  *
  * XXX This works for now, but I am not real happy with it, I'll fix it
  * right after I fix locore.s and the magic 28K hole
- *
- * SMP_PRIVPAGES: The per-cpu address space is 0xff80000 -> 0xffbfffff
  */
-#ifdef SMP
-#define MPPTDI		(NPDEPTD-1)	/* per cpu ptd entry */
-#define	KPTDI		(MPPTDI-NKPDE)	/* start of kernel virtual pde's */
-#else
-#define	KPTDI		(NPDEPTD-NKPDE)/* start of kernel virtual pde's */
-#endif	/* SMP */
+#define	KPTDI		(NPDEPTD-NKPDE)	/* start of kernel virtual pde's */
 #define	PTDPTDI		(KPTDI-NPGPTD)	/* ptd entry that points to ptd! */
 
 /*

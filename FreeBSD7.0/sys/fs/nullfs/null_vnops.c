@@ -36,7 +36,7 @@
  *	...and...
  *	@(#)null_vnodeops.c 1.20 92/07/07 UCLA Ficus project
  *
- * $FreeBSD: src/sys/fs/nullfs/null_vnops.c,v 1.95.2.1 2007/10/22 05:44:07 daichi Exp $
+ * $FreeBSD: src/sys/fs/nullfs/null_vnops.c,v 1.95.2.1.4.2 2008/12/10 17:16:11 kib Exp $
  */
 
 /*
@@ -365,11 +365,10 @@ null_lookup(struct vop_lookup_args *ap)
 			vrele(lvp);
 		} else {
 			error = null_nodeget(dvp->v_mount, lvp, &vp);
-			if (error) {
-				/* XXX Cleanup needed... */
-				panic("null_nodeget failed");
-			}
-			*ap->a_vpp = vp;
+			if (error)
+				vput(lvp);
+			else
+				*ap->a_vpp = vp;
 		}
 	}
 	return (error);

@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/drm/i915_dma.c,v 1.6 2007/08/21 12:52:57 kib Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/drm/i915_dma.c,v 1.6.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "dev/drm/drmP.h"
 #include "dev/drm/drm.h"
@@ -37,7 +37,8 @@ __FBSDID("$FreeBSD: src/sys/dev/drm/i915_dma.c,v 1.6 2007/08/21 12:52:57 kib Exp
 #define IS_I965G(dev)  (dev->pci_device == 0x2972 || \
 			dev->pci_device == 0x2982 || \
 			dev->pci_device == 0x2992 || \
-			dev->pci_device == 0x29A2)
+			dev->pci_device == 0x29A2 || \
+			dev->pci_device == 0x2A12 )
 
 
 /* Really want an OS-independent resettable timer.  Would like to have

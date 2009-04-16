@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_snapshot.c,v 1.136 2007/06/05 00:00:56 jeff Exp $");
+__FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_snapshot.c,v 1.136.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_quota.h"
 
@@ -345,6 +345,8 @@ restart:
 		if (error)
 			goto out;
 		bawrite(nbp);
+		if (cg % 10 == 0)
+			ffs_syncvnode(vp, MNT_WAIT);
 	}
 	/*
 	 * Copy all the cylinder group maps. Although the
@@ -366,6 +368,8 @@ restart:
 			goto out;
 		error = cgaccount(cg, vp, nbp, 1);
 		bawrite(nbp);
+		if (cg % 10 == 0)
+			ffs_syncvnode(vp, MNT_WAIT);
 		if (error)
 			goto out;
 	}
@@ -880,6 +884,13 @@ cgaccount(cg, vp, nbp, passno)
 	}
 	UFS_LOCK(ip->i_ump);
 	ACTIVESET(fs, cg);
+	/*
+	 * Recomputation of summary information might not have been performed
+	 * at mount time.  Sync up summary information for current cylinder
+	 * group while data is in memory to ensure that result of background
+	 * fsck is slightly more consistent.
+	 */
+	fs->fs_cs(fs, cg) = cgp->cg_cs;
 	UFS_UNLOCK(ip->i_ump);
 	bcopy(bp->b_data, nbp->b_data, fs->fs_cgsize);
 	if (fs->fs_cgsize < fs->fs_bsize)
@@ -2300,7 +2311,7 @@ ffs_copyonwrite(devvp, bp)
 				blkno=((ufs2_daddr_t *)(ibp->b_data))[indiroff];
 			bqrelse(ibp);
 		}
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 		if (blkno == BLK_SNAP && bp->b_lblkno >= 0)
 			panic("ffs_copyonwrite: bad copy block");
 #endif

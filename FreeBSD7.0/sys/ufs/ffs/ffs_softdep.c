@@ -39,14 +39,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_softdep.c,v 1.211 2007/06/22 13:22:36 kib Exp $");
+__FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_softdep.c,v 1.211.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
- * For now we want the safety net that the DIAGNOSTIC and DEBUG flags provide.
+ * For now we want the safety net that DEBUG flags provide.
  */
-#ifndef DIAGNOSTIC
-#define DIAGNOSTIC
-#endif
 #ifndef DEBUG
 #define DEBUG
 #endif
@@ -664,7 +661,7 @@ static int maxindirdeps = 50;	/* max number of indirdeps before slowdown */
 static int tickdelay = 2;	/* number of ticks to pause during slowdown */
 static int proc_waiting;	/* tracks whether we have a timeout posted */
 static int *stat_countp;	/* statistic to count in proc_waiting timeout */
-static struct callout_handle handle; /* handle on posted proc_waiting timeout */
+static struct callout softdep_callout;
 static int req_pending;
 static int req_clear_inodedeps;	/* syncer process flush some inodedeps */
 #define FLUSH_INODES		1
@@ -712,7 +709,8 @@ static struct kproc_desc softdep_kp = {
 	softdep_flush,
 	&softdepproc
 };
-SYSINIT(sdproc, SI_SUB_KTHREAD_UPDATE, SI_ORDER_ANY, kproc_start, &softdep_kp)
+SYSINIT(sdproc, SI_SUB_KTHREAD_UPDATE, SI_ORDER_ANY, kproc_start,
+    &softdep_kp);
 
 static void
 softdep_flush(void)
@@ -867,6 +865,7 @@ softdep_process_worklist(mp, full)
 		 */
 		if (loopcount++ % 128 == 0) {
 			FREE_LOCK(&lk);
+			uio_yield();
 			bwillwrite();
 			ACQUIRE_LOCK(&lk);
 		}
@@ -1394,6 +1393,9 @@ softdep_initialize()
 	bioops.io_complete = softdep_disk_write_complete;
 	bioops.io_deallocate = softdep_deallocate_dependencies;
 	bioops.io_countdeps = softdep_count_dependencies;
+
+	/* Initialize the callout with an mtx. */
+	callout_init_mtx(&softdep_callout, &lk, 0);
 }
 
 /*
@@ -1404,6 +1406,7 @@ void
 softdep_uninitialize()
 {
 
+	callout_drain(&softdep_callout);
 	hashdestroy(pagedep_hashtbl, M_PAGEDEP, pagedep_hash);
 	hashdestroy(inodedep_hashtbl, M_INODEDEP, inodedep_hash);
 	hashdestroy(newblk_hashtbl, M_NEWBLK, newblk_hash);
@@ -2782,13 +2785,13 @@ handle_workitem_freeblocks(freeblks, flags)
 		vput(vp);
 	}
 
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 	if (freeblks->fb_chkcnt != blocksreleased &&
 	    ((fs->fs_flags & FS_UNCLEAN) == 0 || (flags & LK_NOWAIT) != 0))
 		printf("handle_workitem_freeblocks: block count\n");
 	if (allerror)
 		softdep_error("handle_workitem_freeblks", allerror);
-#endif /* DIAGNOSTIC */
+#endif /* INVARIANTS */
 
 	ACQUIRE_LOCK(&lk);
 	WORKITEM_FREE(freeblks, D_FREEBLKS);
@@ -3877,7 +3880,10 @@ initiate_write_inodeblock_ufs1(inodedep, bp)
 	struct ufs1_dinode *dp;
 	struct ufs1_dinode *sip;
 	struct fs *fs;
-	ufs_lbn_t i, prevlbn = 0;
+	ufs_lbn_t i;
+#ifdef INVARIANTS
+	ufs_lbn_t prevlbn = 0;
+#endif
 	int deplist;
 
 	if (inodedep->id_state & IOSTARTED)
@@ -3915,7 +3921,7 @@ initiate_write_inodeblock_ufs1(inodedep, bp)
 	 */
 	for (deplist = 0, adp = TAILQ_FIRST(&inodedep->id_inoupdt); adp;
 	     adp = TAILQ_NEXT(adp, ad_next)) {
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 		if (deplist != 0 && prevlbn >= adp->ad_lbn)
 			panic("softdep_write_inodeblock: lbn order");
 		prevlbn = adp->ad_lbn;
@@ -3937,7 +3943,7 @@ initiate_write_inodeblock_ufs1(inodedep, bp)
 		if ((adp->ad_state & ATTACHED) == 0)
 			panic("softdep_write_inodeblock: Unknown state 0x%x",
 			    adp->ad_state);
-#endif /* DIAGNOSTIC */
+#endif /* INVARIANTS */
 		adp->ad_state &= ~ATTACHED;
 		adp->ad_state |= UNDONE;
 	}
@@ -3957,18 +3963,18 @@ initiate_write_inodeblock_ufs1(inodedep, bp)
 			continue;
 		dp->di_size = fs->fs_bsize * adp->ad_lbn + adp->ad_oldsize;
 		for (i = adp->ad_lbn + 1; i < NDADDR; i++) {
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 			if (dp->di_db[i] != 0 && (deplist & (1 << i)) == 0)
 				panic("softdep_write_inodeblock: lost dep1");
-#endif /* DIAGNOSTIC */
+#endif /* INVARIANTS */
 			dp->di_db[i] = 0;
 		}
 		for (i = 0; i < NIADDR; i++) {
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 			if (dp->di_ib[i] != 0 &&
 			    (deplist & ((1 << NDADDR) << i)) == 0)
 				panic("softdep_write_inodeblock: lost dep2");
-#endif /* DIAGNOSTIC */
+#endif /* INVARIANTS */
 			dp->di_ib[i] = 0;
 		}
 		return;
@@ -4020,7 +4026,10 @@ initiate_write_inodeblock_ufs2(inodedep, bp)
 	struct ufs2_dinode *dp;
 	struct ufs2_dinode *sip;
 	struct fs *fs;
-	ufs_lbn_t i, prevlbn = 0;
+	ufs_lbn_t i;
+#ifdef INVARIANTS
+	ufs_lbn_t prevlbn = 0;
+#endif
 	int deplist;
 
 	if (inodedep->id_state & IOSTARTED)
@@ -4059,7 +4068,7 @@ initiate_write_inodeblock_ufs2(inodedep, bp)
 	 */
 	for (deplist = 0, adp = TAILQ_FIRST(&inodedep->id_extupdt); adp;
 	     adp = TAILQ_NEXT(adp, ad_next)) {
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 		if (deplist != 0 && prevlbn >= adp->ad_lbn)
 			panic("softdep_write_inodeblock: lbn order");
 		prevlbn = adp->ad_lbn;
@@ -4073,7 +4082,7 @@ initiate_write_inodeblock_ufs2(inodedep, bp)
 		if ((adp->ad_state & ATTACHED) == 0)
 			panic("softdep_write_inodeblock: Unknown state 0x%x",
 			    adp->ad_state);
-#endif /* DIAGNOSTIC */
+#endif /* INVARIANTS */
 		adp->ad_state &= ~ATTACHED;
 		adp->ad_state |= UNDONE;
 	}
@@ -4091,10 +4100,10 @@ initiate_write_inodeblock_ufs2(inodedep, bp)
 			continue;
 		dp->di_extsize = fs->fs_bsize * adp->ad_lbn + adp->ad_oldsize;
 		for (i = adp->ad_lbn + 1; i < NXADDR; i++) {
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 			if (dp->di_extb[i] != 0 && (deplist & (1 << i)) == 0)
 				panic("softdep_write_inodeblock: lost dep1");
-#endif /* DIAGNOSTIC */
+#endif /* INVARIANTS */
 			dp->di_extb[i] = 0;
 		}
 		lastadp = NULL;
@@ -4118,7 +4127,7 @@ initiate_write_inodeblock_ufs2(inodedep, bp)
 	 */
 	for (deplist = 0, adp = TAILQ_FIRST(&inodedep->id_inoupdt); adp;
 	     adp = TAILQ_NEXT(adp, ad_next)) {
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 		if (deplist != 0 && prevlbn >= adp->ad_lbn)
 			panic("softdep_write_inodeblock: lbn order");
 		prevlbn = adp->ad_lbn;
@@ -4140,7 +4149,7 @@ initiate_write_inodeblock_ufs2(inodedep, bp)
 		if ((adp->ad_state & ATTACHED) == 0)
 			panic("softdep_write_inodeblock: Unknown state 0x%x",
 			    adp->ad_state);
-#endif /* DIAGNOSTIC */
+#endif /* INVARIANTS */
 		adp->ad_state &= ~ATTACHED;
 		adp->ad_state |= UNDONE;
 	}
@@ -4160,18 +4169,18 @@ initiate_write_inodeblock_ufs2(inodedep, bp)
 			continue;
 		dp->di_size = fs->fs_bsize * adp->ad_lbn + adp->ad_oldsize;
 		for (i = adp->ad_lbn + 1; i < NDADDR; i++) {
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 			if (dp->di_db[i] != 0 && (deplist & (1 << i)) == 0)
 				panic("softdep_write_inodeblock: lost dep2");
-#endif /* DIAGNOSTIC */
+#endif /* INVARIANTS */
 			dp->di_db[i] = 0;
 		}
 		for (i = 0; i < NIADDR; i++) {
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 			if (dp->di_ib[i] != 0 &&
 			    (deplist & ((1 << NDADDR) << i)) == 0)
 				panic("softdep_write_inodeblock: lost dep3");
-#endif /* DIAGNOSTIC */
+#endif /* INVARIANTS */
 			dp->di_ib[i] = 0;
 		}
 		return;
@@ -5852,8 +5861,10 @@ request_cleanup(mp, resource)
 	 * We wait at most tickdelay before proceeding in any case.
 	 */
 	proc_waiting += 1;
-	if (handle.callout == NULL)
-		handle = timeout(pause_timer, 0, tickdelay > 2 ? tickdelay : 2);
+	if (callout_pending(&softdep_callout) == FALSE)
+		callout_reset(&softdep_callout, tickdelay > 2 ? tickdelay : 2,
+		    pause_timer, 0);
+
 	msleep((caddr_t)&proc_waiting, &lk, PPAUSE, "softupdate", 0);
 	proc_waiting -= 1;
 	return (1);
@@ -5868,14 +5879,15 @@ pause_timer(arg)
 	void *arg;
 {
 
-	ACQUIRE_LOCK(&lk);
+	/*
+	 * The callout_ API has acquired mtx and will hold it around this
+	 * function call.
+	 */
 	*stat_countp += 1;
 	wakeup_one(&proc_waiting);
 	if (proc_waiting > 0)
-		handle = timeout(pause_timer, 0, tickdelay > 2 ? tickdelay : 2);
-	else
-		handle.callout = NULL;
-	FREE_LOCK(&lk);
+		callout_reset(&softdep_callout, tickdelay > 2 ? tickdelay : 2,
+		    pause_timer, 0);
 }
 
 /*

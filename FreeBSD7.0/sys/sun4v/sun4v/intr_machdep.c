@@ -59,7 +59,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/sun4v/sun4v/intr_machdep.c,v 1.7 2007/05/31 19:25:35 piso Exp $");
+__FBSDID("$FreeBSD: src/sys/sun4v/sun4v/intr_machdep.c,v 1.7.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -359,7 +359,7 @@ inthand_add(const char *name, int vec, driver_filter_t *filt,
 	mtx_unlock_spin(&intr_table_lock);
 	if (ie == NULL) {
 		errcode = intr_event_create(&ie, (void *)(intptr_t)vec, 0, NULL,
-		    "vec%d:", vec);
+		    NULL, "vec%d:", vec);
 		if (errcode)
 			return (errcode);
 		mtx_lock_spin(&intr_table_lock);

@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ray/if_rayvar.h,v 1.22 2005/08/09 10:19:53 rwatson Exp $
+ * $FreeBSD: src/sys/dev/ray/if_rayvar.h,v 1.22.6.1 2008/11/25 02:59:29 kensmith Exp $
  *
  */
 

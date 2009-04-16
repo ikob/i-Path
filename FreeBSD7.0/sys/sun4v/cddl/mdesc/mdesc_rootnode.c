@@ -17,7 +17,7 @@
  * information: Portions Copyright [yyyy] [name of copyright owner]
  *
  * CDDL HEADER END
- * $FreeBSD: src/sys/sun4v/cddl/mdesc/mdesc_rootnode.c,v 1.1 2006/11/24 01:56:46 kmacy Exp $
+ * $FreeBSD: src/sys/sun4v/cddl/mdesc/mdesc_rootnode.c,v 1.1.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

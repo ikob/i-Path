@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/cpufreq/est.c,v 1.11 2006/05/11 17:35:44 njl Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/cpufreq/est.c,v 1.11.2.7.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -39,6 +39,7 @@ __FBSDID("$FreeBSD: src/sys/i386/cpufreq/est.c,v 1.11 2006/05/11 17:35:44 njl Ex
 
 #include "cpufreq_if.h"
 #include <machine/md_var.h>
+#include <machine/specialreg.h>
 
 #include <contrib/dev/acpica/acpi.h>
 #include <dev/acpica/acpivar.h>
@@ -100,7 +101,7 @@ const char centaur_id[] = "CentaurHauls";
 CTASSERT(EST_MAX_SETTINGS <= MAX_SETTINGS);
 
 /* Estimate in microseconds of latency for performing a transition. */
-#define EST_TRANS_LAT		10
+#define EST_TRANS_LAT		1000
 
 /*
  * Frequency (MHz) and voltage (mV) settings.  Data from the
@@ -902,6 +903,8 @@ static int	est_settings(device_t dev, struct cf_setting *sets, int *count);
 static int	est_set(device_t dev, const struct cf_setting *set);
 static int	est_get(device_t dev, struct cf_setting *set);
 static int	est_type(device_t dev, int *type);
+static int	est_set_id16(device_t dev, uint16_t id16, int need_check);
+static void	est_get_id16(uint16_t *id16_p);
 
 static device_method_t est_methods[] = {
 	/* Device interface */
@@ -944,7 +947,6 @@ static void
 est_identify(driver_t *driver, device_t parent)
 {
 	device_t child;
-	u_int p[4];
 
 	/* Make sure we're not being doubly invoked. */
 	if (device_find_child(parent, "est", -1) != NULL)
@@ -956,18 +958,16 @@ est_identify(driver_t *driver, device_t parent)
 		return;
 
 	/*
-	 * Read capability bits and check if the CPU supports EST.
-	 * This is indicated by bit 7 of ECX.
+	 * Check if the CPU supports EST.
 	 */
-	do_cpuid(1, p);
-	if ((p[2] & 0x80) == 0)
+	if (!(cpu_feature2 & CPUID2_EST))
 		return;
 
 	/*
 	 * We add a child for each CPU since settings must be performed
 	 * on each CPU in the SMP case.
 	 */
-	child = BUS_ADD_CHILD(parent, 0, "est", -1);
+	child = BUS_ADD_CHILD(parent, 10, "est", -1);
 	if (child == NULL)
 		device_printf(parent, "add est child failed\n");
 }
@@ -1032,11 +1032,16 @@ static int
 est_detach(device_t dev)
 {
 	struct est_softc *sc;
+	int error;
+
+	error = cpufreq_unregister(dev);
+	if (error)
+		return (error);
 
 	sc = device_get_softc(dev);
 	if (sc->acpi_settings)
 		free(sc->freq_list, M_DEVBUF);
-	return (ENXIO);
+	return (0);
 }
 
 /*
@@ -1076,7 +1081,8 @@ est_acpi_info(device_t dev, freq_info **freqs)
 	struct cf_setting *sets;
 	freq_info *table;
 	device_t perf_dev;
-	int count, error, i;
+	int count, error, i, j;
+	uint16_t saved_id16;
 
 	perf_dev = device_find_child(device_get_parent(dev), "acpi_perf", -1);
 	if (perf_dev == NULL || !device_is_attached(perf_dev))
@@ -1088,6 +1094,7 @@ est_acpi_info(device_t dev, freq_info **freqs)
 	sets = malloc(MAX_SETTINGS * sizeof(*sets), M_TEMP, M_NOWAIT);
 	if (sets == NULL)
 		return (ENOMEM);
+	count = MAX_SETTINGS;
 	error = CPUFREQ_DRV_SETTINGS(perf_dev, sets, &count);
 	if (error)
 		goto out;
@@ -1098,19 +1105,31 @@ est_acpi_info(device_t dev, freq_info **freqs)
 		error = ENOMEM;
 		goto out;
 	}
-	for (i = 0; i < count; i++) {
+	est_get_id16(&saved_id16);
+	for (i = 0, j = 0; i < count; i++) {
 		/*
-		 * TODO: Figure out validity checks for id16.  Linux checks
-		 * that the control and status values match.
+		 * Confirm id16 value is correct.
 		 */
-		table[i].freq = sets[i].freq;
-		table[i].volts = sets[i].volts;
-		table[i].id16 = sets[i].spec[0];
-		table[i].power = sets[i].power;
+		if (sets[i].freq > 0) {
+			error = est_set_id16(dev, sets[i].spec[0], 1);
+			if (error != 0) {
+				if (bootverbose) 
+					device_printf(dev, "Invalid freq %u, "
+					    "ignored.\n", sets[i].freq);
+			} else {
+				table[j].freq = sets[i].freq;
+				table[j].volts = sets[i].volts;
+				table[j].id16 = sets[i].spec[0];
+				table[j].power = sets[i].power;
+				++j;
+			}
+		}
 	}
+	/* restore saved setting */
+	est_set_id16(dev, saved_id16, 0);
 
 	/* Mark end of table with a terminator. */
-	bzero(&table[i], sizeof(freq_info));
+	bzero(&table[j], sizeof(freq_info));
 
 	sc->acpi_settings = TRUE;
 	*freqs = table;
@@ -1149,6 +1168,39 @@ est_table_info(device_t dev, uint64_t msr, freq_info **freqs)
 	return (0);
 }
 
+static void
+est_get_id16(uint16_t *id16_p)
+{
+	*id16_p = rdmsr(MSR_PERF_STATUS) & 0xffff;
+}
+
+static int
+est_set_id16(device_t dev, uint16_t id16, int need_check)
+{
+	uint64_t msr;
+	uint16_t new_id16;
+	int ret = 0;
+
+	/* Read the current register, mask out the old, set the new id. */
+	msr = rdmsr(MSR_PERF_CTL);
+	msr = (msr & ~0xffff) | id16;
+	wrmsr(MSR_PERF_CTL, msr);
+	
+	/* Wait a short while for the new setting.  XXX Is this necessary? */
+	DELAY(EST_TRANS_LAT);
+	
+	if  (need_check) {
+		est_get_id16(&new_id16);		
+		if (new_id16 != id16) {
+			if (bootverbose) 
+				device_printf(dev, "Invalid id16 (set, cur) "
+				    "= (%u, %u)\n", id16, new_id16);
+			ret = ENXIO;
+		}
+	}
+	return (ret);
+}
+
 static freq_info *
 est_get_current(freq_info *freq_list)
 {
@@ -1162,7 +1214,7 @@ est_get_current(freq_info *freq_list)
 	 * we get a temporary invalid result.
 	 */
 	for (i = 0; i < 5; i++) {
-		id16 = rdmsr(MSR_PERF_STATUS) & 0xffff;
+		est_get_id16(&id16);
 		for (f = freq_list; f->id16 != 0; f++) {
 			if (f->id16 == id16)
 				return (f);
@@ -1201,7 +1253,6 @@ est_set(device_t dev, const struct cf_setting *set)
 {
 	struct est_softc *sc;
 	freq_info *f;
-	uint64_t msr;
 
 	/* Find the setting matching the requested one. */
 	sc = device_get_softc(dev);
@@ -1213,12 +1264,7 @@ est_set(device_t dev, const struct cf_setting *set)
 		return (EINVAL);
 
 	/* Read the current register, mask out the old, set the new id. */
-	msr = rdmsr(MSR_PERF_CTL);
-	msr = (msr & ~0xffff) | f->id16;
-	wrmsr(MSR_PERF_CTL, msr);
-
-	/* Wait a short while for the new setting.  XXX Is this necessary? */
-	DELAY(EST_TRANS_LAT);
+	est_set_id16(dev, f->id16, 0);
 
 	return (0);
 }

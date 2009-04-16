@@ -24,7 +24,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ofw/ofw_console.c,v 1.36 2006/11/06 17:43:10 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ofw/ofw_console.c,v 1.36.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_comconsole.h"
 #include "opt_ofw.h"
@@ -105,7 +105,7 @@ cn_drvinit(void *unused)
 	}
 }
 
-SYSINIT(cndev, SI_SUB_CONFIGURE, SI_ORDER_MIDDLE, cn_drvinit, NULL)
+SYSINIT(cndev, SI_SUB_CONFIGURE, SI_ORDER_MIDDLE, cn_drvinit, NULL);
 
 static int	stdin;
 static int	stdout;
@@ -282,7 +282,8 @@ ofw_cngetc(struct consdev *cp)
 	if (OF_read(stdin, &ch, 1) > 0) {
 #if defined(KDB) && defined(ALT_BREAK_TO_DEBUGGER)
 		if (kdb_alt_break(ch, &alt_break_state))
-			kdb_enter("Break sequence on console");
+			kdb_enter_why(KDB_WHY_BREAK,
+			    "Break sequence on console");
 #endif
 		return (ch);
 	}

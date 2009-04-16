@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/cardbus/cardbus_cis.c,v 1.62 2007/06/08 04:03:57 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/cardbus/cardbus_cis.c,v 1.62.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * CIS Handling for the Cardbus Bus

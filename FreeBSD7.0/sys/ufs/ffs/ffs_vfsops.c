@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_vfsops.c,v 1.329 2007/04/04 07:29:53 delphij Exp $");
+__FBSDID("$FreeBSD: src/sys/ufs/ffs/ffs_vfsops.c,v 1.329.2.5.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_mac.h"
 #include "opt_quota.h"
@@ -122,9 +122,9 @@ static struct buf_ops ffs_ops = {
 #endif
 };
 
-static const char *ffs_opts[] = { "acls", "async", "atime", "clusterr",
-    "clusterw", "exec", "export", "force", "from", "multilabel", 
-    "snapshot", "suid", "suiddir", "symfollow", "sync",
+static const char *ffs_opts[] = { "acls", "async", "noatime", "noclusterr",
+    "noclusterw", "noexec", "export", "force", "from", "multilabel", 
+    "snapshot", "nosuid", "suiddir", "nosymfollow", "sync",
     "union", NULL };
 
 static int
@@ -162,29 +162,15 @@ ffs_mount(struct mount *mp, struct thread *td)
 	if (vfs_getopt(mp->mnt_optnew, "acls", NULL, NULL) == 0)
 		mntorflags |= MNT_ACLS;
 
-	if (vfs_getopt(mp->mnt_optnew, "async", NULL, NULL) == 0)
-		mntorflags |= MNT_ASYNC;
-
-	if (vfs_getopt(mp->mnt_optnew, "force", NULL, NULL) == 0)
-		mntorflags |= MNT_FORCE;
-
-	if (vfs_getopt(mp->mnt_optnew, "multilabel", NULL, NULL) == 0)
-		mntorflags |= MNT_MULTILABEL;
-
-	if (vfs_getopt(mp->mnt_optnew, "noasync", NULL, NULL) == 0)
-		mntandnotflags |= MNT_ASYNC;
-
-	if (vfs_getopt(mp->mnt_optnew, "noatime", NULL, NULL) == 0)
-		mntorflags |= MNT_NOATIME;
-
-	if (vfs_getopt(mp->mnt_optnew, "noclusterr", NULL, NULL) == 0)
-		mntorflags |= MNT_NOCLUSTERR;
-
-	if (vfs_getopt(mp->mnt_optnew, "noclusterw", NULL, NULL) == 0)
-		mntorflags |= MNT_NOCLUSTERW;
-
-	if (vfs_getopt(mp->mnt_optnew, "snapshot", NULL, NULL) == 0)
+	if (vfs_getopt(mp->mnt_optnew, "snapshot", NULL, NULL) == 0) {
 		mntorflags |= MNT_SNAPSHOT;
+		/*
+		 * Once we have set the MNT_SNAPSHOT flag, do not
+		 * persist "snapshot" in the options list.
+		 */
+		vfs_deleteopt(mp->mnt_optnew, "snapshot");
+		vfs_deleteopt(mp->mnt_opt, "snapshot");
+	}
 
 	MNT_ILOCK(mp);
 	mp->mnt_flag = (mp->mnt_flag | mntorflags) & ~mntandnotflags;
@@ -865,6 +851,9 @@ ffs_mountfs(devvp, mp, td)
 	/*
 	 * Initialize filesystem stat information in mount struct.
 	 */
+	MNT_ILOCK(mp);
+	mp->mnt_kern_flag |= MNTK_MPSAFE;
+	MNT_IUNLOCK(mp);
 #ifdef UFS_EXTATTR
 #ifdef UFS_EXTATTR_AUTOSTART
 	/*
@@ -877,12 +866,10 @@ ffs_mountfs(devvp, mp, td)
 	 * This would all happen while the filesystem was busy/not
 	 * available, so would effectively be "atomic".
 	 */
+	mp->mnt_stat.f_iosize = fs->fs_bsize;
 	(void) ufs_extattr_autostart(mp, td);
 #endif /* !UFS_EXTATTR_AUTOSTART */
 #endif /* !UFS_EXTATTR */
-	MNT_ILOCK(mp);
-	mp->mnt_kern_flag |= MNTK_MPSAFE;
-	MNT_IUNLOCK(mp);
 	return (0);
 out:
 	if (bp)

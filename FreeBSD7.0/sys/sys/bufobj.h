@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/bufobj.h,v 1.18 2007/01/23 10:01:18 kib Exp $
+ * $FreeBSD: src/sys/sys/bufobj.h,v 1.18.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*
@@ -55,6 +55,7 @@
 
 struct bufobj;
 struct buf_ops;
+struct thread;
 
 extern struct buf_ops buf_ops_bio;
 

@@ -30,7 +30,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/en/midwayvar.h,v 1.15 2005/06/10 16:49:07 brooks Exp $
+ * $FreeBSD: src/sys/dev/en/midwayvar.h,v 1.15.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

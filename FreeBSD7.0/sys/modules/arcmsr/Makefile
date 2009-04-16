@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/arcmsr/Makefile,v 1.1 2005/03/31 18:19:55 scottl Exp $
+# $FreeBSD: src/sys/modules/arcmsr/Makefile,v 1.1.20.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../dev/arcmsr
 

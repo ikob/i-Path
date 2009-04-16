@@ -27,7 +27,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/compat/linux/linux_emul.c,v 1.20 2007/04/02 18:38:13 jkim Exp $");
+__FBSDID("$FreeBSD: src/sys/compat/linux/linux_emul.c,v 1.20.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_compat.h"
 
@@ -232,11 +232,11 @@ linux_proc_exit(void *arg __unused, struct proc *p)
 			continue;
 		em = em_find(q, EMUL_DOLOCK);
 		KASSERT(em != NULL, ("linux_reparent: emuldata not found: %i\n", q->p_pid));
-		if (em->pdeath_signal != 0) {
-			PROC_LOCK(q);
+		PROC_LOCK(q);
+		if ((q->p_flag & P_WEXIT) == 0 && em->pdeath_signal != 0) {
 			psignal(q, em->pdeath_signal);
-			PROC_UNLOCK(q);
 		}
+		PROC_UNLOCK(q);
 		EMUL_UNLOCK(&emul_lock);
 	}
 	sx_xunlock(&proctree_lock);

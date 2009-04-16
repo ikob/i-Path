@@ -38,7 +38,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/trap.c,v 1.319.2.2 2007/12/06 14:20:25 kib Exp $");
+__FBSDID("$FreeBSD: src/sys/amd64/amd64/trap.c,v 1.319.2.6.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * AMD64 Trap and System call handling
@@ -49,6 +49,7 @@ __FBSDID("$FreeBSD: src/sys/amd64/amd64/trap.c,v 1.319.2.2 2007/12/06 14:20:25 k
 #include "opt_hwpmc_hooks.h"
 #include "opt_isa.h"
 #include "opt_kdb.h"
+#include "opt_kdtrace.h"
 #include "opt_ktrace.h"
 
 #include <sys/param.h>
@@ -93,6 +94,26 @@ __FBSDID("$FreeBSD: src/sys/amd64/amd64/trap.c,v 1.319.2.2 2007/12/06 14:20:25 k
 #include <machine/smp.h>
 #endif
 #include <machine/tss.h>
+
+#ifdef KDTRACE_HOOKS
+#include <sys/dtrace_bsd.h>
+
+/*
+ * This is a hook which is initialised by the dtrace module
+ * to handle traps which might occur during DTrace probe
+ * execution.
+ */
+dtrace_trap_func_t	dtrace_trap_func;
+
+dtrace_doubletrap_func_t	dtrace_doubletrap_func;
+
+/*
+ * This is a hook which is initialised by the systrace module
+ * when it is loaded. This keeps the DTrace syscall provider
+ * implementation opaque. 
+ */
+systrace_probe_func_t	systrace_probe_func;
+#endif
 
 extern void trap(struct trapframe *frame);
 extern void syscall(struct trapframe *frame);
@@ -198,6 +219,24 @@ trap(struct trapframe *frame)
 	    (*pmc_intr)(PCPU_GET(cpuid), (uintptr_t) frame->tf_rip,
 		TRAPF_USERMODE(frame)))
 		goto out;
+#endif
+
+#ifdef KDTRACE_HOOKS
+	/*
+	 * A trap can occur while DTrace executes a probe. Before
+	 * executing the probe, DTrace blocks re-scheduling and sets
+	 * a flag in it's per-cpu flags to indicate that it doesn't
+	 * want to fault. On returning from the the probe, the no-fault
+	 * flag is cleared and finally re-scheduling is enabled.
+	 *
+	 * If the DTrace kernel module has registered a trap handler,
+	 * call it and if it returns non-zero, assume that it has
+	 * handled the trap and modified the trap frame so that this
+	 * function can return normally.
+	 */
+	if (dtrace_trap_func != NULL)
+		if ((*dtrace_trap_func)(frame, type))
+			goto out;
 #endif
 
 	if ((frame->tf_rflags & PSL_I) == 0) {
@@ -658,7 +697,8 @@ trap_fatal(frame, eva)
 
 	code = frame->tf_err;
 	type = frame->tf_trapno;
-	sdtossd(&gdt[IDXSEL(frame->tf_cs & 0xffff)], &softseg);
+	sdtossd(&gdt[NGDT * PCPU_GET(cpuid) + IDXSEL(frame->tf_cs & 0xffff)],
+	    &softseg);
 
 	if (type <= MAX_TRAP_MSG)
 		msg = trap_msg[type];
@@ -735,6 +775,10 @@ trap_fatal(frame, eva)
 void
 dblfault_handler(struct trapframe *frame)
 {
+#ifdef KDTRACE_HOOKS
+	if (dtrace_doubletrap_func != NULL)
+		(*dtrace_doubletrap_func)();
+#endif
 	printf("\nFatal double fault\n");
 	printf("rip = 0x%lx\n", frame->tf_rip);
 	printf("rsp = 0x%lx\n", frame->tf_rsp);
@@ -848,9 +892,34 @@ syscall(struct trapframe *frame)
 
 		PTRACESTOP_SC(p, td, S_PT_SCE);
 
+#ifdef KDTRACE_HOOKS
+		/*
+		 * If the systrace module has registered it's probe
+		 * callback and if there is a probe active for the
+		 * syscall 'entry', process the probe.
+		 */
+		if (systrace_probe_func != NULL && callp->sy_entry != 0)
+			(*systrace_probe_func)(callp->sy_entry, code, callp,
+			    args);
+#endif
+
 		AUDIT_SYSCALL_ENTER(code, td);
 		error = (*callp->sy_call)(td, argp);
 		AUDIT_SYSCALL_EXIT(error, td);
+
+		/* Save the latest error return value. */
+		td->td_errno = error;
+
+#ifdef KDTRACE_HOOKS
+		/*
+		 * If the systrace module has registered it's probe
+		 * callback and if there is a probe active for the
+		 * syscall 'return', process the probe.
+		 */
+		if (systrace_probe_func != NULL && callp->sy_return != 0)
+			(*systrace_probe_func)(callp->sy_return, code, callp,
+			    args);
+#endif
 	}
 
 	switch (error) {

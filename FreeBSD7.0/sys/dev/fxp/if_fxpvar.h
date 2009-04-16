@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/fxp/if_fxpvar.h,v 1.40 2006/11/30 14:58:01 glebius Exp $
+ * $FreeBSD: src/sys/dev/fxp/if_fxpvar.h,v 1.40.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

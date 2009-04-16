@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/mac_lomac/Makefile,v 1.1 2002/11/26 17:35:44 rwatson Exp $
+# $FreeBSD: src/sys/modules/mac_lomac/Makefile,v 1.1.32.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../security/mac_lomac
 

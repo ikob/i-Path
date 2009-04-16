@@ -30,7 +30,7 @@
  *
  *	$NetBSD: pio.h,v 1.1 1998/05/15 10:15:54 tsubai Exp $
  *	$OpenBSD: pio.h,v 1.1 1997/10/13 10:53:47 pefo Exp $
- * $FreeBSD: src/sys/powerpc/include/pio.h,v 1.2 2005/01/07 02:29:19 imp Exp $
+ * $FreeBSD: src/sys/powerpc/include/pio.h,v 1.2.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _MACHINE_PIO_H_

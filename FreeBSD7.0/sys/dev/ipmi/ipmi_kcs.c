@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ipmi/ipmi_kcs.c,v 1.1 2006/09/22 22:11:29 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ipmi/ipmi_kcs.c,v 1.1.4.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -169,7 +169,7 @@ kcs_error(struct ipmi_softc *sc)
 			return;
 		}
 	}
-	device_printf(sc->ipmi_dev, "KCS Error retry exhausted\n");
+	device_printf(sc->ipmi_dev, "KCS: Error retry exhausted\n");
 }
 
 /*
@@ -555,7 +555,7 @@ retry:
 	/* Finish out the transaction. */
 
 	/* Clear OBF */
-	if (status && KCS_STATUS_OBF)
+	if (status & KCS_STATUS_OBF)
 		data = INB(sc, KCS_DATA);
 
 	/* 0x00 to DATA_IN */
@@ -597,7 +597,7 @@ retry:
 		}
 
 		/* Clear OBF */
-		if (status && KCS_STATUS_OBF)
+		if (status & KCS_STATUS_OBF)
 			data = INB(sc, KCS_DATA);
 	} else
 		device_printf(sc->ipmi_dev, "KCS probe: end state %x\n",

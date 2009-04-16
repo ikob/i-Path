@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/ia64/ia64/interrupt.c,v 1.61.2.1 2007/11/26 15:06:49 scottl Exp $ */
+/* $FreeBSD: src/sys/ia64/ia64/interrupt.c,v 1.61.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $ */
 /* $NetBSD: interrupt.c,v 1.23 1998/02/24 07:38:01 thorpej Exp $ */
 
 /*-
@@ -344,7 +344,7 @@ ia64_setup_intr(const char *name, int irq, driver_filter_t filter,
 #ifdef INTR_FILTER
 		    ia64_intr_eoi, ia64_intr_mask,
 #endif
-		    "irq%u:", irq);
+		    NULL, "irq%u:", irq);
 		if (error) {
 			free(i, M_DEVBUF);
 			return (error);

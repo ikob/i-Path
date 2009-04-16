@@ -37,11 +37,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/security/mac/mac_internal.h,v 1.121 2007/02/06 14:19:24 rwatson Exp $
+ * $FreeBSD: src/sys/security/mac/mac_internal.h,v 1.121.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
-#ifndef _SYS_SECURITY_MAC_MAC_INTERNAL_H_
-#define	_SYS_SECURITY_MAC_MAC_INTERNAL_H_
+#ifndef _SECURITY_MAC_MAC_INTERNAL_H_
+#define	_SECURITY_MAC_MAC_INTERNAL_H_
 
 #ifndef _KERNEL
 #error "no user-serviceable parts inside"
@@ -332,4 +332,4 @@ int	vn_setlabel(struct vnode *vp, struct label *intlabel,
 	}								\
 } while (0)
 
-#endif /* !_SYS_SECURITY_MAC_MAC_INTERNAL_H_ */
+#endif /* !_SECURITY_MAC_MAC_INTERNAL_H_ */

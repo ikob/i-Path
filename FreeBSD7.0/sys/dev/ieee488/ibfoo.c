@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ieee488/ibfoo.c,v 1.5 2005/03/07 11:05:46 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ieee488/ibfoo.c,v 1.5.12.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #  define	IBDEBUG
 #  undef	IBDEBUG
@@ -809,7 +809,7 @@ gpib_ib_open(struct cdev *dev, int oflags, int devtype, struct thread *td)
 
 	ib = malloc(sizeof *ib, M_IBFOO, M_WAITOK | M_ZERO);
 	LIST_INIT(&ib->handles);
-	callout_init(&ib->callout, 1);
+	callout_init(&ib->callout, CALLOUT_MPSAFE);
 	ib->unrhdr = new_unrhdr(0, INT_MAX, NULL);
 	dev->si_drv2 = ib;
 	ib->u = u;

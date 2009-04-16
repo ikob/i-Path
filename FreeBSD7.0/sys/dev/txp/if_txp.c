@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/txp/if_txp.c,v 1.46 2007/06/12 04:33:21 yongari Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/txp/if_txp.c,v 1.46.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * Driver for 3c990 (Typhoon) Ethernet ASIC
@@ -87,7 +87,7 @@ __FBSDID("$FreeBSD: src/sys/dev/txp/if_txp.c,v 1.46 2007/06/12 04:33:21 yongari 
 
 #ifndef lint
 static const char rcsid[] =
-  "$FreeBSD: src/sys/dev/txp/if_txp.c,v 1.46 2007/06/12 04:33:21 yongari Exp $";
+  "$FreeBSD: src/sys/dev/txp/if_txp.c,v 1.46.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $";
 #endif
 
 /*
@@ -1655,7 +1655,7 @@ txp_ifmedia_sts(ifp, ifmr)
 {
 	struct txp_softc *sc = ifp->if_softc;
 	struct ifmedia *ifm = &sc->sc_ifmedia;
-	u_int16_t bmsr, bmcr, anlpar;
+	u_int16_t bmsr, bmcr, anar, anlpar;
 
 	ifmr->ifm_status = IFM_AVALID;
 	ifmr->ifm_active = IFM_ETHER;
@@ -1674,6 +1674,10 @@ txp_ifmedia_sts(ifp, ifmr)
 
 	if (txp_command(sc, TXP_CMD_PHY_MGMT_READ, 0, MII_ANLPAR, 0,
 	    &anlpar, NULL, NULL, 1))
+		goto bail;
+
+	if (txp_command(sc, TXP_CMD_PHY_MGMT_READ, 0, MII_ANAR, 0,
+	    &anar, NULL, NULL, 1))
 		goto bail;
 	TXP_UNLOCK(sc);
 
@@ -1695,10 +1699,11 @@ txp_ifmedia_sts(ifp, ifmr)
 			return;
 		}
 
-		if (anlpar & ANLPAR_T4)
-			ifmr->ifm_active |= IFM_100_T4;
-		else if (anlpar & ANLPAR_TX_FD)
+		anlpar &= anar;
+		if (anlpar & ANLPAR_TX_FD)
 			ifmr->ifm_active |= IFM_100_TX|IFM_FDX;
+		else if (anlpar & ANLPAR_T4)
+			ifmr->ifm_active |= IFM_100_T4;
 		else if (anlpar & ANLPAR_TX)
 			ifmr->ifm_active |= IFM_100_TX;
 		else if (anlpar & ANLPAR_10_FD)

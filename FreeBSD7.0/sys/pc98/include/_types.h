@@ -1,6 +1,6 @@
 /*-
  * This file is in the public domain.
  */
-/* $FreeBSD: src/sys/pc98/include/_types.h,v 1.3 2006/01/09 06:05:57 imp Exp $ */
+/* $FreeBSD: src/sys/pc98/include/_types.h,v 1.3.6.1 2008/11/25 02:59:29 kensmith Exp $ */
 
 #include <i386/_types.h>

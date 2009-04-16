@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/arm/mem.c,v 1.5 2007/02/13 15:35:57 cognet Exp $");
+__FBSDID("$FreeBSD: src/sys/arm/arm/mem.c,v 1.5.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * Memory special file

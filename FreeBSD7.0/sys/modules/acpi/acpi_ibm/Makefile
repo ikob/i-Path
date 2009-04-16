@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/acpi/acpi_ibm/Makefile,v 1.3 2004/12/13 04:59:35 imp Exp $
+# $FreeBSD: src/sys/modules/acpi/acpi_ibm/Makefile,v 1.3.18.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH:		${.CURDIR}/../../../dev/acpi_support
 KMOD=		acpi_ibm

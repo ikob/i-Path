@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/dev/usb/if_uralvar.h,v 1.9 2007/06/11 03:36:52 sam Exp $	*/
+/*	$FreeBSD: src/sys/dev/usb/if_uralvar.h,v 1.9.6.1 2008/11/25 02:59:29 kensmith Exp $	*/
 
 /*-
  * Copyright (c) 2005

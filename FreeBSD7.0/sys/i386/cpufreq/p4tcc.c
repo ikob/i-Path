@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/cpufreq/p4tcc.c,v 1.12 2005/10/23 19:38:06 njl Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/cpufreq/p4tcc.c,v 1.12.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -131,7 +131,7 @@ p4tcc_identify(driver_t *driver, device_t parent)
 	 * of the IA32 Intel Architecture Software Developer's Manual,
 	 * Volume 3, for more info.
 	 */
-	if (BUS_ADD_CHILD(parent, 0, "p4tcc", -1) == NULL)
+	if (BUS_ADD_CHILD(parent, 10, "p4tcc", -1) == NULL)
 		device_printf(parent, "add p4tcc child failed\n");
 }
 
@@ -164,7 +164,15 @@ p4tcc_attach(device_t dev)
 	 */
 	sc->auto_mode = TRUE;
 
-	switch (cpu_id & 0xf) {
+	/*
+	 * XXX: After a cursory glance at various Intel specification
+	 * XXX: updates it seems like these tests for errata is bogus.
+	 * XXX: As far as I can tell, the failure mode is benign, in
+	 * XXX: that cpus with no errata will have their bottom two
+	 * XXX: STPCLK# rates disabled, so rather than waste more time
+	 * XXX: hunting down intel docs, just document it and punt. /phk
+	 */
+	switch (cpu_id & 0xff) {
 	case 0x22:
 	case 0x24:
 	case 0x25:

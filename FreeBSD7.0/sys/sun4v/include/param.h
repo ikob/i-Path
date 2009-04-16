@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)param.h	5.8 (Berkeley) 6/28/91
- * $FreeBSD: src/sys/sun4v/include/param.h,v 1.1 2006/10/05 06:14:26 kmacy Exp $
+ * $FreeBSD: src/sys/sun4v/include/param.h,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*
@@ -59,7 +59,7 @@
 #endif
 #define MID_MACHINE	MID_SPARC64
 
-#ifdef SMP
+#if defined(SMP) || defined(KLD_MODULE)
 #define MAXCPU		32
 #else
 #define MAXCPU		1

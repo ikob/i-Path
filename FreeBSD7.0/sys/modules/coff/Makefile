@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/coff/Makefile,v 1.15 2002/01/11 15:48:38 ru Exp $
+# $FreeBSD: src/sys/modules/coff/Makefile,v 1.15.32.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../i386/ibcs2
 

@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/pc98/cbus/30line.h,v 1.7 2005/01/09 22:17:39 imp Exp $
+ * $FreeBSD: src/sys/pc98/cbus/30line.h,v 1.7.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef __PC98_PC98_30LINE_H__

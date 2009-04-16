@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/usb/ehci_pci.c,v 1.28.2.1 2007/11/26 18:21:42 jfv Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/usb/ehci_pci.c,v 1.28.2.5.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * USB Enhanced Host Controller Driver, a.k.a. USB 2.0 controller.
@@ -99,6 +99,8 @@ static const char *ehci_device_m5239 = "ALi M5239 USB 2.0 controller";
 /* AMD */
 #define PCI_EHCI_DEVICEID_8111		0x10227463
 static const char *ehci_device_8111 = "AMD 8111 USB 2.0 controller";
+#define PCI_EHCI_DEVICEID_CS5536	0x20951022
+static const char *ehci_device_cs5536 = "AMD CS5536 (Geode) USB 2.0 controller";
 
 /* ATI */
 #define PCI_EHCI_DEVICEID_SB200		0x43451002
@@ -117,6 +119,10 @@ static const char *ehci_device_ich5 = "Intel 82801EB/R (ICH5) USB 2.0 controller
 static const char *ehci_device_ich6 = "Intel 82801FB (ICH6) USB 2.0 controller";
 #define PCI_EHCI_DEVICEID_ICH7		0x27cc8086
 static const char *ehci_device_ich7 = "Intel 82801GB/R (ICH7) USB 2.0 controller";
+#define PCI_EHCI_DEVICEID_ICH8_A	0x28368086
+static const char *ehci_device_ich8_a = "Intel 82801H (ICH8) USB 2.0 controller USB2-A";
+#define PCI_EHCI_DEVICEID_ICH8_B	0x283a8086
+static const char *ehci_device_ich8_b = "Intel 82801H (ICH8) USB 2.0 controller USB2-B";
 #define PCI_EHCI_DEVICEID_63XX		0x268c8086
 static const char *ehci_device_63XX = "Intel 63XXESB USB 2.0 controller";
  
@@ -214,6 +220,8 @@ ehci_pci_match(device_t self)
 		return (ehci_device_m5239);
 	case PCI_EHCI_DEVICEID_8111:
 		return (ehci_device_8111);
+	case PCI_EHCI_DEVICEID_CS5536:
+		return (ehci_device_cs5536);
 	case PCI_EHCI_DEVICEID_SB200:
 		return (ehci_device_sb200);
 	case PCI_EHCI_DEVICEID_SB400:
@@ -230,6 +238,10 @@ ehci_pci_match(device_t self)
 		return (ehci_device_ich6);
 	case PCI_EHCI_DEVICEID_ICH7:
 		return (ehci_device_ich7);
+	case PCI_EHCI_DEVICEID_ICH8_A:
+		return (ehci_device_ich8_a);
+	case PCI_EHCI_DEVICEID_ICH8_B:
+		return (ehci_device_ich8_b);
 	case PCI_EHCI_DEVICEID_NEC:
 		return (ehci_device_nec);
 	case PCI_EHCI_DEVICEID_NF2:
@@ -291,8 +303,13 @@ ehci_pci_attach(device_t self)
 	case PCI_USBREV_PRE_1_0:
 	case PCI_USBREV_1_0:
 	case PCI_USBREV_1_1:
-		sc->sc_bus.usbrev = USBREV_UNKNOWN;
 		device_printf(self, "pre-2.0 USB rev\n");
+		if (pci_get_devid(self) == PCI_EHCI_DEVICEID_CS5536) {
+			sc->sc_bus.usbrev = USBREV_2_0;
+			device_printf(self, "Quirk for CS5536 USB 2.0 enabled\n");
+			break;
+		}
+		sc->sc_bus.usbrev = USBREV_UNKNOWN;
 		return ENXIO;
 	case PCI_USBREV_2_0:
 		sc->sc_bus.usbrev = USBREV_2_0;
@@ -526,7 +543,8 @@ static void
 ehci_pci_takecontroller(device_t self)
 {
 	ehci_softc_t *sc = device_get_softc(self);
-	u_int32_t cparams, eec, legsup;
+	u_int32_t cparams, eec;
+	uint8_t bios_sem;
 	int eecp, i;
 
 	cparams = EREAD4(sc, EHCI_HCCPARAMS);
@@ -537,18 +555,20 @@ ehci_pci_takecontroller(device_t self)
 		eec = pci_read_config(self, eecp, 4);
 		if (EHCI_EECP_ID(eec) != EHCI_EC_LEGSUP)
 			continue;
-		legsup = eec;
-		pci_write_config(self, eecp, legsup | EHCI_LEGSUP_OSOWNED, 4);
-		if (legsup & EHCI_LEGSUP_BIOSOWNED) {
+		bios_sem = pci_read_config(self, eecp + EHCI_LEGSUP_BIOS_SEM,
+		    1);
+		if (bios_sem) {
+			pci_write_config(self, eecp + EHCI_LEGSUP_OS_SEM, 1, 1);
 			printf("%s: waiting for BIOS to give up control\n",
 			    device_get_nameunit(sc->sc_bus.bdev));
 			for (i = 0; i < 5000; i++) {
-				legsup = pci_read_config(self, eecp, 4);
-				if ((legsup & EHCI_LEGSUP_BIOSOWNED) == 0)
+				bios_sem = pci_read_config(self, eecp +
+				    EHCI_LEGSUP_BIOS_SEM, 1);
+				if (bios_sem == 0)
 					break;
 				DELAY(1000);
 			}
-			if (legsup & EHCI_LEGSUP_BIOSOWNED)
+			if (bios_sem)
 				printf("%s: timed out waiting for BIOS\n",
 				    device_get_nameunit(sc->sc_bus.bdev));
 		}
@@ -558,8 +578,9 @@ ehci_pci_takecontroller(device_t self)
 static void
 ehci_pci_givecontroller(device_t self)
 {
+#if 0
 	ehci_softc_t *sc = device_get_softc(self);
-	u_int32_t cparams, eec, legsup;
+	u_int32_t cparams, eec;
 	int eecp;
 
 	cparams = EREAD4(sc, EHCI_HCCPARAMS);
@@ -568,9 +589,9 @@ ehci_pci_givecontroller(device_t self)
 		eec = pci_read_config(self, eecp, 4);
 		if (EHCI_EECP_ID(eec) != EHCI_EC_LEGSUP)
 			continue;
-		legsup = eec;
-		pci_write_config(self, eecp, legsup & ~EHCI_LEGSUP_OSOWNED, 4);
+		pci_write_config(self, eecp + EHCI_LEGSUP_OS_SEM, 0, 1);
 	}
+#endif
 }
 
 static device_method_t ehci_methods[] = {

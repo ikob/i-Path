@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/pci/pci_private.h,v 1.25 2007/09/30 11:05:15 marius Exp $
+ * $FreeBSD: src/sys/dev/pci/pci_private.h,v 1.25.6.1 2008/11/25 02:59:29 kensmith Exp $
  *
  */
 

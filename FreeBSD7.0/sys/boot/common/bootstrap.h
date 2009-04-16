@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/boot/common/bootstrap.h,v 1.44 2006/12/18 07:35:14 kmacy Exp $
+ * $FreeBSD: src/sys/boot/common/bootstrap.h,v 1.44.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include <sys/types.h>

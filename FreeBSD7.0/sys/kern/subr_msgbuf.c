@@ -22,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/kern/subr_msgbuf.c,v 1.3 2005/01/06 23:35:39 imp Exp $
+ * $FreeBSD: src/sys/kern/subr_msgbuf.c,v 1.3.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

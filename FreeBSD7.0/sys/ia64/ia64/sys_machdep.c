@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ia64/ia64/sys_machdep.c,v 1.8 2003/10/27 22:54:34 marcel Exp $");
+__FBSDID("$FreeBSD: src/sys/ia64/ia64/sys_machdep.c,v 1.8.28.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

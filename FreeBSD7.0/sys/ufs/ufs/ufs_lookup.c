@@ -35,7 +35,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_lookup.c,v 1.83 2007/03/14 08:50:27 kib Exp $");
+__FBSDID("$FreeBSD: src/sys/ufs/ufs/ufs_lookup.c,v 1.83.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_ffs_broken_fixme.h"
 #include "opt_ufs.h"
@@ -166,6 +166,15 @@ ufs_lookup(ap)
 
 	vdp = ap->a_dvp;
 	dp = VTOI(vdp);
+
+	/*
+	 * Create a vm object if vmiodirenable is enabled.
+	 * Alternatively we could call vnode_create_vobject
+	 * in VFS_VGET but we could end up creating objects
+	 * that are never used.
+	 */
+	vnode_create_vobject(vdp, DIP(dp, i_size), cnp->cn_thread);
+
 	/*
 	 * We now have a segment name to search for, and a directory to search.
 	 *
@@ -660,7 +669,7 @@ ufs_makedirentry(ip, cnp, newdirp)
 	struct direct *newdirp;
 {
 
-#ifdef DIAGNOSTIC
+#ifdef INVARIANTS
 	if ((cnp->cn_flags & SAVENAME) == 0)
 		panic("ufs_makedirentry: missing name");
 #endif

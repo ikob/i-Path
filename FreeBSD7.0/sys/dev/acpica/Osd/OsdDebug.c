@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/acpica/Osd/OsdDebug.c,v 1.13 2007/03/22 18:16:41 jkim Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/acpica/Osd/OsdDebug.c,v 1.13.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_ddb.h"
 #include <sys/param.h>
@@ -73,13 +73,13 @@ AcpiOsSignal(UINT32 Function, void *Info)
 	printf("ACPI fatal signal, type 0x%x code 0x%x argument 0x%x",
 	      fatal->Type, fatal->Code, fatal->Argument);
 #ifdef ACPI_DEBUG
-	kdb_enter("AcpiOsSignal");
+	kdb_enter_why(KDB_WHY_ACPI, "AcpiOsSignal");
 #endif
 	break;
 
     case ACPI_SIGNAL_BREAKPOINT:
 #ifdef ACPI_DEBUG
-	kdb_enter((char *)Info);
+	kdb_enter_why(KDB_WHY_ACPI, (char *)Info);
 #endif
 	break;
 

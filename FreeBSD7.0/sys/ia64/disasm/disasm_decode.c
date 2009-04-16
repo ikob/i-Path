@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/ia64/disasm/disasm_decode.c,v 1.5 2006/06/24 19:21:11 marcel Exp $");
+__FBSDID("$FreeBSD: src/sys/ia64/disasm/disasm_decode.c,v 1.5.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

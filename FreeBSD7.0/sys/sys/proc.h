@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)proc.h	8.15 (Berkeley) 5/19/95
- * $FreeBSD: src/sys/sys/proc.h,v 1.491.2.1.2.1 2008/01/19 18:15:06 kib Exp $
+ * $FreeBSD: src/sys/sys/proc.h,v 1.491.2.10.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS_PROC_H_
@@ -163,6 +163,9 @@ struct thread;
 struct trapframe;
 struct turnstile;
 struct mqueue_notifier;
+struct cpuset;
+struct kdtrace_proc;
+struct kdtrace_thread;
 
 /*
  * Here we define the two structures used for process information.
@@ -208,7 +211,6 @@ struct thread {
 	/* The two queues below should someday be merged. */
 	TAILQ_ENTRY(thread) td_slpq;	/* (t) Sleep queue. */
 	TAILQ_ENTRY(thread) td_lockq;	/* (t) Lock queue. */
-
 	TAILQ_HEAD(, selinfo) td_selq;	/* (p) List of selinfos. */
 	struct sleepqueue *td_sleepqueue; /* (k) Associated sleep queue. */
 	struct turnstile *td_turnstile;	/* (k) Associated turnstile. */
@@ -298,6 +300,11 @@ struct thread {
 	struct td_sched	*td_sched;	/* (*) Scheduler-specific data. */
 	struct kaudit_record	*td_ar;	/* (k) Active audit record, if any. */
 	int		td_syscalls;	/* per-thread syscall count (used by NFS :)) */
+	uint64_t	td_incruntime;	/* (t) Cpu ticks to transfer to proc. */
+	struct cpuset	*td_cpuset;	/* (t) CPU affinity mask. */
+	struct file	*td_fpop;	/* (k) file referencing cdev under op */
+	struct kdtrace_thread	*td_dtrace; /* (*) DTrace-specific data. */
+	int		td_errno;	/* Error returned by last syscall. */
 };
 
 struct mtx *thread_lock_block(struct thread *);
@@ -567,6 +574,7 @@ struct proc {
 	struct pargs	*p_args;	/* (c) Process arguments. */
 	rlim_t		p_cpulimit;	/* (c) Current CPU limit in seconds. */
 	signed char	p_nice;		/* (c + j) Process "nice" value. */
+	int		p_fibnum;	/* in this routing domain XXX MRT */
 /* End area that is copied on creation. */
 #define	p_endcopy	p_xstat
 
@@ -583,6 +591,7 @@ struct proc {
 	struct p_sched	*p_sched;	/* (*) Scheduler-specific data. */
 	STAILQ_HEAD(, ktr_request)	p_ktr;	/* (o) KTR event queue. */
 	LIST_HEAD(, mqueue_notifier)	p_mqnotifier; /* (c) mqueue notifiers.*/
+	struct kdtrace_proc	*p_dtrace; /* (*) DTrace-specific data. */
 };
 
 #define	p_session	p_pgrp->pg_session
@@ -837,7 +846,6 @@ int	p_cansignal(struct thread *td, struct proc *p, int signum);
 int	p_canwait(struct thread *td, struct proc *p);
 struct	pargs *pargs_alloc(int len);
 void	pargs_drop(struct pargs *pa);
-void	pargs_free(struct pargs *pa);
 void	pargs_hold(struct pargs *pa);
 void	procinit(void);
 void	proc_linkup0(struct proc *p, struct thread *td);
@@ -849,7 +857,7 @@ void	pstats_free(struct pstats *ps);
 int	securelevel_ge(struct ucred *cr, int level);
 int	securelevel_gt(struct ucred *cr, int level);
 void	sessrele(struct session *);
-void	setrunnable(struct thread *);
+int	setrunnable(struct thread *);
 void	setsugid(struct proc *p);
 int	sigonstack(size_t sp);
 void	sleepinit(void);
@@ -877,9 +885,10 @@ void	upcall_remove(struct thread *td);
 void	cpu_set_upcall(struct thread *td, struct thread *td0);
 void	cpu_set_upcall_kse(struct thread *, void (*)(void *), void *, stack_t *);
 int	cpu_set_user_tls(struct thread *, void *tls_base);
+void	cpu_thread_alloc(struct thread *);
 void	cpu_thread_clean(struct thread *);
 void	cpu_thread_exit(struct thread *);
-void	cpu_thread_setup(struct thread *td);
+void	cpu_thread_free(struct thread *);
 void	cpu_thread_swapin(struct thread *);
 void	cpu_thread_swapout(struct thread *);
 struct	thread *thread_alloc(void);
@@ -905,7 +914,7 @@ struct thread *thread_switchout(struct thread *td, int flags,
 	    struct thread *newtd);
 void	thread_unlink(struct thread *td);
 void	thread_unsuspend(struct proc *p);
-void	thread_unsuspend_one(struct thread *td);
+int	thread_unsuspend_one(struct thread *td);
 void	thread_unthread(struct thread *td);
 int	thread_userret(struct thread *td, struct trapframe *frame);
 void	thread_user_enter(struct thread *td);

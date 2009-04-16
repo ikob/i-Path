@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/at91/uart_dev_at91usart.c,v 1.12 2007/04/02 22:00:21 marcel Exp $");
+__FBSDID("$FreeBSD: src/sys/arm/at91/uart_dev_at91usart.c,v 1.12.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_comconsole.h"
 
@@ -508,7 +508,8 @@ at91_rx_put(struct uart_softc *sc, int key)
 #if defined(KDB) && defined(ALT_BREAK_TO_DEBUGGER)
 	if (sc->sc_sysdev != NULL && sc->sc_sysdev->type == UART_DEV_CONSOLE) {
 		if (kdb_alt_break(key, &sc->sc_altbrk))
-			kdb_enter("Break sequence to console");
+			kdb_enter_why(KDB_WHY_BREAK,
+			    "Break sequence to console");
 	}
 #endif
 	uart_rx_put(sc, key);	

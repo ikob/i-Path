@@ -1,6 +1,3 @@
-/*	$FreeBSD: src/sys/netinet6/nd6.h,v 1.21 2005/10/21 16:23:00 suz Exp $	*/
-/*	$KAME: nd6.h,v 1.76 2001/12/18 02:10:31 itojun Exp $	*/
-
 /*-
  * Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project.
  * All rights reserved.
@@ -28,6 +25,9 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
+ *	$KAME: nd6.h,v 1.76 2001/12/18 02:10:31 itojun Exp $
+ * $FreeBSD: src/sys/netinet6/nd6.h,v 1.21.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _NETINET6_ND6_H_
@@ -339,6 +339,7 @@ extern struct llinfo_nd6 llinfo_nd6;
 extern struct nd_drhead nd_defrouter;
 extern struct nd_prhead nd_prefix;
 extern int nd6_debug;
+extern int nd6_onlink_ns_rfc4861;
 
 #define nd6log(x)	do { if (nd6_debug) log x; } while (/*CONSTCOND*/ 0)
 

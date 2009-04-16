@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/dev/usb/umass.c,v 1.160 2007/07/05 05:26:08 imp Exp $
+ *	$FreeBSD: src/sys/dev/usb/umass.c,v 1.160.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $
  *	$NetBSD: umass.c,v 1.28 2000/04/02 23:46:53 augustss Exp $
  */
 
@@ -323,6 +323,12 @@ struct umass_devdescr_t {
 	 * sector number.
 	 */
 #	define READ_CAPACITY_OFFBY1	0x2000
+	/* Device cannot handle a SCSI synchronize cache command.  Normally
+	 * this quirk would be handled in the cam layer, but for IDE bridges
+	 * we need to associate the quirk with the bridge and not the
+	 * underlying disk device.  This is handled by faking a success result.
+	 */
+#	define NO_SYNCHRONIZE_CACHE	0x4000
 };
 
 static struct umass_devdescr_t umass_devdescrs[] = {
@@ -333,6 +339,10 @@ static struct umass_devdescr_t umass_devdescrs[] = {
 	{ USB_VENDOR_AIPTEK, USB_PRODUCT_AIPTEK_POCKETCAM3M, RID_WILDCARD,
 	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
 	  NO_QUIRKS
+	},
+	{ USB_VENDOR_ALCOR, USB_PRODUCT_ALCOR_UMCR_9361, RID_WILDCARD,
+	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
+	  NO_GETMAXLUN
 	},
 	{ USB_VENDOR_ASAHIOPTICAL, USB_PRODUCT_ASAHIOPTICAL_OPTIO230, RID_WILDCARD,
 	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
@@ -568,6 +578,10 @@ static struct umass_devdescr_t umass_devdescrs[] = {
 	  UMASS_PROTO_ATAPI,
 	  NO_INQUIRY
 	},
+	{ USB_VENDOR_NIKON, USB_PRODUCT_NIKON_D300, RID_WILDCARD,
+	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
+	  NO_QUIRKS
+	},
 	{ USB_VENDOR_OLYMPUS, USB_PRODUCT_OLYMPUS_C1, RID_WILDCARD,
 	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
 	  WRONG_CSWSIG
@@ -744,6 +758,10 @@ static struct umass_devdescr_t umass_devdescrs[] = {
 	  UMASS_PROTO_RBC | UMASS_PROTO_CBI,
 	  NO_QUIRKS
 	},
+	{ USB_VENDOR_SONY, USB_PRODUCT_SONY_HANDYCAM, 0x0500,
+	  UMASS_PROTO_RBC | UMASS_PROTO_CBI,
+	  RBC_PAD_TO_12
+	},
 	{ USB_VENDOR_SONY, USB_PRODUCT_SONY_HANDYCAM, RID_WILDCARD,
 	  UMASS_PROTO_RBC | UMASS_PROTO_CBI,
 	  NO_QUIRKS
@@ -803,6 +821,10 @@ static struct umass_devdescr_t umass_devdescrs[] = {
 	{ USB_VENDOR_TWINMOS, USB_PRODUCT_TWINMOS_MDIV, RID_WILDCARD,
 	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
 	  NO_QUIRKS
+	},
+	{ USB_VENDOR_VIA, USB_PRODUCT_VIA_USB2IDEBRIDGE, RID_WILDCARD,
+	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
+	  NO_SYNCHRONIZE_CACHE
 	},
 	{ USB_VENDOR_VIVITAR, USB_PRODUCT_VIVITAR_35XX, RID_WILDCARD,
 	  UMASS_PROTO_SCSI | UMASS_PROTO_BBB,
@@ -2873,6 +2895,15 @@ umass_cam_action(struct cam_sim *sim, union ccb *ccb)
 
 				memcpy(csio->data_ptr, &fake_inq_data,
 				    sizeof(fake_inq_data));
+				csio->scsi_status = SCSI_STATUS_OK;
+				ccb->ccb_h.status = CAM_REQ_CMP;
+				xpt_done(ccb);
+				return;
+			}
+			if ((sc->quirks & NO_SYNCHRONIZE_CACHE) &&
+			    rcmd[0] == SYNCHRONIZE_CACHE) {
+				struct ccb_scsiio *csio = &ccb->csio;
+
 				csio->scsi_status = SCSI_STATUS_OK;
 				ccb->ccb_h.status = CAM_REQ_CMP;
 				xpt_done(ccb);

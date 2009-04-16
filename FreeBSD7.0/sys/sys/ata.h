@@ -23,7 +23,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/sys/ata.h,v 1.36.2.1 2007/11/15 16:29:33 scottl Exp $
+ * $FreeBSD: src/sys/sys/ata.h,v 1.36.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS_ATA_H_
@@ -38,6 +38,7 @@ struct ata_params {
 #define ATA_PROTO_ATAPI                 0x8000
 #define ATA_PROTO_ATAPI_12              0x8000
 #define ATA_PROTO_ATAPI_16              0x8001
+#define ATA_PROTO_CFA                   0x848a
 #define ATA_ATAPI_TYPE_MASK             0x1f00
 #define ATA_ATAPI_TYPE_DIRECT           0x0000  /* disk/floppy */
 #define ATA_ATAPI_TYPE_TAPE             0x0100  /* streaming tape */
@@ -431,6 +432,9 @@ struct ata_ioc_request {
 #define IOCATAGPARM             _IOR('a', 101, struct ata_params)
 #define IOCATAGMODE             _IOR('a', 102, int)
 #define IOCATASMODE             _IOW('a', 103, int)
+
+#define IOCATAGSPINDOWN		_IOR('a', 104, int)
+#define IOCATASSPINDOWN		_IOW('a', 105, int)
 
 
 struct ata_ioc_raid_config {

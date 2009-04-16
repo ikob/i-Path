@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)types.h	8.6 (Berkeley) 2/19/95
- * $FreeBSD: src/sys/sys/types.h,v 1.96 2006/08/04 22:54:10 jb Exp $
+ * $FreeBSD: src/sys/sys/types.h,v 1.96.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS_TYPES_H_
@@ -124,6 +124,10 @@ typedef	__blksize_t	blksize_t;
 #define	_BLKSIZE_T_DECLARED
 #endif
 
+typedef	__cpuwhich_t	cpuwhich_t;
+typedef	__cpulevel_t	cpulevel_t;
+typedef	__cpusetid_t	cpusetid_t;
+
 #ifndef _BLKCNT_T_DECLARED
 typedef	__blkcnt_t	blkcnt_t;
 #define	_BLKCNT_T_DECLARED
@@ -139,6 +143,7 @@ typedef	__clockid_t	clockid_t;
 #define	_CLOCKID_T_DECLARED
 #endif
 
+typedef	__cpumask_t	cpumask_t;
 typedef	__critical_t	critical_t;	/* Critical section value */
 typedef	__int64_t	daddr_t;	/* disk address */
 
@@ -274,7 +279,6 @@ typedef	__vm_size_t	vm_size_t;
 
 #ifdef _KERNEL
 typedef	int		boolean_t;
-typedef	__cpumask_t	cpumask_t;
 typedef	struct device	*device_t;
 typedef	__intfptr_t	intfptr_t;
 
@@ -295,36 +299,6 @@ typedef	struct vm_page	*vm_page_t;
 #define offsetof(type, field) __offsetof(type, field)
 
 #endif /* !_KERNEL */
-
-/*
- * Solaris compatibility definitions.
- */
-#ifdef _SOLARIS_C_SOURCE
-typedef u_int		uint_t;
-typedef u_char		uchar_t;
-typedef u_short		ushort_t;
-typedef u_long		ulong_t;
-
-typedef	long long	longlong_t;  
-typedef unsigned long long	u_longlong_t;
-
-typedef off_t		off64_t;
-
-typedef id_t		taskid_t;
-typedef id_t		projid_t;
-typedef id_t		poolid_t;
-typedef id_t		zoneid_t;
-typedef id_t		ctid_t;
-
-#ifndef _KERNEL
-#if defined(__XOPEN_OR_POSIX)
-typedef enum { _B_FALSE, _B_TRUE } boolean_t;
-#else
-typedef enum { B_FALSE, B_TRUE } boolean_t;
-#endif /* defined(__XOPEN_OR_POSIX) */
-#endif
-
-#endif /* _SOLARIS_C_SOURCE */
 
 /*
  * The following are all things that really shouldn't exist in this header,

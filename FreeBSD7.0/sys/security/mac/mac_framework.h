@@ -35,7 +35,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/security/mac/mac_framework.h,v 1.84.2.1 2007/11/06 14:46:58 rwatson Exp $
+ * $FreeBSD: src/sys/security/mac/mac_framework.h,v 1.84.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*
@@ -43,8 +43,8 @@
  * interact with the TrustedBSD MAC Framework.
  */
 
-#ifndef _SYS_SECURITY_MAC_MAC_FRAMEWORK_H_
-#define	_SYS_SECURITY_MAC_MAC_FRAMEWORK_H_
+#ifndef _SECURITY_MAC_MAC_FRAMEWORK_H_
+#define	_SECURITY_MAC_MAC_FRAMEWORK_H_
 
 #ifndef _KERNEL
 #error "no user-serviceable parts inside"
@@ -191,8 +191,8 @@ void 	mac_create_posix_sem(struct ucred *cred, struct ksem *ks);
 void	mac_create_bpfdesc(struct ucred *cred, struct bpf_d *d);
 void	mac_create_ifnet(struct ifnet *ifp);
 void	mac_create_inpcb_from_socket(struct socket *so, struct inpcb *inp);
-void	mac_create_ipq(struct mbuf *m, struct ipq *ipq);
-void	mac_create_datagram_from_ipq(struct ipq *ipq, struct mbuf *m);
+void	mac_create_ipq(struct mbuf *m, struct ipq *q);
+void	mac_create_datagram_from_ipq(struct ipq *q, struct mbuf *m);
 void	mac_create_fragment(struct mbuf *m, struct mbuf *frag);
 void	mac_create_mbuf_from_inpcb(struct inpcb *inp, struct mbuf *m);
 void	mac_create_mbuf_linklayer(struct ifnet *ifp, struct mbuf *m);
@@ -201,10 +201,10 @@ void	mac_create_mbuf_from_ifnet(struct ifnet *ifp, struct mbuf *m);
 void	mac_create_mbuf_multicast_encap(struct mbuf *m, struct ifnet *ifp,
 	    struct mbuf *mnew);
 void	mac_create_mbuf_netlayer(struct mbuf *m, struct mbuf *mnew);
-int	mac_fragment_match(struct mbuf *m, struct ipq *ipq);
+int	mac_fragment_match(struct mbuf *m, struct ipq *q);
 void	mac_reflect_mbuf_icmp(struct mbuf *m);
 void	mac_reflect_mbuf_tcp(struct mbuf *m);
-void	mac_update_ipq(struct mbuf *m, struct ipq *ipq);
+void	mac_update_ipq(struct mbuf *m, struct ipq *q);
 void	mac_inpcb_sosetlabel(struct socket *so, struct inpcb *inp);
 void	mac_create_mbuf_from_firewall(struct mbuf *m);
 void	mac_destroy_syncache(struct label **l);
@@ -250,6 +250,7 @@ int	mac_check_bpfdesc_receive(struct bpf_d *d, struct ifnet *ifp);
 int	mac_check_cred_visible(struct ucred *cr1, struct ucred *cr2);
 int	mac_check_ifnet_transmit(struct ifnet *ifp, struct mbuf *m);
 int	mac_check_inpcb_deliver(struct inpcb *inp, struct mbuf *m);
+int	mac_check_inpcb_visible(struct ucred *cred, struct inpcb *inp);
 int	mac_check_sysv_msgmsq(struct ucred *cred, struct msg *msgptr,
 	    struct msqid_kernel *msqkptr);
 int	mac_check_sysv_msgrcv(struct ucred *cred, struct msg *msgptr);
@@ -425,4 +426,4 @@ int	mac_priv_grant(struct ucred *cred, int priv);
  */
 int	vop_stdsetlabel_ea(struct vop_setlabel_args *ap);
 
-#endif /* !_SYS_SECURITY_MAC_MAC_FRAMEWORK_H_ */
+#endif /* !_SECURITY_MAC_MAC_FRAMEWORK_H_ */

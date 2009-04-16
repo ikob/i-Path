@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/amr/Makefile,v 1.10 2006/01/25 18:11:59 ambrisko Exp $
+# $FreeBSD: src/sys/modules/amr/Makefile,v 1.10.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../dev/amr
 
@@ -10,7 +10,6 @@ KMOD=	amr
 SRCS=	amr.c amr_pci.c amr_disk.c device_if.h bus_if.h pci_if.h
 
 # SCSI passthrough support for non-disk devices
-#CFLAGS+= -DAMR_SCSI_PASSTHROUGH
 SRCS+=	amr_cam.c opt_cam.h opt_scsi.h
 
 # Enable a questionable optimisation for newer adapters

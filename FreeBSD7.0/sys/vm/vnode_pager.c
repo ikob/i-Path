@@ -51,7 +51,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/vm/vnode_pager.c,v 1.236.2.1 2007/10/26 00:12:23 alc Exp $");
+__FBSDID("$FreeBSD: src/sys/vm/vnode_pager.c,v 1.236.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -198,12 +198,11 @@ vnode_pager_alloc(void *handle, vm_ooffset_t size, vm_prot_t prot,
 
 	vp = (struct vnode *) handle;
 
-	ASSERT_VOP_ELOCKED(vp, "vnode_pager_alloc");
-
 	/*
 	 * If the object is being terminated, wait for it to
 	 * go away.
 	 */
+retry:
 	while ((object = vp->v_object) != NULL) {
 		VM_OBJECT_LOCK(object);
 		if ((object->flags & OBJ_DEAD) == 0)
@@ -217,7 +216,7 @@ vnode_pager_alloc(void *handle, vm_ooffset_t size, vm_prot_t prot,
 
 	if (object == NULL) {
 		/*
-		 * And an object of the appropriate size
+		 * Add an object of the appropriate size
 		 */
 		object = vm_object_allocate(OBJT_VNODE, OFF_TO_IDX(round_page(size)));
 
@@ -226,7 +225,17 @@ vnode_pager_alloc(void *handle, vm_ooffset_t size, vm_prot_t prot,
 		object->handle = handle;
 		if (VFS_NEEDSGIANT(vp->v_mount))
 			vm_object_set_flag(object, OBJ_NEEDGIANT);
+		VI_LOCK(vp);
+		if (vp->v_object != NULL) {
+			/*
+			 * Object has been created while we were sleeping
+			 */
+			VI_UNLOCK(vp);
+			vm_object_destroy(object);
+			goto retry;
+		}
 		vp->v_object = object;
+		VI_UNLOCK(vp);
 	} else {
 		object->ref_count++;
 		VM_OBJECT_UNLOCK(object);

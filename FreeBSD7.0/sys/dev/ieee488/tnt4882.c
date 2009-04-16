@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/ieee488/tnt4882.c,v 1.3 2007/02/23 19:30:55 imp Exp $
+ * $FreeBSD: src/sys/dev/ieee488/tnt4882.c,v 1.3.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include <sys/param.h>

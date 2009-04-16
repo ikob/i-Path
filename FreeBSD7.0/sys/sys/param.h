@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)param.h	8.3 (Berkeley) 4/4/95
- * $FreeBSD: src/sys/sys/param.h,v 1.308.2.3 2007/12/07 23:18:42 kmacy Exp $
+ * $FreeBSD: src/sys/sys/param.h,v 1.308.2.17.2.2 2008/11/25 19:45:09 kensmith Exp $
  */
 
 #ifndef _SYS_PARAM_H_
@@ -57,7 +57,7 @@
  *		is created, otherwise 1.
  */
 #undef __FreeBSD_version
-#define __FreeBSD_version 700055	/* Master, propagated to newvers */
+#define __FreeBSD_version 701000	/* Master, propagated to newvers */
 
 #ifndef LOCORE
 #include <sys/types.h>
@@ -304,21 +304,5 @@ __END_DECLS
  
 #define ctodb(db)			/* calculates pages to devblks */ \
 	((db) << (PAGE_SHIFT - DEV_BSHIFT))
-
-/*
- * Solaris compatibility definitions.
- */
-#ifdef _SOLARIS_C_SOURCE
-#define	PAGESIZE	PAGE_SIZE
-
-/*
- * The OpenSolaris version is set according to the version last imported
- * from http://dlc.sun.com/osol/on/downloads/current/. In FreeBSD header
- * files it can be used to determine the level of compatibility that the
- * FreeBSD headers provide to OpenSolaris code. Perhaps one day there
- * will be a really, really Single Unix Specification.
- */
-#define __OpenSolaris_version 20060731
-#endif
 
 #endif	/* _SYS_PARAM_H_ */

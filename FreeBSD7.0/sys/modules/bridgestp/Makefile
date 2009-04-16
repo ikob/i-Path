@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/bridgestp/Makefile,v 1.1 2006/07/26 22:07:39 thompsa Exp $
+# $FreeBSD: src/sys/modules/bridgestp/Makefile,v 1.1.6.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../net
 

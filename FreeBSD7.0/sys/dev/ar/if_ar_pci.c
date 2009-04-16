@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ar/if_ar_pci.c,v 1.13 2005/05/29 04:42:18 nyan Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ar/if_ar_pci.c,v 1.13.18.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

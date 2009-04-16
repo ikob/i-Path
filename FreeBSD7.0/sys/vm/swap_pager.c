@@ -67,7 +67,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/vm/swap_pager.c,v 1.295 2007/08/05 21:04:32 alc Exp $");
+__FBSDID("$FreeBSD: src/sys/vm/swap_pager.c,v 1.295.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_mac.h"
 #include "opt_swap.h"
@@ -2018,7 +2018,7 @@ swaponsomething(struct vnode *vp, void *id, u_long nblks, sw_strategy_t *strateg
 	sp->sw_strategy = strategy;
 	sp->sw_close = close;
 
-	sp->sw_blist = blist_create(nblks);
+	sp->sw_blist = blist_create(nblks, M_WAITOK);
 	/*
 	 * Do not free the first two block in order to avoid overwriting
 	 * any bsd label at the front of the partition
@@ -2339,19 +2339,17 @@ swapgeom_strategy(struct buf *bp, struct swdevt *sp)
 		bufdone(bp);
 		return;
 	}
-	bio = g_alloc_bio();
-#if 0
-	/*
-	 * XXX: We shouldn't really sleep here when we run out of buffers
-	 * XXX: but the alternative is worse right now.
-	 */
+	if (bp->b_iocmd == BIO_WRITE)
+		bio = g_new_bio();
+	else
+		bio = g_alloc_bio();
 	if (bio == NULL) {
 		bp->b_error = ENOMEM;
 		bp->b_ioflags |= BIO_ERROR;
 		bufdone(bp);
 		return;
 	}
-#endif
+
 	bio->bio_caller2 = bp;
 	bio->bio_cmd = bp->b_iocmd;
 	bio->bio_data = bp->b_data;

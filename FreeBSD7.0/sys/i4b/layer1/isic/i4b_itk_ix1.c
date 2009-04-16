@@ -59,7 +59,7 @@
  *---------------------------------------------------------------------------*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i4b/layer1/isic/i4b_itk_ix1.c,v 1.13 2007/07/06 07:17:20 bz Exp $");
+__FBSDID("$FreeBSD: src/sys/i4b/layer1/isic/i4b_itk_ix1.c,v 1.13.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_i4b.h"
 
@@ -273,10 +273,10 @@ isic_probe_itkix1(device_t dev)
 	printf("done.\n");
 	#endif
 
-	/* register interupt routine */
+	/* register interrupt routine */
 
 	#if defined(ITK_PROBE_DEBUG)
-	printf("Setting up access interupt...");
+	printf("Setting up access interrupt...");
 	#endif
 
 	if (bus_setup_intr(dev, sc->sc_resources.irq, INTR_TYPE_NET, NULL,

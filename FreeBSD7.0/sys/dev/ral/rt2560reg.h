@@ -1,4 +1,4 @@
-/*	$FreeBSD: src/sys/dev/ral/rt2560reg.h,v 1.2 2007/06/11 03:36:52 sam Exp $	*/
+/*	$FreeBSD: src/sys/dev/ral/rt2560reg.h,v 1.2.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $	*/
 
 /*-
  * Copyright (c) 2005, 2006
@@ -333,8 +333,8 @@ struct rt2560_rx_desc {
 	{ RT2560_TXCSR1,      0x07614562 },	\
 	{ RT2560_ARSP_PLCP_0, 0x8c8d8b8a },	\
 	{ RT2560_ACKPCTCSR,   0x7038140a },	\
-	{ RT2560_ARTCSR1,     0x1d21252d },	\
-	{ RT2560_ARTCSR2,     0x1919191d },	\
+	{ RT2560_ARTCSR1,     0x21212929 },	\
+	{ RT2560_ARTCSR2,     0x1d1d1d1d },	\
 	{ RT2560_RXCSR0,      0xffffffff },	\
 	{ RT2560_RXCSR3,      0xb3aab3af },	\
 	{ RT2560_PCICSR,      0x000003b8 },	\

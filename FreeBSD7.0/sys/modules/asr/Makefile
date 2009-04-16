@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/asr/Makefile,v 1.6 2006/07/27 19:12:48 marcel Exp $
+# $FreeBSD: src/sys/modules/asr/Makefile,v 1.6.6.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../dev/asr
 

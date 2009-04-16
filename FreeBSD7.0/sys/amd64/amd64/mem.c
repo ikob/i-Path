@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/amd64/mem.c,v 1.121 2004/08/07 06:21:37 scottl Exp $");
+__FBSDID("$FreeBSD: src/sys/amd64/amd64/mem.c,v 1.121.18.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 /*
  * Memory special file
@@ -66,6 +66,11 @@ __FBSDID("$FreeBSD: src/sys/amd64/amd64/mem.c,v 1.121 2004/08/07 06:21:37 scottl
 #include <vm/vm_extern.h>
 
 #include <machine/memdev.h>
+
+/*
+ * Used in /dev/mem drivers and elsewhere
+ */
+MALLOC_DEFINE(M_MEMDESC, "memdesc", "memory range descriptors");
 
 /* ARGSUSED */
 int

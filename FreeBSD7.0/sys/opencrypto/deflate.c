@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/opencrypto/deflate.c,v 1.4 2005/05/30 05:01:44 scottl Exp $");
+__FBSDID("$FreeBSD: src/sys/opencrypto/deflate.c,v 1.4.18.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/types.h>
 #include <sys/param.h>

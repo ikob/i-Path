@@ -39,7 +39,7 @@
  *
  *	@(#)ufs_vnops.c	8.7 (Berkeley) 2/3/94
  *	@(#)ufs_vnops.c 8.27 (Berkeley) 5/27/95
- * $FreeBSD: src/sys/gnu/fs/ext2fs/ext2_vnops.c,v 1.110 2007/06/12 00:11:58 rwatson Exp $
+ * $FreeBSD: src/sys/gnu/fs/ext2fs/ext2_vnops.c,v 1.110.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include "opt_suiddir.h"
@@ -83,7 +83,6 @@
 static int ext2_makeinode(int mode, struct vnode *, struct vnode **, struct componentname *);
 
 static vop_access_t	ext2_access;
-static vop_advlock_t	ext2_advlock;
 static int ext2_chmod(struct vnode *, int, struct ucred *, struct thread *);
 static int ext2_chown(struct vnode *, uid_t, gid_t, struct ucred *,
     struct thread *);
@@ -119,7 +118,6 @@ static void filt_ext2detach(struct knote *kn);
 struct vop_vector ext2_vnodeops = {
 	.vop_default =		&default_vnodeops,
 	.vop_access =		ext2_access,
-	.vop_advlock =		ext2_advlock,
 	.vop_bmap =		ext2_bmap,
 	.vop_cachedlookup =	ext2_lookup,
 	.vop_close =		ext2_close,
@@ -1519,24 +1517,6 @@ ext2_pathconf(ap)
 		return (EINVAL);
 	}
 	/* NOTREACHED */
-}
-
-/*
- * Advisory record locking support
- */
-static int
-ext2_advlock(ap)
-	struct vop_advlock_args /* {
-		struct vnode *a_vp;
-		caddr_t  a_id;
-		int  a_op;
-		struct flock *a_fl;
-		int  a_flags;
-	} */ *ap;
-{
-	struct inode *ip = VTOI(ap->a_vp);
-
-	return (lf_advlock(ap, &(ip->i_lockf), ip->i_size));
 }
 
 /*

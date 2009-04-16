@@ -26,7 +26,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/acpica/acpi_wakeup.c,v 1.46 2007/03/14 22:30:02 njl Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/acpica/acpi_wakeup.c,v 1.46.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -322,7 +322,7 @@ acpi_alloc_wakeup_handler(void)
 	acpi_wakeaddr = (vm_offset_t)wakeaddr;
 }
 
-SYSINIT(acpiwakeup, SI_SUB_KMEM, SI_ORDER_ANY, acpi_alloc_wakeup_handler, 0)
+SYSINIT(acpiwakeup, SI_SUB_KMEM, SI_ORDER_ANY, acpi_alloc_wakeup_handler, 0);
 
 static void
 acpi_realmodeinst(void *arg, bus_dma_segment_t *segs, int nsegs, int error)

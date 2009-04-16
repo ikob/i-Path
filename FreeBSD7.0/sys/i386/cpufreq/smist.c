@@ -36,7 +36,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/cpufreq/smist.c,v 1.2 2007/06/17 07:18:23 njl Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/cpufreq/smist.c,v 1.2.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -308,7 +308,7 @@ smist_identify(driver_t *driver, device_t parent)
 
 	if (device_find_child(parent, "smist", -1) != NULL)
 		return;
-	if (BUS_ADD_CHILD(parent, 0, "smist", -1) == NULL)
+	if (BUS_ADD_CHILD(parent, 30, "smist", -1) == NULL)
 		device_printf(parent, "smist: add child failed\n");
 }
 
@@ -403,8 +403,8 @@ smist_attach(device_t dev)
 static int
 smist_detach(device_t dev)
 {
-	cpufreq_unregister(dev);
-	return (0);
+
+	return (cpufreq_unregister(dev));
 }
 
 static int

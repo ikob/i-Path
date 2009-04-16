@@ -3,7 +3,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/patm/if_patm_rtables.c,v 1.3 2004/03/10 17:03:27 bms Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/patm/if_patm_rtables.c,v 1.3.26.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/types.h>
 

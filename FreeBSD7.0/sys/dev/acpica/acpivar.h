@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/acpica/acpivar.h,v 1.108 2007/10/09 07:48:07 njl Exp $
+ * $FreeBSD: src/sys/dev/acpica/acpivar.h,v 1.108.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _ACPIVAR_H_

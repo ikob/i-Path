@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/if_ndis/if_ndis.c,v 1.124.2.1 2007/12/05 02:53:44 thompsa Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/if_ndis/if_ndis.c,v 1.124.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -660,12 +660,12 @@ ndis_attach(dev)
 		sc->ndis_maxpkts = 10;
 
 	sc->ndis_txarray = malloc(sizeof(ndis_packet *) *
-	    NDIS_TXPKTS, M_DEVBUF, M_NOWAIT|M_ZERO);
+	    sc->ndis_maxpkts, M_DEVBUF, M_NOWAIT|M_ZERO);
 
 	/* Allocate a pool of ndis_packets for TX encapsulation. */
 
 	NdisAllocatePacketPool(&i, &sc->ndis_txpool,
-	   NDIS_TXPKTS, PROTOCOL_RESERVED_SIZE_IN_PACKET);
+	    sc->ndis_maxpkts, PROTOCOL_RESERVED_SIZE_IN_PACKET);
 
 	if (i != NDIS_STATUS_SUCCESS) {
 		sc->ndis_txpool = NULL;
@@ -3539,7 +3539,7 @@ ndis_scan(void *arg, int npending)
 		return;
 	}
 
-	tsleep(&error, PWAIT, "ssidscan", hz * 3);
+	pause("ssidscan", hz * 3);
 	if (!NDIS_INITIALIZED(sc))
 		/* The interface was downed while we were sleeping */
 		return;

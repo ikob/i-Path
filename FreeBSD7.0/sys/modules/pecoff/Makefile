@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/pecoff/Makefile,v 1.7 2005/06/03 15:35:36 imp Exp $
+# $FreeBSD: src/sys/modules/pecoff/Makefile,v 1.7.18.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../compat/pecoff
 

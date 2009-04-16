@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/nfsclient/Makefile,v 1.33 2006/02/18 23:49:28 yar Exp $
+# $FreeBSD: src/sys/modules/nfsclient/Makefile,v 1.33.6.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../nfsclient ${.CURDIR}/../../nfs4client \
 	${.CURDIR}/../../nfs ${.CURDIR}/../../rpc

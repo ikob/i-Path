@@ -1,6 +1,6 @@
 /*-
  * This file is in the public domain.
  */
-/* $FreeBSD: src/sys/pc98/include/apicvar.h,v 1.2 2005/04/10 03:36:13 nyan Exp $ */
+/* $FreeBSD: src/sys/pc98/include/apicvar.h,v 1.2.18.1 2008/11/25 02:59:29 kensmith Exp $ */
 
 #include <i386/apicvar.h>

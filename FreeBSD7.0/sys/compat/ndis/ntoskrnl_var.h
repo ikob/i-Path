@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/compat/ndis/ntoskrnl_var.h,v 1.43 2006/08/17 22:50:32 imp Exp $
+ * $FreeBSD: src/sys/compat/ndis/ntoskrnl_var.h,v 1.43.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _NTOSKRNL_VAR_H_
@@ -1309,6 +1309,7 @@ extern int ntoskrnl_libinit(void);
 extern int ntoskrnl_libfini(void);
 
 extern void ntoskrnl_intr(void *);
+extern void ntoskrnl_time(uint64_t *);
 
 extern uint16_t ExQueryDepthSList(slist_header *);
 extern slist_entry

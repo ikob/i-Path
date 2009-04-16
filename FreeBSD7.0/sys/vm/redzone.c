@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/vm/redzone.c,v 1.1 2006/01/31 11:09:20 pjd Exp $");
+__FBSDID("$FreeBSD: src/sys/vm/redzone.c,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -152,10 +152,10 @@ redzone_check(caddr_t naddr)
 		    "corrupted before %p (%lu bytes allocated).\n",
 		    ncorruptions, ncorruptions == 1 ? "" : "s", naddr, nsize);
 		printf("Allocation backtrace:\n");
-		stack_print(&ast);
+		stack_print_ddb(&ast);
 		printf("Free backtrace:\n");
 		stack_save(&fst);
-		stack_print(&fst);
+		stack_print_ddb(&fst);
 		if (redzone_panic)
 			panic("Stopping here.");
 	}
@@ -171,10 +171,10 @@ redzone_check(caddr_t naddr)
 		    "after %p (%lu bytes allocated).\n", ncorruptions,
 		    ncorruptions == 1 ? "" : "s", naddr + nsize, nsize);
 		printf("Allocation backtrace:\n");
-		stack_print(&ast);
+		stack_print_ddb(&ast);
 		printf("Free backtrace:\n");
 		stack_save(&fst);
-		stack_print(&fst);
+		stack_print_ddb(&fst);
 		if (redzone_panic)
 			panic("Stopping here.");
 	}

@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/powerpc/include/_bus.h,v 1.1 2005/04/18 21:45:34 imp Exp $
+ * $FreeBSD: src/sys/powerpc/include/_bus.h,v 1.1.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef POWERPC_INCLUDE__BUS_H

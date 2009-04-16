@@ -25,7 +25,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/ntfs/ntfs_subr.c,v 1.42 2006/11/20 19:28:36 le Exp $
+ * $FreeBSD: src/sys/fs/ntfs/ntfs_subr.c,v 1.42.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #include <sys/param.h>
@@ -407,7 +407,7 @@ ntfs_ntlookup(
 	VREF(ip->i_devvp);
 
 	/* init lock and lock the newborn ntnode */
-	lockinit(&ip->i_lock, PINOD, "ntnode", 0, LK_EXCLUSIVE);
+	lockinit(&ip->i_lock, PINOD, "ntnode", 0, 0);
 	mtx_init(&ip->i_interlock, "ntnode interlock", NULL, MTX_DEF);
 	ntfs_ntget(ip);
 
@@ -465,7 +465,7 @@ ntfs_ntput(ip)
 		LIST_REMOVE(vap,va_list);
 		ntfs_freentvattr(vap);
 	}
-	mtx_unlock(&ip->i_interlock);
+	lockmgr(&ip->i_lock, LK_RELEASE | LK_INTERLOCK, &ip->i_interlock, NULL);
 	mtx_destroy(&ip->i_interlock);
 	lockdestroy(&ip->i_lock);
 	vrele(ip->i_devvp);

@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/conf/NOTES,v 1.1454 2007/09/26 21:14:17 marius Exp $
+# $FreeBSD: src/sys/conf/NOTES,v 1.1454.2.21.2.1 2008/11/25 02:59:29 kensmith Exp $
 #
 # NOTES -- Lines that can be cut/pasted into kernel and hints configs.
 #
@@ -141,13 +141,16 @@ options 	GEOM_FOX		# Redundant path mitigation
 options 	GEOM_GATE		# Userland services.
 options 	GEOM_JOURNAL		# Journaling.
 options 	GEOM_LABEL		# Providers labelization.
+options 	GEOM_LINUX_LVM		# Linux LVM2 volumes
 options 	GEOM_MBR		# DOS/MBR partitioning
 options 	GEOM_MIRROR		# Disk mirroring.
 options 	GEOM_MULTIPATH		# Disk multipath
 options 	GEOM_NOP		# Test class.
 options 	GEOM_PART_APM		# Apple partitioning
+options 	GEOM_PART_BSD		# BSD disklabel
 options 	GEOM_PART_GPT		# GPT partitioning
 options 	GEOM_PART_MBR		# MBR partitioning
+options 	GEOM_PART_VTOC8		# SMI VTOC8 disk label
 options 	GEOM_PC98		# NEC PC9800 partitioning
 options 	GEOM_RAID3		# RAID3 functionality.
 options 	GEOM_SHSEC		# Shared secret.
@@ -353,6 +356,12 @@ options 	DDB_NUMSYM
 options 	GDB
 
 #
+# Enable the kernel DTrace hooks which are required to load the DTrace
+# kernel modules.
+#
+options 	KDTRACE_HOOKS
+
+#
 # SYSCTL_DEBUG enables a 'sysctl' debug tree that can be used to dump the
 # contents of the registered sysctl nodes on the console.  It is disabled by
 # default because it generates excessively verbose console output that can
@@ -471,6 +480,13 @@ options 	REGRESSION
 #
 options 	COMPILING_LINT
 
+#
+# STACK enables the stack(9) facility, allowing the capture of kernel stack
+# for the purpose of procinfo(1), etc.  stack(9) will also be compiled in
+# automatically if DDB(4) is compiled into the kernel.
+#
+options 	STACK
+
 
 #####################################################################
 # PERFORMANCE MONITORING OPTIONS
@@ -496,6 +512,8 @@ options 	HWPMC_HOOKS		# Other necessary kernel hooks
 #
 options 	INET			#Internet communications protocols
 options 	INET6			#IPv6 communications protocols
+
+options		ROUTETABLES=2		# max 16. 1 is back compatible.
 
 # In order to enable IPSEC you MUST also add device crypto to 
 # your kernel configuration
@@ -604,7 +622,7 @@ options 	SCTP_LTRACE_ERRORS
 # broken or changes with CPU throttling then you must also have the ALTQ_NOPCC
 # option.
 options 	ALTQ
-options 	ALTQ_CBQ	# Class Bases Queueing
+options 	ALTQ_CBQ	# Class Based Queueing
 options 	ALTQ_RED	# Random Early Detection
 options 	ALTQ_RIO	# RED In/Out
 options 	ALTQ_HFSC	# Hierarchical Packet Scheduler
@@ -830,8 +848,7 @@ device		stf			#6to4 IPv6 over IPv4 encapsulation
 # crafting the ruleset.
 #
 # IPFIREWALL_NAT adds support for in kernel nat in ipfw, and it requires
-# LIBALIAS. To build an ipfw kld with nat support enabled, add 
-# "CFLAGS+= -DIPFIREWALL_NAT" to your make.conf.
+# LIBALIAS.
 #
 # IPSTEALTH enables code to support stealth forwarding (i.e., forwarding
 # packets without touching the TTL).  This can be useful to hide firewalls
@@ -875,8 +892,8 @@ options 	ACCEPT_FILTER_HTTP
 
 # DUMMYNET enables the "dummynet" bandwidth limiter.  You need IPFIREWALL
 # as well.  See dummynet(4) and ipfw(8) for more info.  When you run
-# DUMMYNET it is advisable to also have "options HZ=1000" to achieve a
-# smoother scheduling of the traffic.
+# DUMMYNET it is advisable to also have at least "options HZ=1000" to achieve
+# a smooth scheduling of the traffic.
 options 	DUMMYNET
 
 # Zero copy sockets support.  This enables "zero copy" for sending and
@@ -885,38 +902,6 @@ options 	DUMMYNET
 # page size of your architecture and that support header splitting.  See
 # zero_copy(9) for more details.
 options 	ZERO_COPY_SOCKETS
-
-#
-# ATM (HARP version) options
-#
-# XXX: These have been disabled in FreeBSD 7.0 as they are not MPSAFE.
-#
-# ATM_CORE includes the base ATM functionality code.  This must be included
-#	for ATM support.
-#
-# ATM_IP includes support for running IP over ATM.
-#
-# At least one (and usually only one) of the following signalling managers
-# must be included (note that all signalling managers include PVC support):
-# ATM_SIGPVC includes support for the PVC-only signalling manager `sigpvc'.
-# ATM_SPANS includes support for the `spans' signalling manager, which runs
-#	the FORE Systems's proprietary SPANS signalling protocol.
-# ATM_UNI includes support for the `uni30' and `uni31' signalling managers,
-#	which run the ATM Forum UNI 3.x signalling protocols.
-#
-# The `hfa' driver provides support for the FORE Systems, Inc.
-# PCA-200E ATM PCI Adapter.
-#
-# The `harp' pseudo-driver makes all NATM interface drivers available to HARP.
-#
-#options 	ATM_CORE		#core ATM protocol family
-#options 	ATM_IP			#IP over ATM support
-#options 	ATM_SIGPVC		#SIGPVC signalling manager
-#options 	ATM_SPANS		#SPANS signalling manager
-#options 	ATM_UNI			#UNI signalling manager
-
-#device		hfa			#FORE PCA-200E ATM PCI
-#device		harp			#Pseudo-interface for NATM
 
 
 #####################################################################
@@ -947,6 +932,7 @@ options 	FDESCFS			#File descriptor filesystem
 options 	HPFS			#OS/2 File system
 options 	MSDOSFS			#MS DOS File System (FAT, FAT32)
 options 	NFSSERVER		#Network File System server
+options		NFSLOCKD		#Network Lock Manager
 options 	NTFS			#NT File System
 options 	NULLFS			#NULL filesystem
 # Broken (depends on NCP):
@@ -1105,13 +1091,13 @@ options 	MAC_TEST
 # CLOCK OPTIONS
 
 # The granularity of operation is controlled by the kernel option HZ whose
-# default value (100) means a granularity of 10ms (1s/HZ).
-# Some subsystems, such as DUMMYNET, might benefit from a smaller
-# granularity such as 1ms or less, for a smoother scheduling of packets.
-# Consider, however, that reducing the granularity too much might
-# cause excessive overhead in clock interrupt processing,
-# potentially causing ticks to be missed and thus actually reducing
-# the accuracy of operation.
+# default value (1000 on most architectures) means a granularity of 1ms
+# (1s/HZ).  Historically, the default was 100, but finer granularity is
+# required for DUMMYNET and other systems on modern hardware.  There are
+# reasonable arguments that HZ should, in fact, be 100 still; consider,
+# that reducing the granularity too much might cause excessive overhead in
+# clock interrupt processing, potentially causing ticks to be missed and thus
+# actually reducing the accuracy of operation.
 
 options 	HZ=100
 
@@ -1724,16 +1710,21 @@ device		puc
 # MII bus support is required for some PCI 10/100 ethernet NICs,
 # namely those which use MII-compliant transceivers or implement
 # transceiver control interfaces that operate like an MII. Adding
-# "device miibus0" to the kernel config pulls in support for
+# "device miibus" to the kernel config pulls in support for
 # the generic miibus API and all of the PHY drivers, including a
 # generic one for PHYs that aren't specifically handled by an
 # individual driver.
 device		miibus
 
+# ae:   Support for gigabit ethernet adapters based on the Attansic/Atheros
+#       L2 PCI-Express FastEthernet controllers.
 # an:   Aironet 4500/4800 802.11 wireless adapters. Supports the PCMCIA,
 #       PCI and ISA varieties.
 # awi:  Support for IEEE 802.11 PC Card devices using the AMD Am79C930 and
 #       Harris (Intersil) Chipset with PCnetMobile firmware by AMD.
+# age:  Support for gigabit ethernet adapters based on the Attansic/Atheros
+#       L1 PCI express gigabit ethernet controllers.
+# ale:  Support for Atheros AR8121/AR8113/AR8114 PCIe ethernet controllers.
 # bce:	Broadcom NetXtreme II (BCM5706/BCM5708) PCI/PCIe Gigabit Ethernet
 #       adapters.
 # bfe:	Broadcom BCM4401 Ethernet adapter.
@@ -1768,6 +1759,7 @@ device		miibus
 #	(hint of prefer_iomap can be done to prefer I/O instead of Mem mapping)
 # gem:  Apple GMAC/Sun ERI/Sun GEM
 # hme:  Sun HME (Happy Meal Ethernet)
+# jme:  JMicron JMC260 Fast Ethernet/JMC250 Gigabit Ethernet based adapters.
 # le:   AMD Am7900 LANCE and Am79C9xx PCnet
 # lge:	Support for PCI gigabit ethernet adapters based on the Level 1
 #	LXT1001 NetCellerator chipset. This includes the D-Link DGE-500SX,
@@ -1789,6 +1781,7 @@ device		miibus
 #	pcn(4) driver is left out of the kernel. The le(4) driver does not
 #	support the additional features like the MII bus and burst mode of
 #	the PCnet-FAST and greater chipsets though.
+# re:   RealTek 8139C+/8169/816xS/811xS/8101E PCI/PCIe Ethernet adapter
 # rl:   Support for PCI fast ethernet adapters based on the RealTek 8129/8139
 #       chipset.  Note that the RealTek driver defaults to using programmed
 #       I/O to do register accesses because memory mapped mode seems to cause
@@ -1874,18 +1867,25 @@ device		wi
 device		xe
 
 # PCI Ethernet NICs that use the common MII bus controller code.
+device		ae		# Attansic/Atheros L2 FastEthernet
+device		age		# Attansic/Atheros L1 Gigabit Ethernet
+device		ale		# Atheros AR8121/AR8113/AR8114 Ethernet
 device		bce		# Broadcom BCM5706/BCM5708 Gigabit Ethernet
 device		bfe		# Broadcom BCM440x 10/100 Ethernet
 device		bge		# Broadcom BCM570xx Gigabit Ethernet
 device		cxgb		# Chelsio T3 10 Gigabit Ethernet
 device		dc		# DEC/Intel 21143 and various workalikes
+device		et		# Agere ET1310 10/100/Gigabit Ethernet
 device		fxp		# Intel EtherExpress PRO/100B (82557, 82558)
 hint.fxp.0.prefer_iomap="0"
 device		gem		# Apple GMAC/Sun ERI/Sun GEM
 device		hme		# Sun HME (Happy Meal Ethernet)
+device		jme		# JMicron JMC250 Gigabit/JMC260 Fast Ethernet
 device		lge		# Level 1 LXT1001 gigabit Ethernet
+device		msk		# Marvell/SysKonnect Yukon II Gigabit Ethernet
 device		my		# Myson Fast Ethernet (MTD80X, MTD89X)
 device		nge		# NatSemi DP83820 gigabit Ethernet
+device		re		# RealTek 8139C+/8169/8169S/8110S
 device		rl		# RealTek 8129/8139
 device		pcn		# AMD Am79C97x PCI 10/100 NICs
 device		sf		# Adaptec AIC-6915 (``Starfire'')
@@ -1893,6 +1893,7 @@ device		sbsh		# Granch SBNI16 SHDSL modem
 device		sis		# Silicon Integrated Systems SiS 900/SiS 7016
 device		sk		# SysKonnect SK-984x & SK-982x gigabit Ethernet
 device		ste		# Sundance ST201 (D-Link DFE-550TX)
+device		stge		# Sundance/Tamarack TC9021 gigabit Ethernet
 device		ti		# Alteon Networks Tigon I/II gigabit Ethernet
 device		tl		# Texas Instruments ThunderLAN
 device		tx		# SMC EtherPower II (83c170 ``EPIC'')
@@ -2105,6 +2106,7 @@ device	tnt4882
 # rc: RISCom/8 multiport card
 # rp: Comtrol Rocketport(ISA/PCI) - single card
 # si: Specialix SI/XIO 4-32 port terminal multiplexor
+# cmx: OmniKey CardMan 4040 pccard smartcard reader
 
 # Notes on the Comtrol Rocketport driver:
 #
@@ -2160,6 +2162,7 @@ options 	SI_DEBUG
 hint.si.0.at="isa"
 hint.si.0.maddr="0xd0000"
 hint.si.0.irq="12"
+device		cmx
 
 #
 # The 'bktr' device is a PCI video capture device using the Brooktree
@@ -2438,6 +2441,8 @@ device		uftdi
 device		uipaq
 # USB support for Prolific PL-2303 serial adapters
 device		uplcom
+# USB support for Silicon Laboratories CP2101/CP2102 based USB serial adapters
+device		uslcom
 # USB Visor and Palm devices
 device		uvisor
 # USB serial support for DDI pocket's PHS

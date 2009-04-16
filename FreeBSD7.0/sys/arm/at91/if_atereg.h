@@ -22,7 +22,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* $FreeBSD: src/sys/arm/at91/if_atereg.h,v 1.2 2006/09/07 21:50:01 imp Exp $ */
+/* $FreeBSD: src/sys/arm/at91/if_atereg.h,v 1.2.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $ */
 
 #ifndef ARM_AT91_IF_ATEREG_H
 #define ARM_AT91_IF_ATEREG_H
@@ -63,8 +63,8 @@
 #define ETH_SQEE	0x84		/* SQE Test Error Register */
 		/*	0x88		   reserved */
 		/*	0x8c		   reserved */
-#define ETH_HSH		0x90		/* EMAC Hash Address High [63:32] */
-#define ETH_HSL		0x94		/* EMAC Hash Address Low [31:0] */
+#define ETH_HSL		0x90		/* EMAC Hash Address Low [31:0] */
+#define ETH_HSH		0x94		/* EMAC Hash Address High [63:32] */
 #define ETH_SA1L	0x98		/* EMAC Specific Address 1 Low */
 #define ETH_SA1H	0x9c		/* EMAC Specific Address 1 High */
 #define ETH_SA2L	0xa0		/* EMAC Specific Address 2 Low */

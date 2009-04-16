@@ -1,7 +1,7 @@
 /*	$NecBSD: bshw_machdep.c,v 1.8.12.6 2001/06/29 06:28:05 honda Exp $	*/
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ct/bshw_machdep.c,v 1.8 2006/05/16 14:36:24 phk Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ct/bshw_machdep.c,v 1.8.6.1 2008/11/25 02:59:29 kensmith Exp $");
 /*	$NetBSD$	*/
 
 /*-

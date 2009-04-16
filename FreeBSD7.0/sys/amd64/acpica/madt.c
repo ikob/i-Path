@@ -28,7 +28,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/amd64/acpica/madt.c,v 1.24 2007/05/08 22:01:02 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/amd64/acpica/madt.c,v 1.24.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -109,9 +109,11 @@ static struct apic_enumerator madt_enumerator = {
 /*
  * Code to abuse the crashdump map to map in the tables for the early
  * probe.  We cheat and make the following assumptions about how we
- * use this KVA: page 0 is used to map in the first page of each table
- * found via the RSDT or XSDT and pages 1 to n are used to map in the
- * RSDT or XSDT.  The offset is in pages; the length is in bytes.
+ * use this KVA: pages 0 and 1 are used to map in the header of each
+ * table found via the RSDT or XSDT and pages 2 to n are used to map
+ * in the RSDT or XSDT.  We have to use 2 pages for the table headers
+ * in case a header spans a page boundary.  The offset is in pages;
+ * the length is in bytes.
  */
 static void *
 madt_map(vm_paddr_t pa, int offset, vm_offset_t length)
@@ -232,7 +234,7 @@ madt_probe(void)
 				printf("MADT: RSDP failed extended checksum\n");
 			return (ENXIO);
 		}
-		xsdt = madt_map_table(rsdp->XsdtPhysicalAddress, 1,
+		xsdt = madt_map_table(rsdp->XsdtPhysicalAddress, 2,
 		    ACPI_SIG_XSDT);
 		if (xsdt == NULL) {
 			if (bootverbose)
@@ -246,7 +248,7 @@ madt_probe(void)
 				break;
 		madt_unmap_table(xsdt);
 	} else {
-		rsdt = madt_map_table(rsdp->RsdtPhysicalAddress, 1,
+		rsdt = madt_map_table(rsdp->RsdtPhysicalAddress, 2,
 		    ACPI_SIG_RSDT);
 		if (rsdt == NULL) {
 			if (bootverbose)
@@ -407,7 +409,7 @@ madt_register(void *dummy __unused)
 	apic_register_enumerator(&madt_enumerator);
 }
 SYSINIT(madt_register, SI_SUB_TUNABLES - 1, SI_ORDER_FIRST,
-    madt_register, NULL)
+    madt_register, NULL);
 
 /*
  * Call the handler routine for each entry in the MADT table.
@@ -777,4 +779,4 @@ madt_set_ids(void *dummy)
 			    la->la_acpi_id);
 	}
 }
-SYSINIT(madt_set_ids, SI_SUB_CPU, SI_ORDER_ANY, madt_set_ids, NULL)
+SYSINIT(madt_set_ids, SI_SUB_CPU, SI_ORDER_ANY, madt_set_ids, NULL);

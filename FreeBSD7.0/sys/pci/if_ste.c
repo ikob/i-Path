@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/pci/if_ste.c,v 1.99 2007/06/15 21:45:41 thompsa Exp $");
+__FBSDID("$FreeBSD: src/sys/pci/if_ste.c,v 1.99.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #ifdef HAVE_KERNEL_OPTION_HEADERS
 #include "opt_device_polling.h"
@@ -109,7 +109,7 @@ static int ste_encap(struct ste_softc *, struct ste_chain *, struct mbuf *);
 static void ste_start(struct ifnet *);
 static void ste_start_locked(struct ifnet *);
 static void ste_watchdog(struct ifnet *);
-static void ste_shutdown(device_t);
+static int ste_shutdown(device_t);
 static int ste_newbuf(struct ste_softc *, struct ste_chain_onefrag *,
 		struct mbuf *);
 static int ste_ifmedia_upd(struct ifnet *);
@@ -1736,7 +1736,7 @@ ste_watchdog(ifp)
 	return;
 }
 
-static void
+static int
 ste_shutdown(dev)
 	device_t		dev;
 {
@@ -1748,5 +1748,5 @@ ste_shutdown(dev)
 	ste_stop(sc);
 	STE_UNLOCK(sc);
 
-	return;
+	return (0);
 }

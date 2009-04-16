@@ -25,7 +25,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/i386/i386/mptable.c,v 1.245 2007/05/08 22:01:03 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/i386/i386/mptable.c,v 1.245.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_mptable_force_htt.h"
 #include <sys/param.h>
@@ -386,7 +386,7 @@ mptable_register(void *dummy __unused)
 	apic_register_enumerator(&mptable_enumerator);
 }
 SYSINIT(mptable_register, SI_SUB_CPU - 1, SI_ORDER_FIRST, mptable_register,
-    NULL)
+    NULL);
 
 /*
  * Call the handler routine for each entry in the MP config table.

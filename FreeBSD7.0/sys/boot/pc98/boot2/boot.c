@@ -49,7 +49,7 @@ WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/boot/pc98/boot2/boot.c,v 1.17.2.1 2007/11/01 18:19:19 jhb Exp $");
+__FBSDID("$FreeBSD: src/sys/boot/pc98/boot2/boot.c,v 1.17.2.1.4.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "boot.h"
 #include <a.out.h>

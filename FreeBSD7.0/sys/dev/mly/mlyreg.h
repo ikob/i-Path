@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *	$FreeBSD: src/sys/dev/mly/mlyreg.h,v 1.2 2002/09/23 18:54:30 alfred Exp $
+ *	$FreeBSD: src/sys/dev/mly/mlyreg.h,v 1.2.32.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

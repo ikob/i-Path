@@ -29,7 +29,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/imgact_elf.c,v 1.178.2.2.2.1 2008/01/19 18:15:05 kib Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/imgact_elf.c,v 1.178.2.4.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_compat.h"
 
@@ -612,7 +612,7 @@ __CONCAT(exec_, __elfN(imgact))(struct image_params *imgp)
 	u_long seg_size, seg_addr;
 	u_long addr, entry = 0, proghdr = 0;
 	int error = 0, i;
-	const char *interp = NULL;
+	const char *interp = NULL, *newinterp = NULL;
 	Elf_Brandinfo *brand_info;
 	const Elf_Note *note, *note_end;
 	char *path;
@@ -665,7 +665,7 @@ __CONCAT(exec_, __elfN(imgact))(struct image_params *imgp)
 		return (ENOEXEC);
 	sv = brand_info->sysvec;
 	if (interp != NULL && brand_info->interp_newpath != NULL)
-		interp = brand_info->interp_newpath;
+		newinterp = brand_info->interp_newpath;
 
 	/*
 	 * Avoid a possible deadlock if the current address space is destroyed
@@ -802,6 +802,7 @@ __CONCAT(exec_, __elfN(imgact))(struct image_params *imgp)
 	imgp->entry_addr = entry;
 
 	if (interp != NULL) {
+		int have_interp = FALSE;
 		VOP_UNLOCK(imgp->vp, 0, td);
 		if (brand_info->emul_path != NULL &&
 		    brand_info->emul_path[0] != '\0') {
@@ -812,9 +813,15 @@ __CONCAT(exec_, __elfN(imgact))(struct image_params *imgp)
 			    &imgp->entry_addr, sv->sv_pagesize);
 			free(path, M_TEMP);
 			if (error == 0)
-				interp = NULL;
+				have_interp = TRUE;
 		}
-		if (interp != NULL) {
+		if (!have_interp && newinterp != NULL) {
+			error = __elfN(load_file)(imgp->proc, newinterp, &addr,
+			    &imgp->entry_addr, sv->sv_pagesize);
+			if (error == 0)
+				have_interp = TRUE;
+		}
+		if (!have_interp) {
 			error = __elfN(load_file)(imgp->proc, interp, &addr,
 			    &imgp->entry_addr, sv->sv_pagesize);
 		}

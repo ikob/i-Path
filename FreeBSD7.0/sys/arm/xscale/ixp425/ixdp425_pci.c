@@ -33,7 +33,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/xscale/ixp425/ixdp425_pci.c,v 1.1 2006/11/19 23:55:23 sam Exp $");
+__FBSDID("$FreeBSD: src/sys/arm/xscale/ixp425/ixdp425_pci.c,v 1.1.4.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #define _ARM32_BUS_DMA_PRIVATE
 #include <sys/param.h>
@@ -139,18 +139,19 @@ ixp425_md_attach(device_t dev)
 		panic("ixp425_md_attach: failed to set up IRQ rman");
 }
 
-#define	IXP425_MAX_DEV	4
+#define	IXP425_MAX_DEV	5
 #define	IXP425_MAX_LINE	4
 
 int
 ixp425_md_route_interrupt(device_t bridge, device_t device, int pin)
 {
-	static int ixp425_pci_table[IXP425_MAX_DEV][IXP425_MAX_LINE] =
-	{
+	static int ixp425_pci_table[IXP425_MAX_DEV][IXP425_MAX_LINE] = {
 		{PCI_INT_A, PCI_INT_B, PCI_INT_C, PCI_INT_D},
 		{PCI_INT_B, PCI_INT_C, PCI_INT_D, PCI_INT_A},
 		{PCI_INT_C, PCI_INT_D, PCI_INT_A, PCI_INT_B},
 		{PCI_INT_D, PCI_INT_A, PCI_INT_B, PCI_INT_C},
+		/* NB: for optional USB controller on Gateworks Avila */
+		{PCI_INT_A, PCI_INT_B, PCI_INT_C, PCI_INT_D},
 	};
 	int dev;
 	

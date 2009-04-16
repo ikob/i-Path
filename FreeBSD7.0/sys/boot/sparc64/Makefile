@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/boot/sparc64/Makefile,v 1.2 2002/03/28 01:41:23 obrien Exp $
+# $FreeBSD: src/sys/boot/sparc64/Makefile,v 1.2.32.1 2008/11/25 02:59:29 kensmith Exp $
 
 SUBDIR=	boot1 loader
 

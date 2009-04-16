@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/aout/Makefile,v 1.3 2002/09/11 18:03:03 peter Exp $
+# $FreeBSD: src/sys/modules/aout/Makefile,v 1.3.32.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../kern
 

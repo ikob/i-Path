@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/libmchain/Makefile,v 1.3 2002/12/14 00:01:51 tjr Exp $
+# $FreeBSD: src/sys/modules/libmchain/Makefile,v 1.3.30.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../kern
 

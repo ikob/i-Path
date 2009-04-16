@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/tcp_debug.c,v 1.29 2007/10/07 20:44:23 silby Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/tcp_debug.c,v 1.29.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -171,7 +171,7 @@ tcp_trace(short act, short ostate, struct tcpcb *tp, void *ipgen,
 		ack = th->th_ack;
 		len =
 #ifdef INET6
-		    isipv6 ? ((struct ip6_hdr *)ipgen)->ip6_plen :
+		    isipv6 ? ntohs(((struct ip6_hdr *)ipgen)->ip6_plen) :
 #endif
 		    ((struct ip *)ipgen)->ip_len;
 		if (act == TA_OUTPUT) {

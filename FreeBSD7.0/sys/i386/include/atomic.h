@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/i386/include/atomic.h,v 1.47 2006/12/29 15:48:18 bde Exp $
+ * $FreeBSD: src/sys/i386/include/atomic.h,v 1.47.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 #ifndef _MACHINE_ATOMIC_H_
 #define	_MACHINE_ATOMIC_H_
@@ -276,6 +276,13 @@ atomic_cmpset_long(volatile u_long *dst, u_long exp, u_long src)
 
 	return (atomic_cmpset_int((volatile u_int *)dst, (u_int)exp,
 	    (u_int)src));
+}
+
+static __inline u_long
+atomic_fetchadd_long(volatile u_long *p, u_long v)
+{
+
+	return (atomic_fetchadd_int((volatile u_int *)p, (u_int)v));
 }
 
 /* Read the current value and store a zero in the destination. */

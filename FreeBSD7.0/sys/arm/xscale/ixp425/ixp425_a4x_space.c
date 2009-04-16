@@ -43,7 +43,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/xscale/ixp425/ixp425_a4x_space.c,v 1.1 2006/11/19 23:55:23 sam Exp $");
+__FBSDID("$FreeBSD: src/sys/arm/xscale/ixp425/ixp425_a4x_space.c,v 1.1.4.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -60,7 +60,6 @@ __FBSDID("$FreeBSD: src/sys/arm/xscale/ixp425/ixp425_a4x_space.c,v 1.1 2006/11/1
 #include <machine/bus.h>
 
 /* Prototypes for all the bus_space structure functions */
-bs_protos(ixp425);
 bs_protos(a4x);
 bs_protos(generic);
 bs_protos(generic_armv4);
@@ -70,16 +69,16 @@ struct bus_space ixp425_a4x_bs_tag = {
 	.bs_cookie	= (void *) 0,
 
 	/* mapping/unmapping */
-	.bs_map		= ixp425_bs_map,
-	.bs_unmap	= ixp425_bs_unmap,
-	.bs_subregion	= ixp425_bs_subregion,
+	.bs_map		= generic_bs_map,
+	.bs_unmap	= generic_bs_unmap,
+	.bs_subregion	= generic_bs_subregion,
 
 	/* allocation/deallocation */
-	.bs_alloc	= ixp425_bs_alloc,	/* XXX not implemented */
-	.bs_free	= ixp425_bs_free,	/* XXX not implemented */
+	.bs_alloc	= generic_bs_alloc,	/* XXX not implemented */
+	.bs_free	= generic_bs_free,	/* XXX not implemented */
 
 	/* barrier */
-	.bs_barrier	= ixp425_bs_barrier,
+	.bs_barrier	= generic_bs_barrier,
 
 	/* read (single) */
 	.bs_r_1		= a4x_bs_r_1,

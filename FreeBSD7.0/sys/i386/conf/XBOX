@@ -1,7 +1,7 @@
 #
 # XBOX -- kernel for an XBOX
 #
-# $FreeBSD: src/sys/i386/conf/XBOX,v 1.7 2006/08/09 23:47:38 imp Exp $
+# $FreeBSD: src/sys/i386/conf/XBOX,v 1.7.4.1.2.1 2008/11/25 02:59:29 kensmith Exp $
 cpu		I686_CPU		# Celeron
 ident		XBOX
 
@@ -29,6 +29,7 @@ options 	SOFTUPDATES		# Enable FFS soft updates support
 #options 	MD_ROOT			# MD is a potential root device
 options 	NFSCLIENT		# Network Filesystem Client
 #options 	NFSSERVER		# Network Filesystem Server
+#options 	NFSLOCKD		# Network Lock Manager
 #options 	NFS_ROOT		# NFS usable as /, requires NFSCLIENT
 #options 	MSDOSFS			# MSDOS Filesystem
 options 	CD9660			# ISO 9660 Filesystem

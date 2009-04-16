@@ -23,7 +23,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/at91/at91.c,v 1.13 2007/03/06 10:55:57 piso Exp $");
+__FBSDID("$FreeBSD: src/sys/arm/at91/at91.c,v 1.13.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -209,7 +209,7 @@ at91_add_child(device_t dev, int prio, const char *name, int unit,
 	    printf("Can't add child %s%d ordered\n", name, unit);
 	    return;
 	}
-	ivar = malloc(sizeof(*ivar), M_DEVBUF, M_WAITOK | M_ZERO);
+	ivar = malloc(sizeof(*ivar), M_DEVBUF, M_NOWAIT | M_ZERO);
 	if (ivar == NULL) {
 		device_delete_child(dev, kid);
 		printf("Can't add alloc ivar\n");
@@ -396,6 +396,48 @@ at91_cpu_add_builtin_children(device_t dev, struct at91_softc *sc)
 
 #define NORMDEV 50
 
+/*
+ * Standard priority levels for the system.  0 is lowest and 7 is highest.
+ * These values are the ones Atmel uses for its Linux port, which differ
+ * a little form the ones that are in the standard distribution.  Also,
+ * the ones marked with 'TWEEK' are different based on experience.
+ */
+static int irq_prio[32] =
+{
+	7,	/* Advanced Interrupt Controller (FIQ) */
+	7,	/* System Peripherals */
+	1,	/* Parallel IO Controller A */
+	1,	/* Parallel IO Controller B */
+	1,	/* Parallel IO Controller C */
+	1,	/* Parallel IO Controller D */
+	5,	/* USART 0 */
+	5,	/* USART 1 */
+	5,	/* USART 2 */
+	5,	/* USART 3 */
+	0,	/* Multimedia Card Interface */
+	2,	/* USB Device Port */
+	4,	/* Two-Wire Interface */		/* TWEEK */
+	5,	/* Serial Peripheral Interface */
+	4,	/* Serial Synchronous Controller 0 */
+	6,	/* Serial Synchronous Controller 1 */	/* TWEEK */
+	4,	/* Serial Synchronous Controller 2 */
+	0,	/* Timer Counter 0 */
+	6,	/* Timer Counter 1 */			/* TWEEK */
+	0,	/* Timer Counter 2 */
+	0,	/* Timer Counter 3 */
+	0,	/* Timer Counter 4 */
+	0,	/* Timer Counter 5 */
+	2,	/* USB Host port */
+	3,	/* Ethernet MAC */
+	0,	/* Advanced Interrupt Controller (IRQ0) */
+	0,	/* Advanced Interrupt Controller (IRQ1) */
+	0,	/* Advanced Interrupt Controller (IRQ2) */
+	0,	/* Advanced Interrupt Controller (IRQ3) */
+	0,	/* Advanced Interrupt Controller (IRQ4) */
+	0,	/* Advanced Interrupt Controller (IRQ5) */
+ 	0	/* Advanced Interrupt Controller (IRQ6) */
+};
+
 static int
 at91_attach(device_t dev)
 {
@@ -432,13 +474,11 @@ at91_attach(device_t dev)
 		bus_space_write_4(sc->sc_st, sc->sc_sys_sh, IC_SVR + 
 		    i * 4, i);
 		/* Priority. */
-		/* XXX: Give better priorities to IRQs */
 		bus_space_write_4(sc->sc_st, sc->sc_sys_sh, IC_SMR + i * 4,
-		    0);
+		    irq_prio[i]);
 		if (i < 8)
 			bus_space_write_4(sc->sc_st, sc->sc_sys_sh, IC_EOICR,
 			    1);
-		    
 	}
 	bus_space_write_4(sc->sc_st, sc->sc_sys_sh, IC_SPU, 32);
 	/* No debug. */

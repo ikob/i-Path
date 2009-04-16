@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/ukbd/Makefile,v 1.22 2006/09/27 19:57:01 ru Exp $
+# $FreeBSD: src/sys/modules/ukbd/Makefile,v 1.22.6.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../dev/usb
 

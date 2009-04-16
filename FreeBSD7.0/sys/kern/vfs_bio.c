@@ -39,7 +39,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/kern/vfs_bio.c,v 1.528 2007/09/26 11:22:23 ru Exp $");
+__FBSDID("$FreeBSD: src/sys/kern/vfs_bio.c,v 1.528.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -1383,7 +1383,7 @@ brelse(struct buf *bp)
 		if ((bp->b_flags & (B_DELWRI|B_NEEDSGIANT)) ==
 		    (B_DELWRI|B_NEEDSGIANT))
 			bp->b_qindex = QUEUE_DIRTY_GIANT;
-		if (bp->b_flags & B_DELWRI)
+		else if (bp->b_flags & B_DELWRI)
 			bp->b_qindex = QUEUE_DIRTY;
 		else
 			bp->b_qindex = QUEUE_CLEAN;
@@ -2037,7 +2037,7 @@ static struct kproc_desc buf_kp = {
 	buf_daemon,
 	&bufdaemonproc
 };
-SYSINIT(bufdaemon, SI_SUB_KTHREAD_BUF, SI_ORDER_FIRST, kproc_start, &buf_kp)
+SYSINIT(bufdaemon, SI_SUB_KTHREAD_BUF, SI_ORDER_FIRST, kproc_start, &buf_kp);
 
 static void
 buf_daemon()

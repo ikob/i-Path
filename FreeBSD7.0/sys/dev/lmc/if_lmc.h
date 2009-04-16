@@ -1,5 +1,5 @@
 /*
- * $FreeBSD: src/sys/dev/lmc/if_lmc.h,v 1.5 2006/11/06 13:41:54 rwatson Exp $
+ * $FreeBSD: src/sys/dev/lmc/if_lmc.h,v 1.5.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  *
  * Copyright (c) 2002-2004 David Boggs. (boggs@boggs.palo-alto.ca.us)
  * All rights reserved.
@@ -1535,7 +1535,7 @@ static int  t1_ioctl(softc_t *, struct ioctl *);
         defined(__NetBSD__) || defined(__OpenBSD__) || defined(__bsdi__))
 static void netisr_dispatch(int, struct mbuf *);
 # endif
-static void raw_input(struct ifnet *, struct mbuf *);
+static void lmc_raw_input(struct ifnet *, struct mbuf *);
 #endif /* IFNET */
 
 #if BSD
@@ -1591,19 +1591,19 @@ static int core_ioctl(softc_t *, u_long, caddr_t);
 static void core_watchdog(softc_t *);
 
 #if IFNET
-static int raw_ioctl(struct ifnet *, u_long, caddr_t);
-static int ifnet_ioctl(struct ifnet *, u_long, caddr_t);
-static void ifnet_start(struct ifnet *);
-static int raw_output(struct ifnet *, struct mbuf *,
+static int lmc_raw_ioctl(struct ifnet *, u_long, caddr_t);
+static int lmc_ifnet_ioctl(struct ifnet *, u_long, caddr_t);
+static void lmc_ifnet_start(struct ifnet *);
+static int lmc_raw_output(struct ifnet *, struct mbuf *,
  struct sockaddr *, struct rtentry *);
-static void ifnet_watchdog(struct ifnet *);
+static void lmc_ifnet_watchdog(struct ifnet *);
 # ifdef __OpenBSD__
 static int ifmedia_change(struct ifnet *);
 static void ifmedia_status(struct ifnet *, struct ifmediareq *);
 # endif /* __OpenBSD__ */
 static void setup_ifnet(struct ifnet *);
-static int ifnet_attach(softc_t *);
-static void ifnet_detach(softc_t *);
+static int lmc_ifnet_attach(softc_t *);
+static void lmc_ifnet_detach(softc_t *);
 #endif /* IFNET */
 
 #if NETGRAPH

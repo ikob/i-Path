@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/include/sysarch.h,v 1.24 2005/04/14 16:57:58 peter Exp $
+ * $FreeBSD: src/sys/amd64/include/sysarch.h,v 1.24.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /*

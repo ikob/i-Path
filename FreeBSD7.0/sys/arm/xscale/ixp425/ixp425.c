@@ -34,7 +34,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/arm/xscale/ixp425/ixp425.c,v 1.8 2007/05/29 18:10:42 jhay Exp $");
+__FBSDID("$FreeBSD: src/sys/arm/xscale/ixp425/ixp425.c,v 1.8.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #define _ARM32_BUS_DMA_PRIVATE
 #include <sys/param.h>
@@ -234,7 +234,7 @@ ixp425_attach(device_t dev)
 	sc->sc_mem_rman.rm_descr = "IXP425 Memory";
 	if (rman_init(&sc->sc_mem_rman) != 0 ||
 	    rman_manage_region(&sc->sc_mem_rman, 0, ~0) != 0)
-		panic("ixp425_attach: failed to set up IRQ rman");
+		panic("ixp425_attach: failed to set up memory rman");
 
 	BUS_ADD_CHILD(dev, 0, "pcib", 0);
 	BUS_ADD_CHILD(dev, 0, "ixpclk", 0);

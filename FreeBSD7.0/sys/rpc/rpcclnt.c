@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/rpc/rpcclnt.c,v 1.20 2007/08/06 14:26:03 rwatson Exp $ */
+/* $FreeBSD: src/sys/rpc/rpcclnt.c,v 1.20.6.1 2008/11/25 02:59:29 kensmith Exp $ */
 /* $Id: rpcclnt.c,v 1.9 2003/11/05 14:59:03 rees Exp $ */
 
 /*-

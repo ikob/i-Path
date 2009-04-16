@@ -29,7 +29,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/dev/if_ndis/if_ndisvar.h,v 1.27 2007/07/12 02:54:05 thompsa Exp $
+ * $FreeBSD: src/sys/dev/if_ndis/if_ndisvar.h,v 1.27.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #define NDIS_DEFAULT_NODENAME	"FreeBSD NDIS node"
@@ -87,7 +87,7 @@ TAILQ_HEAD(nch, ndis_cfglist);
 
 #define NDIS_TXPKTS 64
 #define NDIS_INC(x)		\
-	(x)->ndis_txidx = ((x)->ndis_txidx + 1) % NDIS_TXPKTS
+	(x)->ndis_txidx = ((x)->ndis_txidx + 1) % (x)->ndis_maxpkts
 
 #if __FreeBSD_version < 600007
 #define arpcom ic.ic_ac

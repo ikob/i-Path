@@ -31,7 +31,7 @@
 
 *******************************************************************************/
 
-/*$FreeBSD: src/sys/dev/ixgb/ixgb_hw.h,v 1.1 2004/05/28 00:22:59 tackerman Exp $*/
+/*$FreeBSD: src/sys/dev/ixgb/ixgb_hw.h,v 1.1.28.1 2008/11/25 02:59:29 kensmith Exp $*/
 #ifndef _IXGB_HW_H_
 #define _IXGB_HW_H_
 

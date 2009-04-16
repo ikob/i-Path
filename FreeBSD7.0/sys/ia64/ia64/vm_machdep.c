@@ -38,7 +38,7 @@
  *
  *	from: @(#)vm_machdep.c	7.3 (Berkeley) 5/13/91
  *	Utah $Hdr: vm_machdep.c 1.16.1.1 89/06/23$
- * $FreeBSD: src/sys/ia64/ia64/vm_machdep.c,v 1.94 2007/06/04 23:57:31 jeff Exp $
+ * $FreeBSD: src/sys/ia64/ia64/vm_machdep.c,v 1.94.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 /*-
  * Copyright (c) 1994, 1995, 1996 Carnegie-Mellon University.
@@ -107,7 +107,7 @@ cpu_thread_clean(struct thread *td)
 }
 
 void
-cpu_thread_setup(struct thread *td)
+cpu_thread_alloc(struct thread *td)
 {
 	intptr_t sp;
 
@@ -118,6 +118,13 @@ cpu_thread_setup(struct thread *td)
 	td->td_frame = (struct trapframe *)sp;
 	td->td_frame->tf_length = sizeof(struct trapframe);
 	mtx_init(&td->td_md.md_highfp_mtx, "High FP lock", NULL, MTX_SPIN);
+}
+
+void
+cpu_thread_free(struct thread *td)
+{
+
+	mtx_destroy(&td->td_md.md_highfp_mtx);
 }
 
 void

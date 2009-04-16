@@ -37,7 +37,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/ieee488/pcii.c,v 1.8 2007/02/23 19:30:55 imp Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/ieee488/pcii.c,v 1.8.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>

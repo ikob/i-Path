@@ -1,4 +1,5 @@
 /*	$OpenBSD: pf.c,v 1.527 2007/02/22 15:23:23 pyr Exp $ */
+/* add:	$OpenBSD: pf.c,v 1.559 2007/09/18 18:45:59 markus Exp $ */
 
 /*
  * Copyright (c) 2001 Daniel Hartmeier
@@ -40,7 +41,7 @@
 #include "opt_inet6.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/contrib/pf/net/pf.c,v 1.46.2.1 2007/11/25 19:26:46 mlaier Exp $");
+__FBSDID("$FreeBSD: src/sys/contrib/pf/net/pf.c,v 1.46.2.5.2.1 2008/11/25 02:59:29 kensmith Exp $");
 #endif
 
 #ifdef __FreeBSD__
@@ -1839,7 +1840,14 @@ pf_send_tcp(const struct pf_rule *r, sa_family_t af,
 	pf_mtag->tag = rtag;
 
 	if (r != NULL && r->rtableid >= 0)
+#ifdef __FreeBSD__
+	{
+		M_SETFIB(m, r->rtableid);
+#endif
 		pf_mtag->rtableid = r->rtableid;
+#ifdef __FreeBSD__
+	}
+#endif
 #ifdef ALTQ
 	if (r != NULL && r->qid) {
 		pf_mtag->qid = r->qid;
@@ -2004,7 +2012,14 @@ pf_send_icmp(struct mbuf *m, u_int8_t type, u_int8_t code, sa_family_t af,
 #endif
 
 	if (r->rtableid >= 0)
+#ifdef __FreeBSD__
+	{
+		M_SETFIB(m0, r->rtableid);
+#endif
 		pf_mtag->rtableid = r->rtableid;
+#ifdef __FreeBSD__
+	}
+#endif
 
 #ifdef ALTQ
 	if (r->qid) {
@@ -2195,7 +2210,14 @@ pf_tag_packet(struct mbuf *m, struct pf_mtag *pf_mtag, int tag, int rtableid)
 	if (tag > 0)
 		pf_mtag->tag = tag;
 	if (rtableid >= 0)
+#ifdef __FreeBSD__
+	{
+		M_SETFIB(m, rtableid);
+#endif
 		pf_mtag->rtableid = rtableid;
+#ifdef __FreeBSD__
+	}
+#endif
 
 	return (0);
 }
@@ -2916,13 +2938,9 @@ pf_socket_lookup(int direction, struct pf_pdesc *pd)
 #ifdef __FreeBSD__
 	if (inp_arg != NULL) {
 		INP_LOCK_ASSERT(inp_arg);
-		if (inp_arg->inp_socket) {
-			pd->lookup.uid = inp_arg->inp_socket->so_cred->cr_uid;
-			pd->lookup.gid =
-			    inp_arg->inp_socket->so_cred->cr_groups[0];
-			return (1);
-		} else
-			return (-1);
+		pd->lookup.uid = inp_arg->inp_cred->cr_uid;
+		pd->lookup.gid = inp_arg->inp_cred->cr_groups[0];
+		return (1);
 	}
 #endif
 	switch (pd->proto) {
@@ -3018,15 +3036,8 @@ pf_socket_lookup(int direction, struct pf_pdesc *pd)
 		return (-1);
 	}
 #ifdef __FreeBSD__
-	INP_LOCK(inp);
-	if ((inp->inp_socket == NULL) || (inp->inp_socket->so_cred == NULL)) {
-		INP_UNLOCK(inp);
-		INP_INFO_RUNLOCK(pi);
-		return (-1);
-	}
-	pd->lookup.uid = inp->inp_socket->so_cred->cr_uid;
-	pd->lookup.gid = inp->inp_socket->so_cred->cr_groups[0];
-	INP_UNLOCK(inp);
+	pd->lookup.uid = inp->inp_cred->cr_uid;
+	pd->lookup.gid = inp->inp_cred->cr_groups[0];
 	INP_INFO_RUNLOCK(pi);
 #else
 	pd->lookup.uid = inp->inp_socket->so_euid;
@@ -3142,7 +3153,7 @@ pf_calc_mss(struct pf_addr *addr, sa_family_t af, u_int16_t offer)
 #ifdef RTF_PRCLONING
 		rtalloc_ign(&ro, (RTF_CLONING | RTF_PRCLONING));
 #else /* !RTF_PRCLONING */
-		rtalloc_ign(&ro, RTF_CLONING);
+		in_rtalloc_ign(&ro, RTF_CLONING, 0);
 #endif
 #else /* ! __FreeBSD__ */
 		rtalloc_noclone(&ro, NO_CLONING);
@@ -4759,6 +4770,22 @@ pf_test_state_tcp(struct pf_state **state, int direction, struct pfi_kif *kif,
 		}
 	}
 
+	if (((th->th_flags & (TH_SYN|TH_ACK)) == TH_SYN) &&
+	    dst->state >= TCPS_FIN_WAIT_2 &&
+	    src->state >= TCPS_FIN_WAIT_2) {
+		if (pf_status.debug >= PF_DEBUG_MISC) {
+			printf("pf: state reuse ");
+			pf_print_state(*state);
+			pf_print_flags(th->th_flags);
+			printf("\n");
+		}
+		/* XXX make sure it's the same direction ?? */
+		(*state)->src.state = (*state)->dst.state = TCPS_CLOSED;
+		pf_unlink_state(*state);
+		*state = NULL;
+		return (PF_DROP);
+	}
+
 	if (src->wscale && dst->wscale && !(th->th_flags & TH_SYN)) {
 		sws = src->wscale & PF_WSCALE_MASK;
 		dws = dst->wscale & PF_WSCALE_MASK;
@@ -5947,7 +5974,11 @@ pf_routable(struct pf_addr *addr, sa_family_t af, struct pfi_kif *kif)
 		goto out;
 
 #ifdef __FreeBSD__
-	rtalloc_ign((struct route *)&ro, RTF_CLONING);
+/* XXX MRT not always INET */ /* stick with table 0 though */
+	if (af == AF_INET)
+		in_rtalloc_ign((struct route *)&ro, RTF_CLONING, 0);
+	else
+		rtalloc_ign((struct route *)&ro, RTF_CLONING);
 #else /* ! __FreeBSD__ */
 	rtalloc_noclone((struct route *)&ro, NO_CLONING);
 #endif
@@ -6026,7 +6057,10 @@ pf_rtlabel_match(struct pf_addr *addr, sa_family_t af, struct pf_addr_wrap *aw)
 # ifdef RTF_PRCLONING
 	rtalloc_ign((struct route *)&ro, (RTF_CLONING|RTF_PRCLONING));
 # else /* !RTF_PRCLONING */
-	rtalloc_ign((struct route *)&ro, RTF_CLONING);
+	if (af == AF_INET)
+		in_rtalloc_ign((struct route *)&ro, RTF_CLONING, 0);
+	else
+		rtalloc_ign((struct route *)&ro, RTF_CLONING);
 # endif
 #else /* ! __FreeBSD__ */
 	rtalloc_noclone((struct route *)&ro, NO_CLONING);
@@ -6106,7 +6140,7 @@ pf_route(struct mbuf **m, struct pf_rule *r, int dir, struct ifnet *oifp,
 	dst->sin_addr = ip->ip_dst;
 
 	if (r->rt == PF_FASTROUTE) {
-		rtalloc(ro);
+		in_rtalloc(ro, 0);
 		if (ro->ro_rt == 0) {
 			ipstat.ips_noroute++;
 			goto bad;

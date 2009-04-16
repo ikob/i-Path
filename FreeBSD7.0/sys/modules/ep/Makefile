@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/ep/Makefile,v 1.9 2005/07/13 14:53:59 imp Exp $
+# $FreeBSD: src/sys/modules/ep/Makefile,v 1.9.6.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../dev/ep
 

@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/snp/Makefile,v 1.5 2005/09/19 10:14:05 mux Exp $
+# $FreeBSD: src/sys/modules/snp/Makefile,v 1.5.6.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../dev/snp
 

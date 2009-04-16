@@ -31,7 +31,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD: src/sys/dev/firewire/iec68113.h,v 1.9 2005/01/06 01:42:41 imp Exp $
+ * $FreeBSD: src/sys/dev/firewire/iec68113.h,v 1.9.18.1 2008/11/25 02:59:29 kensmith Exp $
  *
  */
 

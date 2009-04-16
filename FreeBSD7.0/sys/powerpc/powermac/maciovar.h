@@ -24,7 +24,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/powerpc/powermac/maciovar.h,v 1.7 2005/12/03 11:59:26 marius Exp $
+ * $FreeBSD: src/sys/powerpc/powermac/maciovar.h,v 1.7.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _MACIO_MACIOVAR_H_
@@ -49,7 +49,7 @@ struct macio_reg {
  * Per macio device structure.
  */
 struct macio_devinfo {
-	int        mdi_interrupts[5];
+	int        mdi_interrupts[6];
 	int	   mdi_ninterrupts;
 	int        mdi_base;
 	struct ofw_bus_devinfo mdi_obdinfo;

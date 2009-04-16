@@ -27,7 +27,7 @@
  *	from: NetBSD: htonl.S,v 1.1 1996/04/17 22:36:52 cgd
  *	from: src/sys/libkern/ia64/htonl.S,v 1.2 2002/02/18 20:35:21
  *
- * $FreeBSD: src/sys/libkern/ia64/bswap32.S,v 1.2 2005/01/07 00:24:33 imp Exp $
+ * $FreeBSD: src/sys/libkern/ia64/bswap32.S,v 1.2.18.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #define	NAME	__bswap32

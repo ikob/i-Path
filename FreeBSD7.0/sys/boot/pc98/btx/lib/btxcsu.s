@@ -13,7 +13,7 @@
 # purpose.
 #
 
-# $FreeBSD: src/sys/boot/pc98/btx/lib/btxcsu.s,v 1.3 2004/10/24 12:16:18 nyan Exp $
+# $FreeBSD: src/sys/boot/pc98/btx/lib/btxcsu.s,v 1.3.18.1 2008/11/25 02:59:29 kensmith Exp $
 
 #
 # BTX C startup code (ELF).

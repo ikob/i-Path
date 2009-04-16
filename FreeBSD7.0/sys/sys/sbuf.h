@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- *      $FreeBSD: src/sys/sys/sbuf.h,v 1.14 2004/07/09 11:35:30 des Exp $
+ *      $FreeBSD: src/sys/sys/sbuf.h,v 1.14.26.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _SYS_SBUF_H_

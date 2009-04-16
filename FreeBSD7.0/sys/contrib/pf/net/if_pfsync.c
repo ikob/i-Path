@@ -34,7 +34,7 @@
 #include "opt_pf.h"
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/contrib/pf/net/if_pfsync.c,v 1.36 2007/07/28 07:31:29 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/contrib/pf/net/if_pfsync.c,v 1.36.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #ifdef DEV_BPF
 #define	NBPFILTER	DEV_BPF

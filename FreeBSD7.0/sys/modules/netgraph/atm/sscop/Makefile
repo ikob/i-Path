@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/netgraph/atm/sscop/Makefile,v 1.1 2003/10/24 07:42:08 harti Exp $
+# $FreeBSD: src/sys/modules/netgraph/atm/sscop/Makefile,v 1.1.28.1 2008/11/25 02:59:29 kensmith Exp $
 #
 # Author: Harti Brandt <harti@freebsd.org>
 

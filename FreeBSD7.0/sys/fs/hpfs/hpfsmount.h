@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/fs/hpfs/hpfsmount.h,v 1.1 1999/12/09 19:10:00 semenu Exp $
+ * $FreeBSD: src/sys/fs/hpfs/hpfsmount.h,v 1.1.52.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #define HPFSMNT_TABLES		0x0001

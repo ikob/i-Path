@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/security/mac/mac_label.c,v 1.8 2007/02/06 14:19:24 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/security/mac/mac_label.c,v 1.8.6.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_mac.h"
 

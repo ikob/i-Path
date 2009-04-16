@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/modules/ipdivert/Makefile,v 1.1 2004/10/19 21:14:57 andre Exp $
+# $FreeBSD: src/sys/modules/ipdivert/Makefile,v 1.1.18.1 2008/11/25 02:59:29 kensmith Exp $
 
 .PATH: ${.CURDIR}/../../netinet
 

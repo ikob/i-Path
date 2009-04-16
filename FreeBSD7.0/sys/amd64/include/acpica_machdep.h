@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: src/sys/amd64/include/acpica_machdep.h,v 1.7 2007/03/22 18:16:39 jkim Exp $
+ * $FreeBSD: src/sys/amd64/include/acpica_machdep.h,v 1.7.6.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 /******************************************************************************

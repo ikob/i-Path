@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/dev/sio/sio.c,v 1.470 2007/02/23 12:18:53 piso Exp $");
+__FBSDID("$FreeBSD: src/sys/dev/sio/sio.c,v 1.470.2.2.2.1 2008/11/25 02:59:29 kensmith Exp $");
 
 #include "opt_comconsole.h"
 #include "opt_compat.h"
@@ -600,7 +600,7 @@ sioprobe(dev, xrid, rclk, noprobe)
 	}
 
 	/*
-	 * Enable the interrupt gate and disable device interupts.  This
+	 * Enable the interrupt gate and disable device interrupts.  This
 	 * should leave the device driving the interrupt line low and
 	 * guarantee an edge trigger if an interrupt can be generated.
 	 */
@@ -1502,7 +1502,8 @@ siointr1(com)
 #ifdef ALT_BREAK_TO_DEBUGGER
 			if (com->unit == comconsole &&
 			    kdb_alt_break(recv_data, &com->alt_brk_state) != 0)
-				kdb_enter("Break sequence on console");
+				kdb_enter_why(KDB_WHY_BREAK,
+				    "Break sequence on console");
 #endif /* ALT_BREAK_TO_DEBUGGER */
 #endif /* KDB */
 			if (line_status & (LSR_BI | LSR_FE | LSR_PE)) {
@@ -1521,7 +1522,8 @@ siointr1(com)
 				if (line_status & LSR_BI) {
 #if defined(KDB) && defined(BREAK_TO_DEBUGGER)
 					if (com->unit == comconsole) {
-						kdb_enter("Line break on console");
+						kdb_enter_why(KDB_WHY_BREAK,
+						    "Line break on console");
 						goto cont;
 					}
 #endif

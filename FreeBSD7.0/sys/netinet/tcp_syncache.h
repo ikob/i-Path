@@ -27,7 +27,7 @@
  * SUCH DAMAGE.
  *
  *	@(#)tcp_var.h	8.4 (Berkeley) 5/24/95
- * $FreeBSD: src/sys/netinet/tcp_syncache.h,v 1.1 2007/07/27 00:57:06 silby Exp $
+ * $FreeBSD: src/sys/netinet/tcp_syncache.h,v 1.1.2.1.2.1 2008/11/25 02:59:29 kensmith Exp $
  */
 
 #ifndef _NETINET_TCP_SYNCACHE_H_
@@ -40,6 +40,12 @@ int	 syncache_expand(struct in_conninfo *, struct tcpopt *,
 	     struct tcphdr *, struct socket **, struct mbuf *);
 void	 syncache_add(struct in_conninfo *, struct tcpopt *,
 	     struct tcphdr *, struct inpcb *, struct socket **, struct mbuf *);
+int	 tcp_offload_syncache_expand(struct in_conninfo *inc, struct tcpopt *to,
+             struct tcphdr *th, struct socket **lsop, struct mbuf *m);
+void	 tcp_offload_syncache_add(struct in_conninfo *, struct tcpopt *,
+             struct tcphdr *, struct inpcb *, struct socket **,
+             struct toe_usrreqs *tu, void *toepcb);
+
 void	 syncache_chkrst(struct in_conninfo *, struct tcphdr *);
 void	 syncache_badack(struct in_conninfo *);
 int	 syncache_pcbcount(void);

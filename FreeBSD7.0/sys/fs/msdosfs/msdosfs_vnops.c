@@ -1,4 +1,4 @@
-/* $FreeBSD: src/sys/fs/msdosfs/msdosfs_vnops.c,v 1.179 2007/08/31 22:29:55 bde Exp $ */
+/* $FreeBSD: src/sys/fs/msdosfs/msdosfs_vnops.c,v 1.179.2.3.2.1 2008/11/25 02:59:29 kensmith Exp $ */
 /*	$NetBSD: msdosfs_vnops.c,v 1.68 1998/02/10 14:10:04 mrg Exp $	*/
 
 /*-
@@ -82,7 +82,6 @@
 /*
  * Prototypes for MSDOSFS vnode operations
  */
-static vop_advlock_t	msdosfs_advlock;
 static vop_create_t	msdosfs_create;
 static vop_mknod_t	msdosfs_mknod;
 static vop_open_t	msdosfs_open;
@@ -984,7 +983,7 @@ msdosfs_rename(ap)
 	struct componentname *fcnp = ap->a_fcnp;
 	struct thread *td = fcnp->cn_thread;
 	struct denode *ip, *xp, *dp, *zp;
-	u_char toname[11], oldname[11];
+	u_char toname[12], oldname[11];
 	u_long from_diroffset, to_diroffset;
 	u_char to_count;
 	int doingdirectory = 0, newparent = 0;
@@ -1947,21 +1946,6 @@ msdosfs_pathconf(ap)
 }
 
 static int
-msdosfs_advlock(ap)
-	struct vop_advlock_args /* {
-		struct vnode *a_vp;
-		u_char a_id;
-		int a_op;
-		struct flock *a_fl;
-		int a_flags;
-	} */ *ap;
-{
-	struct denode *dep = VTODE(ap->a_vp);
-
-	return (lf_advlock(ap, &dep->de_lockf, dep->de_FileSize));
-}
-
-static int
 msdosfs_vptofh(ap)
 	struct vop_vptofh_args /* {
 		struct vnode *a_vp;
@@ -1985,7 +1969,6 @@ struct vop_vector msdosfs_vnodeops = {
 	.vop_default =		&default_vnodeops,
 
 	.vop_access =		msdosfs_access,
-	.vop_advlock =		msdosfs_advlock,
 	.vop_bmap =		msdosfs_bmap,
 	.vop_cachedlookup =	msdosfs_lookup,
 	.vop_open =		msdosfs_open,
