@@ -57,7 +57,6 @@
 #include <sys/param.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
-#include "mbuf.h"
 #include <sys/mbuf.h>
 
 #include <sys/time.h>
@@ -69,7 +68,7 @@
 #include <netinet/kpi_ipfilter.h>
 
 #include <net/if_var.h>
-#include "netinet/ip_sirens.h"
+#include <netinet/ip_sirens.h>
 
 struct ipopt_sr *ip_sirens_dooptions_d(mbuf_t);
 
