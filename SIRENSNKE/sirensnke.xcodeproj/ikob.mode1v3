@@ -229,6 +229,8 @@
 			<key>Layout</key>
 			<array>
 				<dict>
+					<key>BecomeActive</key>
+					<true/>
 					<key>ContentConfiguration</key>
 					<dict>
 						<key>PBXBottomSmartGroupGIDs</key>
@@ -265,6 +267,7 @@
 							<array>
 								<string>089C166AFE841209C02AAC07</string>
 								<string>247142CAFF3F8F9811CA285C</string>
+								<string>F1EF28AA10900F0600E3CDED</string>
 								<string>F17870AA1089462D000E6DC1</string>
 								<string>089C167CFE841241C02AAC07</string>
 								<string>19C28FB6FE9D52B211CA2CBB</string>
@@ -274,7 +277,7 @@
 							<key>PBXSmartGroupTreeModuleOutlineStateSelectionKey</key>
 							<array>
 								<array>
-									<integer>3</integer>
+									<integer>7</integer>
 									<integer>1</integer>
 									<integer>0</integer>
 								</array>
@@ -299,7 +302,7 @@
 							<real>155</real>
 						</array>
 						<key>RubberWindowFrame</key>
-						<string>1121 843 1194 719 0 0 2560 1578 </string>
+						<string>786 847 1194 719 0 0 2560 1578 </string>
 					</dict>
 					<key>Module</key>
 					<string>PBXSmartGroupTreeModule</string>
@@ -310,14 +313,12 @@
 					<key>Dock</key>
 					<array>
 						<dict>
-							<key>BecomeActive</key>
-							<true/>
 							<key>ContentConfiguration</key>
 							<dict>
 								<key>PBXProjectModuleGUID</key>
 								<string>1CE0B20306471E060097A5F4</string>
 								<key>PBXProjectModuleLabel</key>
-								<string>sirensnke.c</string>
+								<string>sirensnke.h</string>
 								<key>PBXSplitModuleInNavigatorKey</key>
 								<dict>
 									<key>Split0</key>
@@ -325,11 +326,11 @@
 										<key>PBXProjectModuleGUID</key>
 										<string>1CE0B20406471E060097A5F4</string>
 										<key>PBXProjectModuleLabel</key>
-										<string>sirensnke.c</string>
+										<string>sirensnke.h</string>
 										<key>_historyCapacity</key>
 										<integer>0</integer>
 										<key>bookmark</key>
-										<string>F1EF289C10900E5D00E3CDED</string>
+										<string>F1EF28CF10900FD300E3CDED</string>
 										<key>history</key>
 										<array>
 											<string>F1EB400D107B507900824F8F</string>
@@ -338,8 +339,10 @@
 											<string>F1149D4E1088268600CFA1CF</string>
 											<string>F1AA7BA710886DF1006A4029</string>
 											<string>F1783F1C107C6D3400E1D64A</string>
-											<string>F1EF288F10900CF100E3CDED</string>
-											<string>F1EF288310900CD400E3CDED</string>
+											<string>F1EF28AF10900F3000E3CDED</string>
+											<string>F1EF28B110900F3000E3CDED</string>
+											<string>F1EF28CD10900FD300E3CDED</string>
+											<string>F1EF28CE10900FD300E3CDED</string>
 										</array>
 									</dict>
 									<key>SplitCount</key>
@@ -351,14 +354,14 @@
 							<key>GeometryConfiguration</key>
 							<dict>
 								<key>Frame</key>
-								<string>{{0, 0}, {1017, 548}}</string>
+								<string>{{0, 0}, {1017, 540}}</string>
 								<key>RubberWindowFrame</key>
-								<string>1121 843 1194 719 0 0 2560 1578 </string>
+								<string>786 847 1194 719 0 0 2560 1578 </string>
 							</dict>
 							<key>Module</key>
 							<string>PBXNavigatorGroup</string>
 							<key>Proportion</key>
-							<string>548pt</string>
+							<string>540pt</string>
 						</dict>
 						<dict>
 							<key>ContentConfiguration</key>
@@ -371,14 +374,14 @@
 							<key>GeometryConfiguration</key>
 							<dict>
 								<key>Frame</key>
-								<string>{{0, 553}, {1017, 125}}</string>
+								<string>{{0, 545}, {1017, 133}}</string>
 								<key>RubberWindowFrame</key>
-								<string>1121 843 1194 719 0 0 2560 1578 </string>
+								<string>786 847 1194 719 0 0 2560 1578 </string>
 							</dict>
 							<key>Module</key>
 							<string>XCDetailModule</string>
 							<key>Proportion</key>
-							<string>125pt</string>
+							<string>133pt</string>
 						</dict>
 					</array>
 					<key>Proportion</key>
@@ -397,9 +400,9 @@
 			</array>
 			<key>TableOfContents</key>
 			<array>
-				<string>F1EF289110900CF100E3CDED</string>
+				<string>F1EF28D010900FD300E3CDED</string>
 				<string>1CE0B1FE06471DED0097A5F4</string>
-				<string>F1EF289210900CF100E3CDED</string>
+				<string>F1EF28D110900FD300E3CDED</string>
 				<string>1CE0B20306471E060097A5F4</string>
 				<string>1CE0B20506471E060097A5F4</string>
 			</array>
@@ -537,12 +540,11 @@
 	<integer>5</integer>
 	<key>WindowOrderList</key>
 	<array>
-		<string>1C530D57069F1CE1000CFCEE</string>
 		<string>F1A0A358107B300300B70183</string>
 		<string>/Users/ikob/SIRENSNKE/sirensnke.xcodeproj</string>
 	</array>
 	<key>WindowString</key>
-	<string>1121 843 1194 719 0 0 2560 1578 </string>
+	<string>786 847 1194 719 0 0 2560 1578 </string>
 	<key>WindowToolsV3</key>
 	<array>
 		<dict>
@@ -619,7 +621,7 @@
 			<key>TableOfContents</key>
 			<array>
 				<string>F1A0A358107B300300B70183</string>
-				<string>F1EF288110900CD400E3CDED</string>
+				<string>F1EF28D210900FD300E3CDED</string>
 				<string>1CD0528F0623707200166675</string>
 				<string>XCMainBuildResultsModuleGUID</string>
 			</array>
