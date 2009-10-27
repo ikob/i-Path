@@ -216,10 +216,10 @@
 						<key>_historyCapacity</key>
 						<integer>0</integer>
 						<key>bookmark</key>
-						<string>F1B041AD1096991500D75BC1</string>
+						<string>F1E24600109699540029A015</string>
 						<key>history</key>
 						<array>
-							<string>F1B0419E1096977A00D75BC1</string>
+							<string>F1B041AD1096991500D75BC1</string>
 						</array>
 					</dict>
 					<key>SplitCount</key>
@@ -338,7 +338,7 @@
 							<real>155</real>
 						</array>
 						<key>RubberWindowFrame</key>
-						<string>713 226 1261 1340 0 0 2560 1578 </string>
+						<string>1061 71 1261 1340 0 0 2560 1578 </string>
 					</dict>
 					<key>Module</key>
 					<string>PBXSmartGroupTreeModule</string>
@@ -366,7 +366,7 @@
 										<key>_historyCapacity</key>
 										<integer>0</integer>
 										<key>bookmark</key>
-										<string>F1B041AC1096991500D75BC1</string>
+										<string>F1E245FD109699540029A015</string>
 										<key>history</key>
 										<array>
 											<string>F1EB400D107B507900824F8F</string>
@@ -379,7 +379,7 @@
 											<string>F1B041981096977A00D75BC1</string>
 											<string>F1B041991096977A00D75BC1</string>
 											<string>F1B041A91096991500D75BC1</string>
-											<string>F1B041AB1096991500D75BC1</string>
+											<string>F1B041AC1096991500D75BC1</string>
 										</array>
 									</dict>
 									<key>SplitCount</key>
@@ -391,14 +391,14 @@
 							<key>GeometryConfiguration</key>
 							<dict>
 								<key>Frame</key>
-								<string>{{0, 0}, {1084, 1111}}</string>
+								<string>{{0, 0}, {1084, 1108}}</string>
 								<key>RubberWindowFrame</key>
-								<string>713 226 1261 1340 0 0 2560 1578 </string>
+								<string>1061 71 1261 1340 0 0 2560 1578 </string>
 							</dict>
 							<key>Module</key>
 							<string>PBXNavigatorGroup</string>
 							<key>Proportion</key>
-							<string>1111pt</string>
+							<string>1108pt</string>
 						</dict>
 						<dict>
 							<key>BecomeActive</key>
@@ -413,14 +413,14 @@
 							<key>GeometryConfiguration</key>
 							<dict>
 								<key>Frame</key>
-								<string>{{0, 1116}, {1084, 183}}</string>
+								<string>{{0, 1113}, {1084, 186}}</string>
 								<key>RubberWindowFrame</key>
-								<string>713 226 1261 1340 0 0 2560 1578 </string>
+								<string>1061 71 1261 1340 0 0 2560 1578 </string>
 							</dict>
 							<key>Module</key>
 							<string>XCDetailModule</string>
 							<key>Proportion</key>
-							<string>183pt</string>
+							<string>186pt</string>
 						</dict>
 					</array>
 					<key>Proportion</key>
@@ -439,9 +439,9 @@
 			</array>
 			<key>TableOfContents</key>
 			<array>
-				<string>F1B0419C1096977A00D75BC1</string>
+				<string>F1E245FE109699540029A015</string>
 				<string>1CE0B1FE06471DED0097A5F4</string>
-				<string>F1B0419D1096977A00D75BC1</string>
+				<string>F1E245FF109699540029A015</string>
 				<string>1CE0B20306471E060097A5F4</string>
 				<string>1CE0B20506471E060097A5F4</string>
 			</array>
@@ -584,7 +584,7 @@
 		<string>/Users/ikob/SIRENSNKE/sirensnke.xcodeproj</string>
 	</array>
 	<key>WindowString</key>
-	<string>713 226 1261 1340 0 0 2560 1578 </string>
+	<string>1061 71 1261 1340 0 0 2560 1578 </string>
 	<key>WindowToolsV3</key>
 	<array>
 		<dict>
@@ -600,14 +600,12 @@
 					<key>Dock</key>
 					<array>
 						<dict>
-							<key>BecomeActive</key>
-							<true/>
 							<key>ContentConfiguration</key>
 							<dict>
 								<key>PBXProjectModuleGUID</key>
 								<string>1CD0528F0623707200166675</string>
 								<key>PBXProjectModuleLabel</key>
-								<string>sirensnke.c</string>
+								<string></string>
 								<key>StatusBarVisibility</key>
 								<true/>
 							</dict>
@@ -663,7 +661,7 @@
 			<key>TableOfContents</key>
 			<array>
 				<string>F1A0A358107B300300B70183</string>
-				<string>F1B041A01096977A00D75BC1</string>
+				<string>F1E24601109699540029A015</string>
 				<string>1CD0528F0623707200166675</string>
 				<string>XCMainBuildResultsModuleGUID</string>
 			</array>
@@ -676,7 +674,7 @@
 			<key>WindowToolGUID</key>
 			<string>F1A0A358107B300300B70183</string>
 			<key>WindowToolIsVisible</key>
-			<true/>
+			<false/>
 		</dict>
 		<dict>
 			<key>Identifier</key>
