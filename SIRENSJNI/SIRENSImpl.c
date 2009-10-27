@@ -88,7 +88,11 @@ void getSockoptSIRENSSDATA(JNIEnv *env, jobject this,
 	jint dir, jint mode, jint probe, jobject array)
 {
     jint fd;
+#if 0
     jint *res_p;
+#else
+    jlong *res_p;
+#endif
     jboolean isCopy = JNI_TRUE;
     char *dreqbuf;
     int len = IPSIRENS_DREQSIZE(256);
@@ -112,11 +116,19 @@ void getSockoptSIRENSSDATA(JNIEnv *env, jobject this,
         (*env)->DeleteLocalRef(env, jcls);
 	return;
     }
+#if 0
     res_p = (*env)->GetIntArrayElements(env, array, &isCopy);
     for(i = 0 ; i < 256 ; i++){
         res_p[i] = ntohl(sr_dataq[i].set);
     }
     (*env)->SetIntArrayRegion(env, array, 0, 256, res_p);
+#else
+    res_p = (*env)->GetLongArrayElements(env, array, &isCopy);
+    for(i = 0 ; i < 256 ; i++){
+        res_p[i] = ntohl(sr_dataq[i].set);
+    }
+    (*env)->SetLongArrayRegion(env, array, 0, 256, res_p);
+#endif
     return;
 }
 void setSockoptSIRENSIDX(JNIEnv *env, jobject this,

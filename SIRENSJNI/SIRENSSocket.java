@@ -38,7 +38,7 @@ import java.net.*;
 
 public class SIRENSSocket extends Socket {
     public native void setSockoptSIRENSIDX (int srsmax, int[] mode, int[] probe, int[] qttlmax, int[] qttlmin, int[] sttlmax, int[] sttlmin) throws IOException;
-    public native void getSockoptSIRENSSDATA(int dir, int mode, int probe, int [] array) throws IOException;
+    public native void getSockoptSIRENSSDATA(int dir, int mode, int probe, long [] array) throws IOException;
     static {
         System.loadLibrary("SIRENSImpl");
     }

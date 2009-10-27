@@ -49,8 +49,8 @@ public class jperfParam {
 	int port = 4444;
 	boolean sirens = false;
 
-	int[][] parray = new int[4][256];
-	int[][] array = new int[4][256];
+	long[][] parray = new long[4][256];
+	long[][] array = new long[4][256];
 
 	public void printStatus(long basetime, long basecount){
 		long currtime = System.currentTimeMillis();
@@ -87,7 +87,7 @@ public class jperfParam {
 	}
 	public void printSIRENSStatus (SIRENSSocket socket){
 		if(sirens == false) return;
-		int []tarray;
+		long []tarray;
 		long currtime = System.currentTimeMillis();
 		try {
 			socket.getSockoptSIRENSSDATA(1, 3, 1, array[0]);
@@ -114,19 +114,19 @@ public class jperfParam {
 			return;
 		}
 		for( int j = 0 ; j < 256 ; j++){
-       			if(array[0][j] != 0xffffffff)
+       			if(array[0][j] != 0xffffffffL)
 	       			System.out.printf("%10sbps\n", inttosip(array[0][j] * 1000000 ));
 		}
 		for( int j = 0 ; j < 256 ; j++){
-       			if(array[1][j] != 0xffffffff)
+       			if(array[1][j] != 0xffffffffL)
 				System.out.printf("%10sbps\n", inttosip(array[1][j] * 1000000));
 			}
 		for( int j = 0 ; j < 256 ; j++){
-       			if(array[2][j] != 0xffffffff && currtime - starttime >= 2000)
+       			if(array[2][j] != 0xffffffffL && currtime - starttime >= 2000)
 	       			System.out.printf("%10sbps\n", inttosip((array[2][j] - parray[2][j]) / (currtime - oldtime) * 8 * 1000));
 		}
 		for( int j = 0 ; j < 256 ; j++){
-       			if(array[3][j] != 0xffffffff && currtime - starttime >= 2000)
+       			if(array[3][j] != 0xffffffffL && currtime - starttime >= 2000)
 	       			System.out.printf("%10sbps\n", inttosip((array[3][j] - parray[3][j]) / (currtime - oldtime) * 8 * 1000));
 		}
 		tarray = array[0];

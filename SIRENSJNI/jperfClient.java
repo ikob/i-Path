@@ -35,7 +35,7 @@
  */
 import java.io.*;
 import java.net.*;
-import gnu.getopt.Getopt;
+//import gnu.getopt.Getopt;
 
 public class jperfClient extends Thread {
 	jperfParam param;
