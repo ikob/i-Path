@@ -89,14 +89,6 @@ struct ipopt_sr *ip_sirens_dooptions_d(mbuf_t);
  */
 #define MYBUNDLEID		"jp.hpcc.ikob.kext.sirensnke"
 
-typedef enum SRPROCFLAGS{
-	TTL_IN_DONE	= 1,
-	TTL_IN_TO,
-	TTL_OUT_DONE,
-	TTL_OUT_TO,
-} SRPROCFLAGS;
-
-
 static boolean_t sirens_initted = FALSE;
 
 static	int sr_enable = 0;
@@ -747,7 +739,7 @@ sr_ipf_output(void *cookie, mbuf_t *data, ipf_pktopts_t options)
 {
 	errno_t	ret = 0;
 	errno_t status;
-	SRPROCFLAGS	*tag_ref;
+	int *tag_ref;
 	size_t	len;
 	struct ipopt_sr *opt_sr = NULL;
 	struct tcphdr *tp, th;
@@ -843,51 +835,23 @@ sr_ipf_output(void *cookie, mbuf_t *data, ipf_pktopts_t options)
 				}
 				lck_mtx_unlock(gmutex);
 				srp->sr_sttl = sttl + j;
-/* allocate tag for later process */
 			}
-/* update SIRENS data */
-/*
- {
-			struct sirens_tag *sr_tag = NULL;
-			sr_tag = (struct sirens_tag *)m_tag_find(m, PACKET_TAG_SIRENS, NULL);
-			if(sr_tag != NULL){
-				struct ipopt_sr * opt_sr = NULL;
-				opt_sr = ip_sirens_dooptions(m);
-				if(opt_sr != NULL){
-					if((opt_sr->req_mode == SIRENS_TTL) && (opt_sr->req_ttl == ip->ip_ttl)){
-						if(sr_setparam(opt_sr, ifp) != 0){
-							ipstat.ips_odropped++;
-						}
-					}
-				}
-			}
-        }
-*/
 			break;
 		default:
 			break;
 	}
+	status = mbuf_tag_find(*data, gsr_idtag, SR_TAG_TYPE, &len, (void**)&tag_ref);
+	if(!status){
+		goto out;
+	}
 	if(opt_sr->req_mode == SIRENS_TTL
 	   && !(opt_sr->req_probe & SIRENS_DIR_IN)
 	   && iph->ip_ttl == opt_sr->req_ttl){
-//		ifnet_t ifp;
-//		debug_printf("to set parameter at outbound\n");		
-//		ifp = mbuf_pkthdr_rcvif(*data);
-		debug_printf("allocate tag for lower layer\n");
-		status = mbuf_tag_allocate(*data, gsr_idtag, SR_TAG_TYPE, sizeof(TTL_OUT_TO), MBUF_WAITOK, (void**)&tag_ref);
+		status = mbuf_tag_allocate(*data, gsr_idtag, SR_TAG_TYPE, sizeof(int), MBUF_WAITOK, (void**)&tag_ref);
 		if(status == 0){
-			*tag_ref = TTL_OUT_TO;
-		}		
+			*tag_ref = mbuf_pkthdr_len(*data);
+		}
 	}
-/*
-	status = mbuf_tag_find(*data, gsr_idtag, SR_TAG_TYPE, &len, (void**)&tag_ref);
-	if(status != 0) {
-		goto out;
-	}
-	if (*tag_ref == TTL_OUT_TO) {
-		debug_printf("ipf_output: found tag!\n");
-	}
- */
 out:
 	return ret;
 }
@@ -896,7 +860,7 @@ static errno_t
 sr_ipf_input(void *cookie, mbuf_t *data, int offset, u_int8_t protocol){
 	errno_t	ret = 0;
 	errno_t status;
-	SRPROCFLAGS	*tag_ref;
+	int *tag_ref;
 	size_t	len;
 	struct ipopt_sr *opt_sr = NULL;
 	struct tcphdr *tp, th;
@@ -923,12 +887,6 @@ sr_ipf_input(void *cookie, mbuf_t *data, int offset, u_int8_t protocol){
 			for(srp = TAILQ_FIRST(&sr_active); srp ; srp = nsrp){
 				nsrp = TAILQ_NEXT(srp, sre_list);
 				inp = (struct inpcb *)(((struct socket *)(srp->sre_so))->so_pcb);
-
-//				debug_printf("%2x %08x %08x %04x %04x\n",
-//							 iph->ip_p, iph->ip_dst, iph->ip_src, tp->th_dport, tp->th_sport);				
-//				debug_printf("%2x %08x %08x %04x %04x\n",
-//							inp->inp_ip_p, inp->inp_laddr, inp->inp_faddr, inp->inp_lport, inp->inp_fport);
-/* how to determine upper layer protocol from inpcb ???? */
 				if((inp->inp_vflag == INP_IPV4)
 				   && (inp->inp_laddr.s_addr == iph->ip_dst.s_addr)
 				   && (inp->inp_faddr.s_addr == iph->ip_src.s_addr)
@@ -981,19 +939,19 @@ skip_res:
 	status = mbuf_tag_find(*data, gsr_idtag, SR_TAG_TYPE, &len, (void**)&tag_ref);
 	if(status == 0) {
 		debug_printf("ipf_input: found tag!\n");
+		goto in;
 	}
 	if(opt_sr->req_mode == SIRENS_TTL
 	   && iph->ip_ttl == opt_sr->req_ttl){
 //		ifnet_t ifp;
-//		debug_printf("to set parameter\n");
-//		ifp = mbuf_pkthdr_rcvif(*data);
-//		debug_printf("if speed = %d\n", ifnet_baudrate(ifp));
+		debug_printf("sirens input: match TTL update hdr data and re-compute IP checksum TTL:%x:%x probe:%x\n",
+					 iph->ip_ttl, opt_sr->req_ttl, opt_sr->req_probe);
 		if(opt_sr->req_probe & SIRENS_DIR_IN){
 		}else{
-			status = mbuf_tag_allocate(*data, gsr_idtag, SR_TAG_TYPE, sizeof(TTL_OUT_TO), MBUF_WAITOK, (void**)&tag_ref);
+			status = mbuf_tag_allocate(*data, gsr_idtag, SR_TAG_TYPE, sizeof(int), MBUF_WAITOK, (void**)&tag_ref);
 			if(status == 0){
-				*tag_ref = TTL_OUT_TO;
-			}			
+				*tag_ref = mbuf_pkthdr_len(*data);
+			}
 		}
 	}
 	goto in;
@@ -1060,13 +1018,40 @@ sr_iff_out_fn (void *cookie, ifnet_t interface, protocol_family_t protocol, mbuf
 {
 	size_t	len;
 	int status;
+	int pktlen;
 	int error = 0;
-	SRPROCFLAGS	*tag_ref;
+	int *tag_ref;
+	struct ip *iph;
+	struct ipopt_sr *opt_sr = NULL;
+	u_int32_t *qp;
+	int i;
+	
 	status = mbuf_tag_find(*data, gsr_idtag, SR_TAG_TYPE, &len, (void**)&tag_ref);
 	if(status != 0){
 		return error;
 	}
-	debug_printf("found tag\n");
+	pktlen = mbuf_pkthdr_len(*data);
+	if(pktlen < *tag_ref){
+		debug_printf("found tag but error %x < %x\n", pktlen, *tag_ref);
+		return error;
+	}
+	error = mbuf_pullup(data, pktlen - *tag_ref + sizeof (struct ip) + sizeof(struct ipopt_sr));
+	if(error){
+		debug_printf("found tag but pullup %x %x\n", pktlen, *tag_ref);
+		return error;
+	}
+	qp = (u_int32_t *)(mbuf_data(*data));
+	iph = (struct ip *)((caddr_t)qp + pktlen - *tag_ref);
+//	for( i = 0 ; i < (pktlen - *tag_ref + sizeof (struct ip) + sizeof(struct ipopt_sr))/4  + 2 ; i ++){
+//		printf("%08x ", ntohl(qp[i]));
+//	}
+//	printf("\n");
+
+	opt_sr = (struct ipopt_sr*)(iph + 1);
+	
+	debug_printf("sirens otput: match TTL update hdr data and re-compute IP checksum TTL:%x:%x probe:%x\n",
+				 iph->ip_ttl, opt_sr->req_ttl, opt_sr->req_probe);
+
 	return error;
 }
 
