@@ -8,20 +8,18 @@
 
 /* Begin PBXBuildFile section */
 		32A4FEBE0562C75700D090E7 /* sirensnke.c in Sources */ = {isa = PBXBuildFile; fileRef = 1A224C3CFF42312311CA2CB7 /* sirensnke.c */; settings = {ATTRIBUTES = (); }; };
-		F14EDE15108949CB0094EA55 /* mbuf.h in Headers */ = {isa = PBXBuildFile; fileRef = F14EDE14108949CB0094EA55 /* mbuf.h */; };
 		F17870AC1089462D000E6DC1 /* ip_sirens.h in Headers */ = {isa = PBXBuildFile; fileRef = F17870AB1089462D000E6DC1 /* ip_sirens.h */; };
 		F1A0A342107B2F3400B70183 /* sirensnke.h in Headers */ = {isa = PBXBuildFile; fileRef = F1A0A341107B2F3400B70183 /* sirensnke.h */; };
-		F1AA7A94108855C1006A4029 /* ip_pcbopt.c in Sources */ = {isa = PBXBuildFile; fileRef = F1AA7A93108855C1006A4029 /* ip_pcbopt.c */; };
+		F1E24606109699F10029A015 /* ip_pcbopt.c in Sources */ = {isa = PBXBuildFile; fileRef = F1E24605109699F10029A015 /* ip_pcbopt.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		1A224C3CFF42312311CA2CB7 /* sirensnke.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sirensnke.c; sourceTree = "<group>"; };
 		32A4FEC30562C75700D090E7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		32A4FEC40562C75800D090E7 /* sirensnke.kext */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = sirensnke.kext; sourceTree = BUILT_PRODUCTS_DIR; };
-		F14EDE14108949CB0094EA55 /* mbuf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mbuf.h; sourceTree = "<group>"; };
 		F17870AB1089462D000E6DC1 /* ip_sirens.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ip_sirens.h; sourceTree = "<group>"; };
 		F1A0A341107B2F3400B70183 /* sirensnke.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sirensnke.h; sourceTree = "<group>"; };
-		F1AA7A93108855C1006A4029 /* ip_pcbopt.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ip_pcbopt.c; sourceTree = "<group>"; };
+		F1E24605109699F10029A015 /* ip_pcbopt.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ip_pcbopt.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -64,8 +62,6 @@
 		247142CAFF3F8F9811CA285C /* Source */ = {
 			isa = PBXGroup;
 			children = (
-				F14EDE14108949CB0094EA55 /* mbuf.h */,
-				F1AA7A93108855C1006A4029 /* ip_pcbopt.c */,
 				F17870AA1089462D000E6DC1 /* netinet */,
 				F1A0A341107B2F3400B70183 /* sirensnke.h */,
 				1A224C3CFF42312311CA2CB7 /* sirensnke.c */,
@@ -76,6 +72,7 @@
 		F17870AA1089462D000E6DC1 /* netinet */ = {
 			isa = PBXGroup;
 			children = (
+				F1E24605109699F10029A015 /* ip_pcbopt.c */,
 				F17870AB1089462D000E6DC1 /* ip_sirens.h */,
 			);
 			path = netinet;
@@ -90,7 +87,6 @@
 			files = (
 				F1A0A342107B2F3400B70183 /* sirensnke.h in Headers */,
 				F17870AC1089462D000E6DC1 /* ip_sirens.h in Headers */,
-				F14EDE15108949CB0094EA55 /* mbuf.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -160,7 +156,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				32A4FEBE0562C75700D090E7 /* sirensnke.c in Sources */,
-				F1AA7A94108855C1006A4029 /* ip_pcbopt.c in Sources */,
+				F1E24606109699F10029A015 /* ip_pcbopt.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -239,11 +235,9 @@
 				GCC_WARN_ABOUT_POINTER_SIGNEDNESS = NO;
 				GCC_WARN_ABOUT_RETURN_TYPE = NO;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = ".//**";
 				ONLY_ACTIVE_ARCH = NO;
-				OTHER_CFLAGS = (
-					"-I",
-					./,
-				);
+				OTHER_CFLAGS = "";
 				PREBINDING = YES;
 				SDKROOT = macosx10.6;
 				VALID_ARCHS = "i386 x86_64";
@@ -265,11 +259,9 @@
 				GCC_WARN_ABOUT_POINTER_SIGNEDNESS = NO;
 				GCC_WARN_ABOUT_RETURN_TYPE = NO;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = ".//**";
 				ONLY_ACTIVE_ARCH = NO;
-				OTHER_CFLAGS = (
-					"-I",
-					./,
-				);
+				OTHER_CFLAGS = "";
 				PREBINDING = YES;
 				SDKROOT = macosx10.6;
 				VALID_ARCHS = "i386 x86_64";
