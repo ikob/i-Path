@@ -10,6 +10,8 @@
 		32A4FEBE0562C75700D090E7 /* sirensnke.c in Sources */ = {isa = PBXBuildFile; fileRef = 1A224C3CFF42312311CA2CB7 /* sirensnke.c */; settings = {ATTRIBUTES = (); }; };
 		F17870AC1089462D000E6DC1 /* ip_sirens.h in Headers */ = {isa = PBXBuildFile; fileRef = F17870AB1089462D000E6DC1 /* ip_sirens.h */; };
 		F1A0A342107B2F3400B70183 /* sirensnke.h in Headers */ = {isa = PBXBuildFile; fileRef = F1A0A341107B2F3400B70183 /* sirensnke.h */; };
+		F1A87A791096C8820002411E /* mbuf.h in Headers */ = {isa = PBXBuildFile; fileRef = F1A87A781096C8820002411E /* mbuf.h */; };
+		F1A87A7C1096C8AF0002411E /* version.plist in Resources */ = {isa = PBXBuildFile; fileRef = F1A87A7B1096C8AF0002411E /* version.plist */; };
 		F1E24606109699F10029A015 /* ip_pcbopt.c in Sources */ = {isa = PBXBuildFile; fileRef = F1E24605109699F10029A015 /* ip_pcbopt.c */; };
 /* End PBXBuildFile section */
 
@@ -19,6 +21,8 @@
 		32A4FEC40562C75800D090E7 /* sirensnke.kext */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = sirensnke.kext; sourceTree = BUILT_PRODUCTS_DIR; };
 		F17870AB1089462D000E6DC1 /* ip_sirens.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ip_sirens.h; sourceTree = "<group>"; };
 		F1A0A341107B2F3400B70183 /* sirensnke.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sirensnke.h; sourceTree = "<group>"; };
+		F1A87A781096C8820002411E /* mbuf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = mbuf.h; path = sys/mbuf.h; sourceTree = "<group>"; };
+		F1A87A7B1096C8AF0002411E /* version.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = version.plist; sourceTree = "<group>"; };
 		F1E24605109699F10029A015 /* ip_pcbopt.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ip_pcbopt.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -62,6 +66,8 @@
 		247142CAFF3F8F9811CA285C /* Source */ = {
 			isa = PBXGroup;
 			children = (
+				F1A87A7B1096C8AF0002411E /* version.plist */,
+				F1A87A7A1096C8900002411E /* sys */,
 				F17870AA1089462D000E6DC1 /* netinet */,
 				F1A0A341107B2F3400B70183 /* sirensnke.h */,
 				1A224C3CFF42312311CA2CB7 /* sirensnke.c */,
@@ -78,6 +84,14 @@
 			path = netinet;
 			sourceTree = "<group>";
 		};
+		F1A87A7A1096C8900002411E /* sys */ = {
+			isa = PBXGroup;
+			children = (
+				F1A87A781096C8820002411E /* mbuf.h */,
+			);
+			name = sys;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -87,6 +101,7 @@
 			files = (
 				F1A0A342107B2F3400B70183 /* sirensnke.h in Headers */,
 				F17870AC1089462D000E6DC1 /* ip_sirens.h in Headers */,
+				F1A87A791096C8820002411E /* mbuf.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -135,6 +150,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F1A87A7C1096C8AF0002411E /* version.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

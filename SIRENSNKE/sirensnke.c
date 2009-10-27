@@ -358,27 +358,7 @@ sr_setoption_fn(void *cookie, socket_t so, sockopt_t opt)
 	struct SRSFEntry *srp = SRSFEntryFromCookie(cookie);
 	debug_printf("sr_setoption_fn   - so: 0x%X, 0x%X %d %d\n", so, srp, sockopt_name(opt), sockopt_valsize(opt));
 	int error = 0;
-	switch(sockopt_name(opt)){
-#if 0
-		case IP_OPTIONS:
-			{
-				struct inpcb *inp;
-				int i;
-				u_int32_t *dp = (u_int32_t *)inp;
-			
-				inp = (struct inpcb *)(((struct socket *)so)->so_pcb);
-			
-				debug_printf("INP:0x%X 0x%0X: 0x%0X\n", inp, &inp->inp_options, inp->inp_options);
-				debug_printf("INP:%d %d %d %d\n", ntohs(inp->inp_fport), ntohs(inp->inp_lport), inp->inp_ip_ttl, inp->inp_ip_p);
-				for(i = 0 ; i < 64 ; i++){
-					debug_printf("%08x ", dp[i]);
-				}
-				debug_printf("\n");
-				error = 0;
-			}
-			break;
-#endif
-			
+	switch(sockopt_name(opt)){			
 		case IPSIRENS_IDX:
 			{
 				struct sr_ireq *srireq;
@@ -512,6 +492,29 @@ sr_setoption_fn(void *cookie, socket_t so, sockopt_t opt)
 				error = EJUSTRETURN;
 			}
 			break;
+		case IPSIRENS_SDATAX:
+			{
+				struct sr_dreq *dreq;
+
+				if(IPSIRENS_DREQSIZE(0) != sockopt_valsize(opt)){
+					return(EINVAL);
+				}
+				if(srp->sr_nmax == 0 || !(srp->sre_flag & SRE_FL_ARMED)){
+					return(EINVAL);
+				}
+				dreq = (struct sr_dreq *)OSMalloc(IPSIRENS_DREQSIZE(0), gOSMallocTag);
+				if(dreq == NULL)
+					return(ENOMEM);
+				error = sockopt_copyin(opt, dreq, IPSIRENS_DREQSIZE(0));
+				srp->sr_dreq.dir = dreq->dir;
+				srp->sr_dreq.probe = dreq->probe;
+				srp->sr_dreq.mode = dreq->mode;
+				OSFree(dreq, IPSIRENS_DREQSIZE(0), gOSMallocTag);
+				error = EJUSTRETURN;
+				break;
+			}
+			break;
+			
 		default:
 			break;
 	}
@@ -527,52 +530,59 @@ sr_getoption_fn(void *cookie, socket_t so, sockopt_t opt)
 	struct SRSFEntry *srp = SRSFEntryFromCookie(cookie);
 
 	debug_printf("sr_getoption_fn   - so: 0x%X, 0x%X %d\n", so, srp, sockopt_name(opt));
+
 	switch(sockopt_name(opt)){
-#if 0
-		case IP_OPTIONS:
-		{
-			struct sr_ireq *srireq;
-			struct inpcb *inp;
-			
-			inp = (struct inpcb *)(((struct socket *)so)->so_pcb);
-			
-			debug_printf("INP:0x%X 0x%0X: 0x%0X\n", inp, &inp->inp_options, inp->inp_options);
-			debug_printf("INP:%d %d %d %d\n", ntohs(inp->inp_fport), ntohs(inp->inp_lport), inp->inp_ip_ttl, inp->inp_ip_p);
-			{
-				int i;
-				u_int32_t *dp = (u_int32_t *)inp;
-				for(i = 0 ; i < 64 ; i++){
-					debug_printf("%08x ", dp[i]);
-				}
-				debug_printf("\n");
-			}
-			error = 0;
-			
-		}
-			break;
-#endif
-
 		case IPSIRENS_IDX:
-#if 0
+			error = EINVAL;
+			break;
+		case IPSIRENS_SDATAX:
 		{
-			struct sr_ireq *srireq;
-			struct inpcb *inp;
+			int i, j;        
+			struct timeval tv;
+			struct sr_hopdata *thopdata;
+			union u_sr_data *sr_data;
 
-			inp = (struct inpcb *)(((struct socket *)so)->so_pcb);
-
-			debug_printf("INP:0x%X 0x%0X: 0x%0X\n", inp, &inp->inp_options, inp->inp_options);
-			debug_printf("INP:%d %d %d %d\n", ntohs(inp->inp_fport), ntohs(inp->inp_lport), inp->inp_ip_ttl, inp->inp_ip_p);
-			{
-				int i;
-				u_int32_t *dp = (u_int32_t *)inp;
-				for(i = 0 ; i < 64 ; i++){
-					debug_printf("%08x ", dp[i]);
-				}
-				debug_printf("\n");
+			if(256 * sizeof(union u_sr_data) != sockopt_valsize(opt)){
+				return(EINVAL);
 			}
-		}
-#endif
+			if(srp->sr_nmax == 0 || !(srp->sre_flag & SRE_FL_ARMED)){
+				return(EINVAL);
+			}
+			sr_data = (union u_sr_data*) OSMalloc(256 * sizeof(union u_sr_data), gOSMallocTag);			
+			if(sr_data == NULL)
+				return(ENOMEM);
+			for(i = 0 ; i < srp->sr_nmax ; i++){
+				if(srp->inp_sr[i].mode == srp->sr_dreq.mode
+				   && srp->inp_sr[i].probe == srp->sr_dreq.probe) break;
+			}
+			if( i == srp->sr_nmax){
+				OSFree(sr_data, 256 * sizeof(union u_sr_data), gOSMallocTag);
+				return(EINVAL);
+			}
+			microtime(&tv);
+			tv.tv_sec -= 2;
+			switch(srp->sr_dreq.dir){
+				case 1:
+					thopdata = srp->inp_sr[i].sr_qdata;
+					break;
+				case 2:
+				default:
+					thopdata = srp->inp_sr[i].sr_sdata;
+					break;
+			}
+			for(j = 0 ; j < 256 ; j++){
+				if(timevalcmp(&tv, &thopdata[j].tv, <)){
+					sr_data[j] = thopdata[j].val;
+				} else {
+					sr_data[j].set = -1;
+				}
+			}
+			error = sockopt_copyout(opt, sr_data, 256 * sizeof(union u_sr_data));
+			OSFree(sr_data, 256 * sizeof(union u_sr_data), gOSMallocTag);
+			if (error)
+				return(error);
 			error = EJUSTRETURN;
+		}
 			break;
 		case IPSIRENS_SDATA:
 		{
@@ -588,7 +598,7 @@ sr_getoption_fn(void *cookie, socket_t so, sockopt_t opt)
 			if(dreq == NULL)
 				return(ENOMEM);
 			sr_data = (union u_sr_data*)((char *)dreq + sizeof(struct sr_dreq));
-			if(srp->sr_nmax == 0 || !(srp->sre_flag & SRE_FL_ARMED) ){
+			if(srp->sr_nmax == 0 || !(srp->sre_flag & SRE_FL_ARMED)){
 				dreq->dir = 255;
 				dreq->mode = 255;
 				dreq->probe = 255;
@@ -1084,7 +1094,6 @@ jp_hpcc_ikob_kext_sirensnke_start(kmod_info_t *ki, void *data)
 	
 	sirens_initted = TRUE;
 	
-	debug_printf("jp_hpcc_ikob_kext_sirensnke_start returning %d\n", ret);
 	return KERN_SUCCESS;
 	
 err:
@@ -1098,7 +1107,6 @@ err:
 		ipf_remove(sr_ipf_ref);
 	}
 	free_locks();
-	debug_printf("jp_hpcc_ikob_kext_sirensnke_start returning %d\n", KERN_FAILURE);
 	return KERN_FAILURE;
 }
 
