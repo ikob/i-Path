@@ -49,15 +49,17 @@
 #include <kern/debug.h>
 
 #include "sirensnke.h"
+
 #include <libkern/OSMalloc.h>
 #include <libkern/OSAtomic.h>
+#include <libkern/OSKextLib.h>
 #include <sys/kauth.h>
 #include <sys/time.h>
 #include <stdarg.h>
 #include <sys/param.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
-#include "mbuf.h"
+// #include "mbuf.h"
 #include <sys/mbuf.h>
 
 #include <sys/time.h>
@@ -69,12 +71,13 @@
 #include <netinet/kpi_ipfilter.h>
 
 #include <net/if_var.h>
-#include "netinet/ip_sirens.h"
+#include <netinet/ip_sirens.h>
+
 
 struct ipopt_sr *ip_sirens_dooptions_d(mbuf_t);
 
 
-#define DEBUG	0
+#define DEBUG	1
 
 #define SIRENS_HANDLE4 0x696b6f62		/* Temp hack to identify this filter */
 #define SIRENS_HANDLE6 0x696b6f64
@@ -249,14 +252,35 @@ static void
 sr_detach_fn(void *cookie, socket_t so)
 {
 	struct SRSFEntry *srp = SRSFEntryFromCookie(cookie);
+	int ret = 0;
 	
-	debug_printf("sr_detach_fn - so: 0x%X, ", so);
+	debug_printf("sr_detach_fn - so: 0x%X sr_count: %d %d 0x%X\n", so, sr_enable, sr_count, srp);
 	if (srp == NULL)
 		goto err;
 	
 	sr_remove(srp);
+	
 	if(sr_enable == 0 && sr_count == 0){
-		printf("should stop SIRENS\n");
+		OSKextLoadTag OStag;
+		printf("sirensnke: all descriptor is free'ed, unload again\n");
+		OStag = OSKextGetCurrentLoadTag();
+		printf("tag: %x\n", OStag);
+		ret = jp_hpcc_ikob_kext_sirensnke_flush();
+		if(ret == KERN_SUCCESS){
+			OSReturn OSret;
+			OSret = OSKextRetainKextWithLoadTag(OStag);
+			if(OSret != kOSReturnSuccess){
+				printf("sirensnke: failed to retain err: %d\n", OSret);
+				return;
+			}
+			OSret = OSKextReleaseKextWithLoadTag(OStag);
+			if(OSret != kOSReturnSuccess){
+				printf("sirensnke: failed to release err: %d\n", OSret);
+				return;
+			}
+			printf("sirensnke: success to releasee\n", OSret);
+			return;			
+		}
 	}
 err:
 	return;
@@ -365,21 +389,17 @@ sr_setoption_fn(void *cookie, socket_t so, sockopt_t opt)
 				mbuf_t data;
 				struct ipopt_sr *opt_sr; 
 				if(srireq == NULL){
-//					return(EINVAL);
-					return(EMSGSIZE);
+					return(EINVAL);
 				}
 				if(sockopt_valsize(opt) > IPSIRENS_IREQSIZE(IPSIRENS_IREQMAX)){
-//					return(EINVAL);
-					return(EMSGSIZE);
+					return(EINVAL);
 				}
 				error = sockopt_copyin(opt, srireq, sockopt_valsize(opt));
 				if(sockopt_valsize(opt) != IPSIRENS_IREQSIZE(srireq->sr_nindex)){
-//					return(EINVAL);
-					return(EMSGSIZE);
+					return(EINVAL);
 				}
 				if(srireq->sr_smax > SIRENSRESLEN){
-//					return(EINVAL);
-					return(EMSGSIZE);
+					return(EINVAL);
 				}
 				/* set SIRENS flag, and initialize storage in tcpcb */
 				/* if connection destination is determined, call ip layer */
@@ -395,8 +415,7 @@ sr_setoption_fn(void *cookie, socket_t so, sockopt_t opt)
 						if(sri[i].qttl_min > sri[i].qttl_max ||
 						   sri[i].sttl_min > sri[i].sttl_max ){
 							OSFree(srireq, IPSIRENS_IREQSIZE(IPSIRENS_IREQMAX), gOSMallocTag);
-//							return(EINVAL);
-							return(EMSGSIZE);
+							return(EINVAL);
 						}
 					}
 				}
@@ -1085,11 +1104,83 @@ err:
 
 /*
  */
+
+extern int
+jp_hpcc_ikob_kext_sirensnke_flush()
+{
+	int ret = 0;
+	if ((!gFilterRegistered && !gFilterRegistered_ip6 && !gipFilterRegistered))
+		return KERN_SUCCESS;
+	
+	if (!sirens_initted)
+		return KERN_SUCCESS;
+	lck_mtx_lock(gmutex);
+	if(sr_enable) {
+		lck_mtx_unlock(gmutex);
+		return EBUSY;
+	}
+	lck_mtx_unlock(gmutex);
+	lck_mtx_lock(gmutex);
+	if (sr_count > 0) {
+		debug_printf("sirensnke_flush busy, sr_count: %d\n", sr_count);
+		ret = EBUSY;
+		lck_mtx_unlock(gmutex);
+		goto err;
+	}
+	lck_mtx_unlock(gmutex);
+	
+	if (gUnregisterProc_started == FALSE) {
+		ret = sflt_unregister(SIRENS_HANDLE4);
+		if (ret != 0)
+			debug_printf( "sirensnke_flush: sflt_unregister failed for ip4 %d\n", ret);
+		else {
+			gUnregisterProc_started = TRUE;	// indicate that we've started the unreg process.
+		}
+	}
+	if (gUnregisterProc_started_ip6 == FALSE) {
+		ret = sflt_unregister(SIRENS_HANDLE6);
+		if (ret != 0)
+			debug_printf( "sirensnke_flush: sflt_unregister failed for ip6 %d\n", ret);
+		else {
+			gUnregisterProc_started_ip6 = TRUE;	// indicate that we've started the unreg process.
+		}
+	}
+	if (gipFilterRegistered == TRUE) {
+		ret = ipf_remove(sr_ipf_ref);
+		if (ret != 0)
+			debug_printf( "sirensnke_flush: sflt_unregister failed for ip4 %d\n", ret);
+		else {
+			gipFilterRegistered = FALSE;	// indicate that we've started the unreg process.
+		}			
+	}
+	
+	if ((gUnregisterProc_complete && gUnregisterProc_complete_ip6 && !(gipFilterRegistered))){
+		ret = KERN_SUCCESS;
+	} else {
+		printf( "sirensnke: sirensnke_flush: failed unload again\n");
+		ret = KERN_FAILURE;
+	}
+	
+	if (ret == KERN_SUCCESS) {
+		free_locks();
+		if (gOSMallocTag) {
+			OSMalloc_Tagfree(gOSMallocTag);
+			gOSMallocTag = NULL;
+		}
+	}
+err:
+	printf("jp_hpcc_ikob_sirens_kext_stop end %d\n", ret);
+	return ret;
+	
+}
 extern int
 jp_hpcc_ikob_kext_sirensnke_stop(kmod_info_t *ki, void *data)
 {	
 	int	ret = 0;
+
+#if 0
 	struct SRSFEntry *srp, *srpnext = NULL;
+#endif
 	
 	if ((!gFilterRegistered && !gFilterRegistered_ip6 && !gipFilterRegistered))
 		return KERN_SUCCESS;
@@ -1118,56 +1209,8 @@ jp_hpcc_ikob_kext_sirensnke_stop(kmod_info_t *ki, void *data)
 #endif
 	lck_mtx_unlock(gmutex);
 	
-	lck_mtx_lock(gmutex);
-	if (sr_count > 0) {
-		debug_printf("sirensnke_stop busy, sr_count: %d\n", sr_count);
-		ret = EBUSY;
-		lck_mtx_unlock(gmutex);
-		goto err;
-	}
-	lck_mtx_unlock(gmutex);
+	ret = jp_hpcc_ikob_kext_sirensnke_flush();
 	
-	if (gUnregisterProc_started == FALSE) {
-		ret = sflt_unregister(SIRENS_HANDLE4);
-		if (ret != 0)
-			debug_printf( "sirensnke_stop: sflt_unregister failed for ip4 %d\n", ret);
-		else {
-			gUnregisterProc_started = TRUE;	// indicate that we've started the unreg process.
-		}
-	}
-	if (gUnregisterProc_started_ip6 == FALSE) {
-		ret = sflt_unregister(SIRENS_HANDLE6);
-		if (ret != 0)
-			debug_printf( "sirensnke_stop: sflt_unregister failed for ip6 %d\n", ret);
-		else {
-			gUnregisterProc_started_ip6 = TRUE;	// indicate that we've started the unreg process.
-		}
-	}
-	if (gipFilterRegistered == TRUE) {
-		ret = ipf_remove(sr_ipf_ref);
-		if (ret != 0)
-			debug_printf( "sirensnke_stop: sflt_unregister failed for ip4 %d\n", ret);
-		else {
-			gipFilterRegistered = FALSE;	// indicate that we've started the unreg process.
-		}			
-	}
-				
-	if ((gUnregisterProc_complete && gUnregisterProc_complete_ip6 && !(gipFilterRegistered))){
-		ret = KERN_SUCCESS;
-	} else {
-		printf( "sirensnke_stop: again\n");
-		ret = KERN_FAILURE;
-	}
-	
-	if (ret == KERN_SUCCESS) {
-		free_locks();
-		if (gOSMallocTag) {
-			OSMalloc_Tagfree(gOSMallocTag);
-			gOSMallocTag = NULL;
-		}
-	}
-
-err:
 	printf("jp_hpcc_ikob_sirens_kext_stop end %d\n", ret);
 	return ret;
 }
