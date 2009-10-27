@@ -40,6 +40,8 @@
 #include <sys/kpi_mbuf.h>
 #include <sys/kpi_socket.h>
 #include <sys/kpi_socketfilter.h>
+#include <sys/kernel_types.h>
+#include <net/kpi_interfacefilter.h>
 
 #include <sys/systm.h>
 #include <sys/select.h>
@@ -59,7 +61,6 @@
 #include <sys/param.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
-// #include "mbuf.h"
 #include <sys/mbuf.h>
 
 #include <sys/time.h>
@@ -117,6 +118,10 @@ static boolean_t	gUnregisterProc_started_ip6 = FALSE;
 static boolean_t	gUnregisterProc_complete_ip6 = FALSE;
 
 static boolean_t	gipFilterRegistered = FALSE;
+
+static interface_filter_t	gsr_if_filter;
+static boolean_t	gifFilterRegistered = FALSE;
+
 
 /* List of sockets */
 static struct sr_sflist sr_list;				// protected by gmutex
@@ -862,7 +867,19 @@ sr_ipf_output(void *cookie, mbuf_t *data, ipf_pktopts_t options)
 		default:
 			break;
 	}
-	
+	if(opt_sr->req_mode == SIRENS_TTL
+	   && !(opt_sr->req_probe & SIRENS_DIR_IN)
+	   && iph->ip_ttl == opt_sr->req_ttl){
+//		ifnet_t ifp;
+//		debug_printf("to set parameter at outbound\n");		
+//		ifp = mbuf_pkthdr_rcvif(*data);
+		debug_printf("allocate tag for lower layer\n");
+		status = mbuf_tag_allocate(*data, gsr_idtag, SR_TAG_TYPE, sizeof(TTL_OUT_TO), MBUF_WAITOK, (void**)&tag_ref);
+		if(status == 0){
+			*tag_ref = TTL_OUT_TO;
+		}		
+	}
+/*
 	status = mbuf_tag_find(*data, gsr_idtag, SR_TAG_TYPE, &len, (void**)&tag_ref);
 	if(status != 0) {
 		goto out;
@@ -870,6 +887,7 @@ sr_ipf_output(void *cookie, mbuf_t *data, ipf_pktopts_t options)
 	if (*tag_ref == TTL_OUT_TO) {
 		debug_printf("ipf_output: found tag!\n");
 	}
+ */
 out:
 	return ret;
 }
@@ -961,14 +979,22 @@ skip_res:
 	
 	/* Prevent duplicate tag */
 	status = mbuf_tag_find(*data, gsr_idtag, SR_TAG_TYPE, &len, (void**)&tag_ref);
-	if(status != 0) {
-		goto in;
+	if(status == 0) {
+		debug_printf("ipf_input: found tag!\n");
 	}
-	debug_printf("ipf_input: found tag!\n");
-
-	status = mbuf_tag_allocate(*data, gsr_idtag, SR_TAG_TYPE, sizeof(TTL_OUT_TO), MBUF_WAITOK, (void**)&tag_ref);
-	if(status == 0){
-		*tag_ref = TTL_OUT_TO;
+	if(opt_sr->req_mode == SIRENS_TTL
+	   && iph->ip_ttl == opt_sr->req_ttl){
+//		ifnet_t ifp;
+//		debug_printf("to set parameter\n");
+//		ifp = mbuf_pkthdr_rcvif(*data);
+//		debug_printf("if speed = %d\n", ifnet_baudrate(ifp));
+		if(opt_sr->req_probe & SIRENS_DIR_IN){
+		}else{
+			status = mbuf_tag_allocate(*data, gsr_idtag, SR_TAG_TYPE, sizeof(TTL_OUT_TO), MBUF_WAITOK, (void**)&tag_ref);
+			if(status == 0){
+				*tag_ref = TTL_OUT_TO;
+			}			
+		}
 	}
 	goto in;
 in:
@@ -1029,12 +1055,45 @@ sr_remove(struct SRSFEntry *srp)
 	return;
 }
 
-/* =================================== */
+static errno_t
+sr_iff_out_fn (void *cookie, ifnet_t interface, protocol_family_t protocol, mbuf_t *data)
+{
+	size_t	len;
+	int status;
+	int error = 0;
+	SRPROCFLAGS	*tag_ref;
+	status = mbuf_tag_find(*data, gsr_idtag, SR_TAG_TYPE, &len, (void**)&tag_ref);
+	if(status != 0){
+		return error;
+	}
+	debug_printf("found tag\n");
+	return error;
+}
 
+static errno_t
+sr_iff_detached_fn( void *cookie, ifnet_t interface)
+{
+	int error = 0;
+	return error;
+}
+
+static struct iff_filter sr_iff_filter = { 
+    &sr_enable,
+    MYBUNDLEID,
+	0,
+	NULL,
+	sr_iff_out_fn,
+	NULL,
+	NULL,
+	sr_iff_detached_fn
+};
+
+/* =================================== */
 extern int
 jp_hpcc_ikob_kext_sirensnke_start(kmod_info_t *ki, void *data)
 {	
 	int				ret = 0;
+	ifnet_t			ifp;
 	
 	printf("SIRENS_start\n");
 	
@@ -1091,7 +1150,15 @@ jp_hpcc_ikob_kext_sirensnke_start(kmod_info_t *ki, void *data)
 	else
 		goto err;
 	
-	
+	ret = ifnet_find_by_name("en0", &ifp);
+	if(ret == 0){
+		ret = iflt_attach(ifp, &sr_iff_filter, &gsr_if_filter);
+		gifFilterRegistered = TRUE;
+		debug_printf("filter is registered\n");
+	}else {
+		debug_printf("filter is not registered\n");
+//		goto err;
+	}
 	sirens_initted = TRUE;
 	
 	return KERN_SUCCESS;
@@ -1106,6 +1173,9 @@ err:
 	if (gipFilterRegistered){
 		ipf_remove(sr_ipf_ref);
 	}
+	if (gifFilterRegistered){
+		iflt_detach(gsr_if_filter);
+	}
 	free_locks();
 	return KERN_FAILURE;
 }
@@ -1117,7 +1187,7 @@ extern int
 jp_hpcc_ikob_kext_sirensnke_flush()
 {
 	int ret = 0;
-	if ((!gFilterRegistered && !gFilterRegistered_ip6 && !gipFilterRegistered))
+	if ((!gFilterRegistered && !gFilterRegistered_ip6 && !gipFilterRegistered && !gifFilterRegistered))
 		return KERN_SUCCESS;
 	
 	if (!sirens_initted)
@@ -1162,7 +1232,16 @@ jp_hpcc_ikob_kext_sirensnke_flush()
 		}			
 	}
 	
-	if ((gUnregisterProc_complete && gUnregisterProc_complete_ip6 && !(gipFilterRegistered))){
+	if (gifFilterRegistered){
+		iflt_detach(gsr_if_filter);
+		gifFilterRegistered = FALSE;	// indicate that we've started the unreg process.
+	}
+	
+	
+	if ((gUnregisterProc_complete &&
+		 gUnregisterProc_complete_ip6 &&
+		 !(gipFilterRegistered &&
+		 !(gifFilterRegistered)))){
 		ret = KERN_SUCCESS;
 	} else {
 		printf( "sirensnke: sirensnke_flush: failed unload again\n");
@@ -1208,8 +1287,6 @@ jp_hpcc_ikob_kext_sirensnke_stop(kmod_info_t *ki, void *data)
 		srpnext = TAILQ_NEXT(srp, sre_list);
 		sr_remove_locked(srp);
 	}
-#endif
-#if 0
 	for (srp = TAILQ_FIRST(&sr_active); srp; srp = srpnext) {
 		srpnext = TAILQ_NEXT(srp, sre_list);
 		sr_remove_locked(srp);
