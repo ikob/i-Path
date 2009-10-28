@@ -948,13 +948,16 @@ skip_res:
 		ifnet_t interface;
 //		debug_printf("sirens input: match TTL update hdr data and re-compute IP checksum TTL:%x:%x probe:%x\n",
 //					 iph->ip_ttl, opt_sr->req_ttl, opt_sr->req_probe);
+
 		interface = mbuf_pkthdr_rcvif(*data);
-		if(opt_sr->req_probe & SIRENS_DIR_IN && interface){
+		if(interface == NULL) goto in;
+		if(opt_sr->req_probe & SIRENS_DIR_IN){
 			if(!sr_setparam(opt_sr, interface)){
-				u_int32_t tmp;
+				u_int32_t tmp, tcksum;
+				tcksum = opt_sr->req_data.set;
 				tmp = (~ntohs(iph->ip_sum) & 0xffff
-					   + ~tag_ref[2] & 0xffff 
-					   + ~(tag_ref[2] >> 16) & 0xffff
+					   + ~tcksum & 0xffff 
+					   + ~(tcksum >> 16) & 0xffff
 					   + opt_sr->req_data.set & 0xffff
 					   + opt_sr->req_data.set >> 16);
 				tmp = tmp & 0xffff + tmp >> 16;
@@ -965,11 +968,9 @@ skip_res:
 /* tag for later use */
 			status = mbuf_tag_allocate(*data, gsr_idtag, SR_TAG_TYPE, 4 * sizeof(int), MBUF_WAITOK, (void**)&tag_ref);
 			if(status == 0){
-				if(status == 0){
-					tag_ref[0] = mbuf_pkthdr_len(*data);
-					tag_ref[1] = (caddr_t)opt_sr - (caddr_t)iph;
-					tag_ref[2] = opt_sr->req_data.set;
-				}
+				tag_ref[0] = mbuf_pkthdr_len(*data);
+				tag_ref[1] = (caddr_t)opt_sr - (caddr_t)iph;
+				tag_ref[2] = opt_sr->req_data.set;
 			}
 		}
 	}

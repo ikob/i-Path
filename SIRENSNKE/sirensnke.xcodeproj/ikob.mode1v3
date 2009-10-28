@@ -216,10 +216,10 @@
 						<key>_historyCapacity</key>
 						<integer>0</integer>
 						<key>bookmark</key>
-						<string>F19DA7F81097E7E000F427B5</string>
+						<string>F1AC54B51097F5DC0015B621</string>
 						<key>history</key>
 						<array>
-							<string>F1862D451097DEE20091C20E</string>
+							<string>F19DA7F81097E7E000F427B5</string>
 						</array>
 					</dict>
 					<key>SplitCount</key>
@@ -235,7 +235,7 @@
 				<key>PBXModuleWindowStatusBarHidden2</key>
 				<false/>
 				<key>RubberWindowFrame</key>
-				<string>1590 -141 1309 1229 0 0 2560 1578 </string>
+				<string>1251 60 1309 1229 0 0 2560 1578 </string>
 			</dict>
 		</dict>
 	</array>
@@ -341,7 +341,7 @@
 							<real>155</real>
 						</array>
 						<key>RubberWindowFrame</key>
-						<string>1234 -50 1261 1340 0 0 2560 1578 </string>
+						<string>1249 238 1261 1340 0 0 2560 1578 </string>
 					</dict>
 					<key>Module</key>
 					<string>PBXSmartGroupTreeModule</string>
@@ -371,7 +371,7 @@
 										<key>_historyCapacity</key>
 										<integer>0</integer>
 										<key>bookmark</key>
-										<string>F19DA7F71097E7E000F427B5</string>
+										<string>F1AC54B41097F5DC0015B621</string>
 										<key>history</key>
 										<array>
 											<string>F1EB400D107B507900824F8F</string>
@@ -383,7 +383,7 @@
 											<string>F1A87A7E1096C8CC0002411E</string>
 											<string>F1A87A821096CA210002411E</string>
 											<string>F19DA7E51097E5A400F427B5</string>
-											<string>F19DA7E61097E5A400F427B5</string>
+											<string>F19DA7F71097E7E000F427B5</string>
 										</array>
 									</dict>
 									<key>SplitCount</key>
@@ -395,14 +395,14 @@
 							<key>GeometryConfiguration</key>
 							<dict>
 								<key>Frame</key>
-								<string>{{0, 0}, {1084, 1152}}</string>
+								<string>{{0, 0}, {1084, 1150}}</string>
 								<key>RubberWindowFrame</key>
-								<string>1234 -50 1261 1340 0 0 2560 1578 </string>
+								<string>1249 238 1261 1340 0 0 2560 1578 </string>
 							</dict>
 							<key>Module</key>
 							<string>PBXNavigatorGroup</string>
 							<key>Proportion</key>
-							<string>1152pt</string>
+							<string>1150pt</string>
 						</dict>
 						<dict>
 							<key>ContentConfiguration</key>
@@ -415,14 +415,14 @@
 							<key>GeometryConfiguration</key>
 							<dict>
 								<key>Frame</key>
-								<string>{{0, 1157}, {1084, 142}}</string>
+								<string>{{0, 1155}, {1084, 144}}</string>
 								<key>RubberWindowFrame</key>
-								<string>1234 -50 1261 1340 0 0 2560 1578 </string>
+								<string>1249 238 1261 1340 0 0 2560 1578 </string>
 							</dict>
 							<key>Module</key>
 							<string>XCDetailModule</string>
 							<key>Proportion</key>
-							<string>142pt</string>
+							<string>144pt</string>
 						</dict>
 					</array>
 					<key>Proportion</key>
@@ -441,9 +441,9 @@
 			</array>
 			<key>TableOfContents</key>
 			<array>
-				<string>F19DA7E81097E5A400F427B5</string>
+				<string>F1AC54A01097F40B0015B621</string>
 				<string>1CE0B1FE06471DED0097A5F4</string>
-				<string>F19DA7E91097E5A400F427B5</string>
+				<string>F1AC54A11097F40B0015B621</string>
 				<string>1CE0B20306471E060097A5F4</string>
 				<string>1CE0B20506471E060097A5F4</string>
 			</array>
@@ -586,7 +586,7 @@
 		<string>/Users/ikob/SIRENSNKE/sirensnke.xcodeproj</string>
 	</array>
 	<key>WindowString</key>
-	<string>1234 -50 1261 1340 0 0 2560 1578 </string>
+	<string>1249 238 1261 1340 0 0 2560 1578 </string>
 	<key>WindowToolsV3</key>
 	<array>
 		<dict>
@@ -607,7 +607,7 @@
 								<key>PBXProjectModuleGUID</key>
 								<string>1CD0528F0623707200166675</string>
 								<key>PBXProjectModuleLabel</key>
-								<string>sirensnke.c</string>
+								<string></string>
 								<key>StatusBarVisibility</key>
 								<true/>
 							</dict>
@@ -624,8 +624,6 @@
 							<string>903pt</string>
 						</dict>
 						<dict>
-							<key>BecomeActive</key>
-							<true/>
 							<key>ContentConfiguration</key>
 							<dict>
 								<key>PBXProjectModuleGUID</key>
@@ -665,7 +663,7 @@
 			<key>TableOfContents</key>
 			<array>
 				<string>F1A0A358107B300300B70183</string>
-				<string>F19DA7DE1097E46A00F427B5</string>
+				<string>F1AC54A31097F40B0015B621</string>
 				<string>1CD0528F0623707200166675</string>
 				<string>XCMainBuildResultsModuleGUID</string>
 			</array>
