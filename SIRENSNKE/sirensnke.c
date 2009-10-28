@@ -111,8 +111,8 @@ static boolean_t	gUnregisterProc_complete_ip6 = FALSE;
 
 static boolean_t	gipFilterRegistered = FALSE;
 
-static interface_filter_t	gsr_if_filter;
-static boolean_t	gifFilterRegistered = FALSE;
+static interface_filter_t	gsr_if_filter[256];
+static int	gifFilterRegistered = 0;
 
 
 /* List of sockets */
@@ -847,9 +847,11 @@ sr_ipf_output(void *cookie, mbuf_t *data, ipf_pktopts_t options)
 	if(opt_sr->req_mode == SIRENS_TTL
 	   && !(opt_sr->req_probe & SIRENS_DIR_IN)
 	   && iph->ip_ttl == opt_sr->req_ttl){
-		status = mbuf_tag_allocate(*data, gsr_idtag, SR_TAG_TYPE, sizeof(int), MBUF_WAITOK, (void**)&tag_ref);
+		status = mbuf_tag_allocate(*data, gsr_idtag, SR_TAG_TYPE, 4 * sizeof(int), MBUF_WAITOK, (void**)&tag_ref);
 		if(status == 0){
-			*tag_ref = mbuf_pkthdr_len(*data);
+			tag_ref[0] = mbuf_pkthdr_len(*data);
+			tag_ref[1] = (caddr_t)opt_sr - (caddr_t)iph;
+			tag_ref[2] = opt_sr->req_data.set;
 		}
 	}
 out:
@@ -943,14 +945,31 @@ skip_res:
 	}
 	if(opt_sr->req_mode == SIRENS_TTL
 	   && iph->ip_ttl == opt_sr->req_ttl){
-//		ifnet_t ifp;
-		debug_printf("sirens input: match TTL update hdr data and re-compute IP checksum TTL:%x:%x probe:%x\n",
-					 iph->ip_ttl, opt_sr->req_ttl, opt_sr->req_probe);
-		if(opt_sr->req_probe & SIRENS_DIR_IN){
+		ifnet_t interface;
+//		debug_printf("sirens input: match TTL update hdr data and re-compute IP checksum TTL:%x:%x probe:%x\n",
+//					 iph->ip_ttl, opt_sr->req_ttl, opt_sr->req_probe);
+		interface = mbuf_pkthdr_rcvif(*data);
+		if(opt_sr->req_probe & SIRENS_DIR_IN && interface){
+			if(!sr_setparam(opt_sr, interface)){
+				u_int32_t tmp;
+				tmp = (~ntohs(iph->ip_sum) & 0xffff
+					   + ~tag_ref[2] & 0xffff 
+					   + ~(tag_ref[2] >> 16) & 0xffff
+					   + opt_sr->req_data.set & 0xffff
+					   + opt_sr->req_data.set >> 16);
+				tmp = tmp & 0xffff + tmp >> 16;
+				tmp = ~tmp;
+				iph->ip_sum = htons((u_int16_t)tmp);
+			}
 		}else{
-			status = mbuf_tag_allocate(*data, gsr_idtag, SR_TAG_TYPE, sizeof(int), MBUF_WAITOK, (void**)&tag_ref);
+/* tag for later use */
+			status = mbuf_tag_allocate(*data, gsr_idtag, SR_TAG_TYPE, 4 * sizeof(int), MBUF_WAITOK, (void**)&tag_ref);
 			if(status == 0){
-				*tag_ref = mbuf_pkthdr_len(*data);
+				if(status == 0){
+					tag_ref[0] = mbuf_pkthdr_len(*data);
+					tag_ref[1] = (caddr_t)opt_sr - (caddr_t)iph;
+					tag_ref[2] = opt_sr->req_data.set;
+				}
 			}
 		}
 	}
@@ -1013,6 +1032,126 @@ sr_remove(struct SRSFEntry *srp)
 	return;
 }
 
+#define SIRENS_DSIZE 32
+
+int sr_setparam (struct ipopt_sr *opt_sr, ifnet_t interface) {
+	int error = 0;
+//	struct sr_storage *srp;
+#if SIRENS_DSIZE > 16
+	uint32_t data = 0;
+#else
+	u_int16_t e1 = 0, e2 = 0;
+#endif
+	switch(opt_sr->req_probe){
+		default:
+			break;
+	}
+	/* getting if info */
+	if(interface == NULL){
+		data = ~0;
+		goto update;
+	}
+#ifdef __APPLE__
+	{
+		struct ifnet_stats_param stats;
+		ifnet_stat(interface, &stats);
+		switch ((opt_sr->req_probe) & ~SIRENS_DIR_IN){
+			case SIRENS_LINK:
+				data = (u_int32_t) (ifnet_baudrate(interface)/ 1000000);
+				break;
+			case SIRENS_OBYTES:
+				data = (u_int32_t) (stats.bytes_out);
+				break;
+			case SIRENS_IBYTES:
+				data = (u_int32_t) (stats.bytes_in);
+				break;
+			case SIRENS_DROPS:
+				data = (u_int32_t) (stats.dropped);
+				break;
+			case SIRENS_ERRORS:
+				data = (u_int32_t) (stats.dropped);
+				break;
+//			case SIRENS_QMAX:
+//				data = (u_int32_t) (ifp->if_snd.ifq_maxlen);
+//				break;
+//			case SIRENS_QLEN:
+//				data = (u_int32_t) (ifp->if_snd.ifq_len);
+//				break;
+			case SIRENS_MTU:
+				data = (u_int32_t) (ifnet_mtu(interface));
+				break;
+			default:
+				data = ~0;
+				break;
+		}
+	}
+#else
+	srs_update ++;
+	IF_AFDATA_LOCK(ifp);
+	srp = (struct sr_storage *)(ifp->if_sr);
+#ifdef SR_DEBUG
+	printf("probe%d %d %d\n", opt_sr->req_probe, srp->array[srh->req_probe].flag, srp->array[srh->req_probe].data);
+#endif
+	if(srp->array[opt_sr->req_probe].flag == IPSR_VAR_VALID){
+		data = (u_int32_t) srp->array[opt_sr->req_probe].data;
+	} else {
+		switch ((opt_sr->req_probe) & ~SIRENS_DIR_IN){
+			case SIRENS_LINK:
+				data = (u_int32_t) (ifp->if_baudrate / 1000000);
+				break;
+			case SIRENS_OBYTES:
+				data = (u_int32_t) (ifp->if_obytes);
+				break;
+			case SIRENS_IBYTES:
+				data = (u_int32_t) (ifp->if_ibytes);
+				break;
+			case SIRENS_DROPS:
+				data = (u_int32_t) (ifp->if_snd.ifq_drops);
+				break;
+			case SIRENS_ERRORS:
+				data = (u_int32_t) (ifp->if_oerrors);
+				break;
+			case SIRENS_QMAX:
+				data = (u_int32_t) (ifp->if_snd.ifq_maxlen);
+				break;
+			case SIRENS_QLEN:
+				data = (u_int32_t) (ifp->if_snd.ifq_len);
+				break;
+			case SIRENS_MTU:
+				data = (u_int32_t) (ifp->if_mtu);
+				break;
+			default:
+				data = ~0;
+				break;
+		}
+	}
+	IF_AFDATA_UNLOCK(ifp);
+#endif
+update:
+	switch(opt_sr->req_mode){
+		case SIRENS_TTL:
+			opt_sr->req_data.set = htonl(data);
+			break;
+		case SIRENS_MIN:
+			opt_sr->req_ttl = opt_sr->req_ttl == 0 ? 0xff : opt_sr->req_ttl - 1;
+			if(data == ~0) return error;
+			if( data < opt_sr->req_data.set ){
+				opt_sr->req_data.set = htonl(data);
+			}
+			break;
+		case SIRENS_MAX:
+			opt_sr->req_ttl = opt_sr->req_ttl == 0 ? 0xff : opt_sr->req_ttl - 1;
+			if(data == ~0) return error;
+			if( data >  opt_sr->req_data.set ){
+				opt_sr->req_data.set = htonl(data);
+			}
+			break;
+		default:
+			break;
+	}
+	return error;
+}
+
 static errno_t
 sr_iff_out_fn (void *cookie, ifnet_t interface, protocol_family_t protocol, mbuf_t *data)
 {
@@ -1031,7 +1170,7 @@ sr_iff_out_fn (void *cookie, ifnet_t interface, protocol_family_t protocol, mbuf
 		return error;
 	}
 	pktlen = mbuf_pkthdr_len(*data);
-	if(pktlen < *tag_ref){
+	if(pktlen < tag_ref[0]){
 		debug_printf("found tag but error %x < %x\n", pktlen, *tag_ref);
 		return error;
 	}
@@ -1047,11 +1186,25 @@ sr_iff_out_fn (void *cookie, ifnet_t interface, protocol_family_t protocol, mbuf
 //	}
 //	printf("\n");
 
-	opt_sr = (struct ipopt_sr*)(iph + 1);
+	opt_sr = (struct ipopt_sr*)((caddr_t)iph + tag_ref[1]);
 	
-	debug_printf("sirens otput: match TTL update hdr data and re-compute IP checksum TTL:%x:%x probe:%x\n",
-				 iph->ip_ttl, opt_sr->req_ttl, opt_sr->req_probe);
-
+	if(opt_sr->req_data.set == tag_ref[2]){
+//	debug_printf("sirens output: match TTL update hdr data and re-compute IP checksum TTL:%x:%x probe:%x\n",
+//					 iph->ip_ttl, opt_sr->req_ttl, opt_sr->req_probe);
+		if(!sr_setparam(opt_sr, interface)){
+			u_int32_t tmp;
+			tmp = (~ntohs(iph->ip_sum) & 0xffff
+				   + ~tag_ref[2] & 0xffff 
+				   + ~(tag_ref[2] >> 16) & 0xffff
+				   + opt_sr->req_data.set & 0xffff
+				   + opt_sr->req_data.set >> 16);
+			tmp = tmp & 0xffff + tmp >> 16;
+			tmp = ~tmp;
+			iph->ip_sum = htons((u_int16_t)tmp);
+		}
+	}else{
+		printf("sirens output: found tag, data value is not changed : data %08x -> %08x\n", tag_ref[2], opt_sr->req_data.set);
+	}
 	return error;
 }
 
@@ -1078,7 +1231,9 @@ extern int
 jp_hpcc_ikob_kext_sirensnke_start(kmod_info_t *ki, void *data)
 {	
 	int				ret = 0;
-	ifnet_t			ifp;
+	ifnet_t			*ifnetp;
+	u_int32_t ifcount;
+	int i;
 	
 	printf("SIRENS_start\n");
 	
@@ -1135,15 +1290,20 @@ jp_hpcc_ikob_kext_sirensnke_start(kmod_info_t *ki, void *data)
 	else
 		goto err;
 	
-	ret = ifnet_find_by_name("en0", &ifp);
-	if(ret == 0){
-		ret = iflt_attach(ifp, &sr_iff_filter, &gsr_if_filter);
-		gifFilterRegistered = TRUE;
-		debug_printf("filter is registered\n");
-	}else {
-		debug_printf("filter is not registered\n");
-//		goto err;
+	ret = ifnet_list_get(IFNET_FAMILY_ANY, &ifnetp, &ifcount);
+	if(ret != 0 ) goto err;
+
+	for(i = 0; i < ifcount; i++){
+		if(strncmp(ifnet_name(ifnetp[i]), "lo", 2) == 0)
+			continue;
+		ret = iflt_attach(ifnetp[i], &sr_iff_filter, &(gsr_if_filter[i]));
+		if(ret == 0){
+			gifFilterRegistered++;
+			debug_printf("SIRENS filter is registered on \"%s%d\"\n", ifnet_name(ifnetp[i]), ifnet_unit(ifnetp[i]));
+		}
 	}
+	ifnet_list_free(ifnetp);
+
 	sirens_initted = TRUE;
 	
 	return KERN_SUCCESS;
@@ -1159,7 +1319,9 @@ err:
 		ipf_remove(sr_ipf_ref);
 	}
 	if (gifFilterRegistered){
-		iflt_detach(gsr_if_filter);
+		for(i = 0 ; i < gifFilterRegistered ; i++){
+			iflt_detach(gsr_if_filter[i]);
+		}
 	}
 	free_locks();
 	return KERN_FAILURE;
@@ -1172,7 +1334,7 @@ extern int
 jp_hpcc_ikob_kext_sirensnke_flush()
 {
 	int ret = 0;
-	if ((!gFilterRegistered && !gFilterRegistered_ip6 && !gipFilterRegistered && !gifFilterRegistered))
+	if ((!gFilterRegistered && !gFilterRegistered_ip6 && !gipFilterRegistered && gifFilterRegistered == 0))
 		return KERN_SUCCESS;
 	
 	if (!sirens_initted)
@@ -1218,15 +1380,16 @@ jp_hpcc_ikob_kext_sirensnke_flush()
 	}
 	
 	if (gifFilterRegistered){
-		iflt_detach(gsr_if_filter);
-		gifFilterRegistered = FALSE;	// indicate that we've started the unreg process.
+		int i;
+		for(i = 0 ; i < gifFilterRegistered ; i++){
+			iflt_detach(gsr_if_filter[i]);
+		}
 	}
-	
 	
 	if ((gUnregisterProc_complete &&
 		 gUnregisterProc_complete_ip6 &&
 		 !(gipFilterRegistered &&
-		 !(gifFilterRegistered)))){
+		 (gifFilterRegistered == 0)))){
 		ret = KERN_SUCCESS;
 	} else {
 		printf( "sirensnke: sirensnke_flush: failed unload again\n");
