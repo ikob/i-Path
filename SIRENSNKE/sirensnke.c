@@ -1239,28 +1239,31 @@ sr_iff_in_fn( void *cookie,
 		goto in;
 	}
 	
-	debug_printf("sirens if-input: match TTL update TTL:%x:%x probe:%x from data:%x\n",
-				 iph->ip_ttl, opt_sr->req_ttl, opt_sr->req_probe, ntohl(opt_sr->req_data.set));
-	
 	if(interface == NULL) goto in;
-	
 	if(opt_sr->req_probe & SIRENS_DIR_IN){
+		u_int32_t tmp, tcksum;
+		debug_printf("sirens if-input: match TTL update TTL:%x:%x probe:%x from: %x\n",
+					 iph->ip_ttl, opt_sr->req_ttl, opt_sr->req_probe, ntohl(opt_sr->req_data.set));
+		tcksum = ntohl(opt_sr->req_data.set);
 		if(!sr_setparam(opt_sr, interface)){
-			u_int32_t tmp, tcksum;
 			debug_printf("re-compute checksum from %04x\n", ntohs(iph->ip_sum));
-			tcksum = opt_sr->req_data.set;
-			tmp = (~ntohs(iph->ip_sum) & 0xffff
-				   + ~tcksum & 0xffff 
-				   + ~(tcksum >> 16) & 0xffff
-				   + opt_sr->req_data.set & 0xffff
-				   + opt_sr->req_data.set >> 16);
-			tmp = tmp & 0xffff + tmp >> 16;
-			tmp = ~tmp;
-			iph->ip_sum = htons((u_int16_t)tmp);
+			tmp = ((~ntohs(iph->ip_sum) & 0xffff)
+				   + (~tcksum & 0xffff)
+				   + (~(tcksum >> 16)) & 0xffff
+				   + (opt_sr->req_data.set & 0xffff)
+				   + (opt_sr->req_data.set >> 16));
+			tmp = (tmp & 0xffff) + (tmp >> 16);
+			debug_printf("%08x %08x %08x %08x %08x %08x\n",
+						 ~ntohs(iph->ip_sum) & 0xffff,
+						 ~tcksum & 0xffff,
+						 ~(tcksum >> 16) & 0xffff,
+						 opt_sr->req_data.set & 0xffff,
+						 opt_sr->req_data.set >> 16,
+						 tmp);
+			iph->ip_sum = htons(tmp);
 			debug_printf("re-compute checksum to %04x\n", ntohs(iph->ip_sum));
 		}
-		debug_printf("sirens if-input: to data:%x\n", opt_sr->req_data.set);
-
+		debug_printf("sirens if-input: to: %x\n", ntohl(opt_sr->req_data.set));
 	}else{
 		debug_printf("sirens if-input: unchenge data:%x\n", opt_sr->req_data.set);
 	}
@@ -1321,14 +1324,15 @@ sr_iff_out_fn (void *cookie,
 		u_int32_t tmp, tcksum;
 		debug_printf("sirens output: match TTL update TTL:%x:%x probe:%x from: %x\n",
 					 iph->ip_ttl, opt_sr->req_ttl, opt_sr->req_probe, ntohl(opt_sr->req_data.set));
-		tcksum =  opt_sr->req_data.set;
+		tcksum = ntohl(opt_sr->req_data.set);
 		if(!sr_setparam(opt_sr, interface)){
 			debug_printf("re-compute checksum from %04x\n", ntohs(iph->ip_sum));
-			tmp = (~ntohs(iph->ip_sum) & 0xffff
-				   + ~tcksum & 0xffff 
-				   + ~(tcksum >> 16) & 0xffff
-				   + opt_sr->req_data.set & 0xffff
-				   + opt_sr->req_data.set >> 16);
+			tmp = ((~ntohs(iph->ip_sum) & 0xffff)
+				   + (~tcksum & 0xffff)
+				   + (~(tcksum >> 16)) & 0xffff
+				   + (opt_sr->req_data.set & 0xffff)
+				   + (opt_sr->req_data.set >> 16));
+			tmp = (tmp & 0xffff) + (tmp >> 16);
 			debug_printf("%08x %08x %08x %08x %08x %08x\n",
 						 ~ntohs(iph->ip_sum) & 0xffff,
 						 ~tcksum & 0xffff,
@@ -1336,12 +1340,7 @@ sr_iff_out_fn (void *cookie,
 						 opt_sr->req_data.set & 0xffff,
 						 opt_sr->req_data.set >> 16,
 						 tmp);
-			debug_printf("%08x %08x\n", tmp, ~tmp);
-			tmp = (tmp & 0xffff) + (tmp >> 16);
-			debug_printf("%08x %08x\n", tmp, ~tmp);
-			tmp = ~tmp;
-			debug_printf("%08x %08x\n", tmp, ~tmp);
-			iph->ip_sum = htons((u_int16_t)tmp);
+			iph->ip_sum = htons(tmp);
 			debug_printf("re-compute checksum to %04x\n", ntohs(iph->ip_sum));
 		}
 		debug_printf("sirens output: to: %x\n", ntohl(opt_sr->req_data.set));
