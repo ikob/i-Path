@@ -1337,7 +1337,7 @@ sr_iff_out_fn (void *cookie,
 						 opt_sr->req_data.set >> 16,
 						 tmp);
 			debug_printf("%08x %08x\n", tmp, ~tmp);
-			tmp = tmp & 0xffff + tmp >> 16;
+			tmp = (tmp & 0xffff) + (tmp >> 16);
 			debug_printf("%08x %08x\n", tmp, ~tmp);
 			tmp = ~tmp;
 			debug_printf("%08x %08x\n", tmp, ~tmp);
