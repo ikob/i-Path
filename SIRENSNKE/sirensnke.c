@@ -71,6 +71,9 @@
 #include <netinet/tcp_var.h>
 #include <netinet/kpi_ipfilter.h>
 
+#include <net/if_types.h>
+
+#include <net/ethernet.h>
 #include <net/if_var.h>
 #include <netinet/ip_sirens.h>
 
@@ -1152,9 +1155,77 @@ update:
 	}
 	return error;
 }
-
 static errno_t
-sr_iff_out_fn (void *cookie, ifnet_t interface, protocol_family_t protocol, mbuf_t *data)
+sr_iff_in_fn( void *cookie,
+			 ifnet_t interface, 
+			 protocol_family_t protocol,
+			 mbuf_t *data,
+			 char **frame_ptr)
+{
+	size_t len;
+	int error = 0;
+	int status;
+	int *tag_ref;
+	struct ip *iph = NULL;
+	struct ipopt_sr *opt_sr;
+	if(protocol != AF_INET)
+		return error;
+	status = mbuf_tag_find(*data, gsr_idtag, SR_TAG_TYPE, &len, (void**)&tag_ref);
+	if(status != 0){
+		return error;
+		/* XXX: or remove */
+	}	
+	switch(ifnet_type(interface)){
+		case IFT_ETHER:
+		{
+			/* seek 0x800 */
+			/* seek VLAN tag */
+			/* seek LLC/SNAP */			
+			/* Strip ARP and non-IP packets out of the list */
+//			struct ether_header *eh = mbuf_pkthdr_header(*data);
+			struct ether_header *eh = (struct ether_header *)*frame_ptr;
+			if(eh->ether_type == htons(ETHERTYPE_IP)){
+				iph = (struct ip*)(eh + 1);
+				if((iph->ip_len << 2) < sizeof(struct ip) + sizeof(struct ipopt_sr)){
+					return error;
+				}
+				mbuf_pkthdr_setheader(*data, *frame_ptr);
+				error = mbuf_pullup(data, sizeof(struct ether_header) + sizeof(struct ip) + sizeof(struct ipopt_sr));
+				if(error) return error;
+				*frame_ptr = mbuf_pkthdr_header(*data);
+				mbuf_pkthdr_setheader(*data, NULL);
+				eh = (struct ether_header *)*frame_ptr;
+				iph = (struct ip*)(eh + 1);
+				opt_sr = (struct ipopt_sr*)(iph + 1); /* ad-hoc */
+			}
+		}
+			break;
+		default:
+			return error;
+	}
+//	opt_sr = ip_sirens_dooptions_d(iph);
+	if(opt_sr == NULL)
+		return error;
+	if(opt_sr->req_mode != SIRENS_TTL
+	   || iph->ip_ttl != opt_sr->req_ttl){
+		return error;
+	}
+	debug_printf("found matched SIRENS %d %d %d\n", opt_sr->req_ttl, opt_sr->req_mode, iph->ip_len);
+	status = mbuf_tag_allocate(*data, gsr_idtag, SR_TAG_TYPE, 4 * sizeof(int), MBUF_WAITOK, (void**)&tag_ref);
+	if(status == 0){
+		tag_ref[0] = iph->ip_len;
+		tag_ref[1] = (caddr_t)opt_sr - (caddr_t)iph;
+		tag_ref[2] = opt_sr->req_data.set;
+	}else{
+		return status;
+	}
+	return error;
+}
+static errno_t
+sr_iff_out_fn (void *cookie,
+			   ifnet_t interface,
+			   protocol_family_t protocol,
+			   mbuf_t *data)
 {
 	size_t	len;
 	int status;
@@ -1166,6 +1237,8 @@ sr_iff_out_fn (void *cookie, ifnet_t interface, protocol_family_t protocol, mbuf
 	u_int32_t *qp;
 	int i;
 	
+	if(protocol != AF_INET)
+		return error;
 	status = mbuf_tag_find(*data, gsr_idtag, SR_TAG_TYPE, &len, (void**)&tag_ref);
 	if(status != 0){
 		return error;
@@ -1220,7 +1293,7 @@ static struct iff_filter sr_iff_filter = {
     &sr_enable,
     MYBUNDLEID,
 	0,
-	NULL,
+	sr_iff_in_fn,
 	sr_iff_out_fn,
 	NULL,
 	NULL,
