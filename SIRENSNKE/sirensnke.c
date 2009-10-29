@@ -878,12 +878,51 @@ sr_ipf_input(void *cookie, mbuf_t *data, int offset, u_int8_t protocol){
 		goto in; 
 	}
 
+	iph = (struct ip*) mbuf_data(*data);
 	opt_sr = ip_sirens_dooptions_d(*data);
 	if(opt_sr == NULL)
 			goto in;
 
+	if(opt_sr->req_mode == SIRENS_TTL
+	   && iph->ip_ttl == opt_sr->req_ttl){
+		ifnet_t interface;
+		/* Prevent duplicate tag */
+		status = mbuf_tag_find(*data, gsr_idtag, SR_TAG_TYPE, &len, (void**)&tag_ref);
+		if(status == 0) {
+			debug_printf("ipf_input: found tag!\n");
+			goto in;
+		}
+		
+		debug_printf("sirens input: match TTL update hdr data and re-compute IP checksum TTL:%x:%x probe:%x\n",
+					 iph->ip_ttl, opt_sr->req_ttl, opt_sr->req_probe);
+		
+		interface = mbuf_pkthdr_rcvif(*data);
+		if(interface == NULL) goto in;
+		if(opt_sr->req_probe & SIRENS_DIR_IN){
+			if(!sr_setparam(opt_sr, interface)){
+				u_int32_t tmp, tcksum;
+				tcksum = opt_sr->req_data.set;
+				tmp = (~ntohs(iph->ip_sum) & 0xffff
+					   + ~tcksum & 0xffff 
+					   + ~(tcksum >> 16) & 0xffff
+					   + opt_sr->req_data.set & 0xffff
+					   + opt_sr->req_data.set >> 16);
+				tmp = tmp & 0xffff + tmp >> 16;
+				tmp = ~tmp;
+				iph->ip_sum = htons((u_int16_t)tmp);
+			}
+		}else{
+			/* tag for later use */
+			status = mbuf_tag_allocate(*data, gsr_idtag, SR_TAG_TYPE, 4 * sizeof(int), MBUF_WAITOK, (void**)&tag_ref);
+			if(status == 0){
+				tag_ref[0] = mbuf_pkthdr_len(*data);
+				tag_ref[1] = (caddr_t)opt_sr - (caddr_t)iph;
+				tag_ref[2] = opt_sr->req_data.set;
+			}
+		}
+	}
+	
 //	debug_printf("ipf_input found SIRENS\n");
-	iph = (struct ip*) mbuf_data(*data);
 	switch (iph->ip_p) {
 		case IPPROTO_TCP:
 			tp = &th;
@@ -940,43 +979,6 @@ skip_res:
 			break;
 	}
 	
-	/* Prevent duplicate tag */
-	status = mbuf_tag_find(*data, gsr_idtag, SR_TAG_TYPE, &len, (void**)&tag_ref);
-	if(status == 0) {
-		debug_printf("ipf_input: found tag!\n");
-		goto in;
-	}
-	if(opt_sr->req_mode == SIRENS_TTL
-	   && iph->ip_ttl == opt_sr->req_ttl){
-		ifnet_t interface;
-//		debug_printf("sirens input: match TTL update hdr data and re-compute IP checksum TTL:%x:%x probe:%x\n",
-//					 iph->ip_ttl, opt_sr->req_ttl, opt_sr->req_probe);
-
-		interface = mbuf_pkthdr_rcvif(*data);
-		if(interface == NULL) goto in;
-		if(opt_sr->req_probe & SIRENS_DIR_IN){
-			if(!sr_setparam(opt_sr, interface)){
-				u_int32_t tmp, tcksum;
-				tcksum = opt_sr->req_data.set;
-				tmp = (~ntohs(iph->ip_sum) & 0xffff
-					   + ~tcksum & 0xffff 
-					   + ~(tcksum >> 16) & 0xffff
-					   + opt_sr->req_data.set & 0xffff
-					   + opt_sr->req_data.set >> 16);
-				tmp = tmp & 0xffff + tmp >> 16;
-				tmp = ~tmp;
-				iph->ip_sum = htons((u_int16_t)tmp);
-			}
-		}else{
-/* tag for later use */
-			status = mbuf_tag_allocate(*data, gsr_idtag, SR_TAG_TYPE, 4 * sizeof(int), MBUF_WAITOK, (void**)&tag_ref);
-			if(status == 0){
-				tag_ref[0] = mbuf_pkthdr_len(*data);
-				tag_ref[1] = (caddr_t)opt_sr - (caddr_t)iph;
-				tag_ref[2] = opt_sr->req_data.set;
-			}
-		}
-	}
 	goto in;
 in:
 	return ret;
@@ -1163,15 +1165,16 @@ sr_iff_in_fn( void *cookie,
 			 char **frame_ptr)
 {
 	size_t len;
+	struct ether_header *eh = (struct ether_header *)*frame_ptr;
 	int error = 0;
 	int status;
 	int *tag_ref;
 	struct ip *iph = NULL;
-	struct ipopt_sr *opt_sr;
+	struct ipopt_sr *opt_sr = NULL;
 	if(protocol != AF_INET)
 		return error;
 	status = mbuf_tag_find(*data, gsr_idtag, SR_TAG_TYPE, &len, (void**)&tag_ref);
-	if(status != 0){
+	if(status == 0){
 		return error;
 		/* XXX: or remove */
 	}	
@@ -1182,43 +1185,95 @@ sr_iff_in_fn( void *cookie,
 			/* seek VLAN tag */
 			/* seek LLC/SNAP */			
 			/* Strip ARP and non-IP packets out of the list */
-//			struct ether_header *eh = mbuf_pkthdr_header(*data);
-			struct ether_header *eh = (struct ether_header *)*frame_ptr;
-			if(eh->ether_type == htons(ETHERTYPE_IP)){
-				iph = (struct ip*)(eh + 1);
-				if((iph->ip_len << 2) < sizeof(struct ip) + sizeof(struct ipopt_sr)){
+			switch (htons(eh->ether_type)) {
+				case ETHERTYPE_IP:
+					iph = (struct ip*)(eh + 1);
+					if((iph->ip_hl << 2) < sizeof(struct ip) + sizeof(struct ipopt_sr)){
+						return error;
+					}
+					//				debug_printf("Longer IP header %d %d %d\n", iph->ip_hl << 2, sizeof(struct ip), sizeof(struct ipopt_sr));
+#if 0
+					mbuf_pkthdr_setheader(*data, *frame_ptr);
+					error = mbuf_pullup(data, sizeof(struct ether_header) + sizeof(struct ip) + sizeof(struct ipopt_sr));
+					if(error) return error;
+					*frame_ptr = mbuf_pkthdr_header(*data);
+					mbuf_pkthdr_setheader(*data, NULL);
+					eh = (struct ether_header *)*frame_ptr;
+					iph = (struct ip*)(eh + 1);
+#else
+					if(mbuf_len(*data) < sizeof(struct ether_header) + sizeof(struct ip) + sizeof(struct ipopt_sr)){
+						printf("sirens input: should mbuf_pullup hear!!\n");
+						return;
+					}
+#endif
+					opt_sr = (struct ipopt_sr*)(iph + 1);
+					if(opt_sr->type != IPOPT_SIRENS || opt_sr->len < sizeof(struct ipopt_sr)){
+						return;
+					}
+					//				debug_printf("%08x %08x %d %d\n", iph, opt_sr, iph->ip_ttl, mbuf_len(*data));					
+					break;
+				default:
 					return error;
-				}
-				mbuf_pkthdr_setheader(*data, *frame_ptr);
-				error = mbuf_pullup(data, sizeof(struct ether_header) + sizeof(struct ip) + sizeof(struct ipopt_sr));
-				if(error) return error;
-				*frame_ptr = mbuf_pkthdr_header(*data);
-				mbuf_pkthdr_setheader(*data, NULL);
-				eh = (struct ether_header *)*frame_ptr;
-				iph = (struct ip*)(eh + 1);
-				opt_sr = (struct ipopt_sr*)(iph + 1); /* ad-hoc */
+					break;
+			}
+			if(eh->ether_type == htons(ETHERTYPE_IP)){
 			}
 		}
 			break;
 		default:
 			return error;
+			break;
 	}
 //	opt_sr = ip_sirens_dooptions_d(iph);
-	if(opt_sr == NULL)
+	if(opt_sr == NULL || iph == NULL)
 		return error;
+//	debug_printf("inspect:%08x %08x %d %d %d\n", iph, opt_sr, iph->ip_ttl, opt_sr->req_ttl, opt_sr->req_mode);
 	if(opt_sr->req_mode != SIRENS_TTL
 	   || iph->ip_ttl != opt_sr->req_ttl){
 		return error;
 	}
-	debug_printf("found matched SIRENS %d %d %d\n", opt_sr->req_ttl, opt_sr->req_mode, iph->ip_len);
+	/* Prevent duplicate tag */
+	status = mbuf_tag_find(*data, gsr_idtag, SR_TAG_TYPE, &len, (void**)&tag_ref);
+	if(status == 0) {
+		debug_printf("sirens if-filter input: found tag!\n");
+		goto in;
+	}
+	
+	debug_printf("sirens if-input: match TTL update TTL:%x:%x probe:%x from data:%x\n",
+				 iph->ip_ttl, opt_sr->req_ttl, opt_sr->req_probe, ntohl(opt_sr->req_data.set));
+	
+	if(interface == NULL) goto in;
+	
+	if(opt_sr->req_probe & SIRENS_DIR_IN){
+		if(!sr_setparam(opt_sr, interface)){
+			u_int32_t tmp, tcksum;
+			debug_printf("re-compute checksum from %04x\n", ntohs(iph->ip_sum));
+			tcksum = opt_sr->req_data.set;
+			tmp = (~ntohs(iph->ip_sum) & 0xffff
+				   + ~tcksum & 0xffff 
+				   + ~(tcksum >> 16) & 0xffff
+				   + opt_sr->req_data.set & 0xffff
+				   + opt_sr->req_data.set >> 16);
+			tmp = tmp & 0xffff + tmp >> 16;
+			tmp = ~tmp;
+			iph->ip_sum = htons((u_int16_t)tmp);
+			debug_printf("re-compute checksum to %04x\n", ntohs(iph->ip_sum));
+		}
+		debug_printf("sirens if-input: to data:%x\n", opt_sr->req_data.set);
+
+	}else{
+		debug_printf("sirens if-input: unchenge data:%x\n", opt_sr->req_data.set);
+	}
 	status = mbuf_tag_allocate(*data, gsr_idtag, SR_TAG_TYPE, 4 * sizeof(int), MBUF_WAITOK, (void**)&tag_ref);
 	if(status == 0){
 		tag_ref[0] = iph->ip_len;
-		tag_ref[1] = (caddr_t)opt_sr - (caddr_t)iph;
+		tag_ref[1] = sizeof(struct ip);
+//		tag_ref[1] = (caddr_t)opt_sr - (caddr_t)iph;
 		tag_ref[2] = opt_sr->req_data.set;
 	}else{
 		return status;
 	}
+in:
 	return error;
 }
 static errno_t
@@ -1263,21 +1318,36 @@ sr_iff_out_fn (void *cookie,
 	opt_sr = (struct ipopt_sr*)((caddr_t)iph + tag_ref[1]);
 	
 	if(opt_sr->req_data.set == tag_ref[2]){
-//	debug_printf("sirens output: match TTL update hdr data and re-compute IP checksum TTL:%x:%x probe:%x\n",
-//					 iph->ip_ttl, opt_sr->req_ttl, opt_sr->req_probe);
+		u_int32_t tmp, tcksum;
+		debug_printf("sirens output: match TTL update TTL:%x:%x probe:%x from: %x\n",
+					 iph->ip_ttl, opt_sr->req_ttl, opt_sr->req_probe, ntohl(opt_sr->req_data.set));
+		tcksum =  opt_sr->req_data.set;
 		if(!sr_setparam(opt_sr, interface)){
-			u_int32_t tmp;
+			debug_printf("re-compute checksum from %04x\n", ntohs(iph->ip_sum));
 			tmp = (~ntohs(iph->ip_sum) & 0xffff
-				   + ~tag_ref[2] & 0xffff 
-				   + ~(tag_ref[2] >> 16) & 0xffff
+				   + ~tcksum & 0xffff 
+				   + ~(tcksum >> 16) & 0xffff
 				   + opt_sr->req_data.set & 0xffff
 				   + opt_sr->req_data.set >> 16);
+			debug_printf("%08x %08x %08x %08x %08x %08x\n",
+						 ~ntohs(iph->ip_sum) & 0xffff,
+						 ~tcksum & 0xffff,
+						 ~(tcksum >> 16) & 0xffff,
+						 opt_sr->req_data.set & 0xffff,
+						 opt_sr->req_data.set >> 16,
+						 tmp);
+			debug_printf("%08x %08x\n", tmp, ~tmp);
 			tmp = tmp & 0xffff + tmp >> 16;
+			debug_printf("%08x %08x\n", tmp, ~tmp);
 			tmp = ~tmp;
+			debug_printf("%08x %08x\n", tmp, ~tmp);
 			iph->ip_sum = htons((u_int16_t)tmp);
+			debug_printf("re-compute checksum to %04x\n", ntohs(iph->ip_sum));
 		}
+		debug_printf("sirens output: to: %x\n", ntohl(opt_sr->req_data.set));
+
 	}else{
-		printf("sirens output: found tag, data value is not changed : data %08x -> %08x\n", tag_ref[2], opt_sr->req_data.set);
+		printf("sirens output : data %08x -> %08x\n", tag_ref[2], opt_sr->req_data.set);
 	}
 	return error;
 }
