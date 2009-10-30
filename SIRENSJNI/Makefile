@@ -5,6 +5,8 @@ CC = gcc
 
 JC = javac
 
+JARC = jar
+
 JH = javah
 
 JCLASSPATH = -cp ./java-getopt-1.0.13.jar:.
@@ -29,11 +31,13 @@ JNISRCS = SIRENSSocket.java SIRENSServerSocket.java
 
 JSRCS = jperf.java jperfServer.java jperfClient.java SIRENSReqIndex.java jperfParam.java $(JNISRCS)
 
+JAR = SIRENSSocket-0.0.2-macos10.6.1.jar
+
 HDRS = -I/System/Library/Frameworks/JavaVM.framework/Headers -I../SIRENSNKE
 
-all: $(JCLASSES) $(JNILIB)
+all: $(JCLASSES) $(JNILIB) $(JAR)
 
-clean:;	@rm -f $(JCLASSES) $(JNILIB) $(JNIHDRS)
+clean:;	@rm -f $(JCLASSES) $(JNILIB) $(JNIHDRS) $(JAR)
 
 $(JCLASSES): $(JSRCS)
 	@$(JC) $(JCLASSPATH) $(JSRCS)
@@ -46,3 +50,6 @@ $(JNIHDRS): $(JNICLASSES)
 
 $(JNILIB): $(JNISRC) $(JNICSRC) $(JNIHDRS)
 	@$(CC) $(CFLAGS) $(HDRS) $(JNICSRC) -o $(JNILIB)
+
+$(JAR): $(JNICLASSES) $(JNILIB)
+	@$(JARC) cvf $(JAR) $(JNICLASSES) $(JNILIB)
