@@ -165,12 +165,14 @@ struct sirens_tag {
 #define MAXIPOPTSIRENSLEN IPOPTSIRENSLEN(SIRENSRESLEN)
 #define IPOPTLENTORESLEN(j) ((j - sizeof (struct ipopt_sr)) / sizeof(union u_sr_data) )
 
+#ifdef _KERNEL
 caddr_t ip_getsirensoptions __P((struct mbuf *));
 #ifdef __APPLE__
 int sr_setparam __P((struct ipopt_sr *, ifnet_t));
 #else
 int sr_setparam __P((struct ipopt_sr *, struct ifnet *));
 #endif
+#endif /* KERNEL */
 
 struct ipopt_sr	*ip_sirens_dooptions(struct mbuf *);
 
