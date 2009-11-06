@@ -118,6 +118,13 @@ static interface_filter_t	gsr_if_filter[256];
 static int	gifFilterRegistered = 0;
 
 
+struct SRIFEntry {
+	TAILQ_ENTRY(SRIFEntry)	srif_list;
+	struct iff_filter		srif_filter;
+	struct sr_storage		srif_storage;
+};
+static struct sr_iflist sr_iflist;
+
 /* List of sockets */
 static struct sr_sflist sr_list;				// protected by gmutex
 static struct sr_sflist sr_active;
@@ -128,6 +135,7 @@ static lck_grp_t		*gmutex_grp = NULL;
 
 /* Tag to assign jp.hpcc.ikob.kext.sirens */
 static mbuf_tag_id_t	gsr_idtag;
+
 
 struct SRSFEntry {
 	TAILQ_ENTRY(SRSFEntry)		sre_list;
@@ -153,10 +161,12 @@ struct SRSFEntry {
 #define	SRE_FL_ARMED	2
 
 typedef struct SRSFEntry  SRSFEntry;
+typedef struct SRIFEntry  SRIFEntry;
 
 #define kSRSFEntryMagic		0xAABBCCDD
 
 TAILQ_HEAD(sr_sflist, SRSFEntry);
+TAILQ_HEAD(sr_iflist, SRIFEntry);
 
 #define kInvalidUnit	0xFFFFFFFF
 
@@ -1044,7 +1054,7 @@ sr_remove(struct SRSFEntry *srp)
 
 #define SIRENS_DSIZE 32
 
-int sr_setparam (struct ipopt_sr *opt_sr, ifnet_t interface) {
+int sr_setparam (struct ipopt_sr *opt_sr, ifnet_t interface, struct sr_storage *srp) {
 	int error = 0;
 //	struct sr_storage *srp;
 #if SIRENS_DSIZE > 16
@@ -1064,35 +1074,39 @@ int sr_setparam (struct ipopt_sr *opt_sr, ifnet_t interface) {
 #ifdef __APPLE__
 	{
 		struct ifnet_stats_param stats;
-		ifnet_stat(interface, &stats);
-		switch ((opt_sr->req_probe) & ~SIRENS_DIR_IN){
-			case SIRENS_LINK:
-				data = (u_int32_t) (ifnet_baudrate(interface)/ 1000000);
+		if(srp->array[opt_sr->req_probe].flag == IPSR_VAR_VALID){
+			data = (u_int32_t) srp->array[opt_sr->req_probe].data;
+		} else {
+			ifnet_stat(interface, &stats);
+			switch ((opt_sr->req_probe) & ~SIRENS_DIR_IN){
+				case SIRENS_LINK:
+					data = (u_int32_t) (ifnet_baudrate(interface)/ 1000000);
+					break;
+				case SIRENS_OBYTES:
+					data = (u_int32_t) (stats.bytes_out);
+					break;
+				case SIRENS_IBYTES:
+					data = (u_int32_t) (stats.bytes_in);
 				break;
-			case SIRENS_OBYTES:
-				data = (u_int32_t) (stats.bytes_out);
-				break;
-			case SIRENS_IBYTES:
-				data = (u_int32_t) (stats.bytes_in);
-				break;
-			case SIRENS_DROPS:
-				data = (u_int32_t) (stats.dropped);
-				break;
-			case SIRENS_ERRORS:
-				data = (u_int32_t) (stats.dropped);
-				break;
-//			case SIRENS_QMAX:
-//				data = (u_int32_t) (ifp->if_snd.ifq_maxlen);
-//				break;
-//			case SIRENS_QLEN:
-//				data = (u_int32_t) (ifp->if_snd.ifq_len);
-//				break;
-			case SIRENS_MTU:
-				data = (u_int32_t) (ifnet_mtu(interface));
-				break;
-			default:
-				data = ~0;
-				break;
+				case SIRENS_DROPS:
+					data = (u_int32_t) (stats.dropped);
+					break;
+				case SIRENS_ERRORS:
+					data = (u_int32_t) (stats.dropped);
+					break;
+//				case SIRENS_QMAX:
+//					data = (u_int32_t) (ifp->if_snd.ifq_maxlen);
+//					break;
+//				case SIRENS_QLEN:
+//					data = (u_int32_t) (ifp->if_snd.ifq_len);
+//					break;
+				case SIRENS_MTU:
+					data = (u_int32_t) (ifnet_mtu(interface));
+					break;
+				default:
+					data = ~0;
+					break;
+			}
 		}
 	}
 #else
@@ -1170,6 +1184,56 @@ in_update_csum(u_int16_t original, u_int16_t old, u_int16_t new){
 	return((u_int16_t)((~tmp) & 0xffff));
 }
 static errno_t
+sr_iff_ioctl_fn(void *cookie,
+				ifnet_t interface, 
+				protocol_family_t protocol,
+				unsigned long ioctl_cmd,
+				void *ioctl_arg){
+	int error = ENOTSUP;/* continue to normal process */
+	debug_printf("called iff_ioctl_fn %d\n", ioctl_cmd);
+	switch(ioctl_cmd){
+	case SIOCSSRVAR:
+        {
+			struct if_srvarreq *ifsrr = (struct if_srvarreq *)ioctl_arg;
+			struct sr_storage *srp;
+			int idx = ifsrr->sr_probe &0xFF;
+			srp = &(((struct SRIFEntry *)cookie)->srif_storage);
+			switch(ifsrr->sr_var.flag){
+                case IPSR_VAR_VALID:
+					srp->array[idx].data = ifsrr->sr_var.data;
+					srp->array[idx].flag = ifsrr->sr_var.flag;
+					/**/
+					 printf("SIOCSSRVAR %d %d %d %d\n", ifsrr->sr_probe, idx, srp->array[idx].data, srp->array[idx].flag);
+					 /**/
+					break;
+                case IPSR_VAR_INVAL:
+					srp->array[idx].flag = ifsrr->sr_var.flag;
+					break;
+                default:
+					return(EINVAL);
+			}
+			error = 0;
+			break;
+        }
+	case SIOCGSRVAR:
+        {
+			struct if_srvarreq *ifsrr = (struct if_srvarreq *)ioctl_arg;
+			struct sr_storage *srp;
+			int idx = ifsrr->sr_probe & 0xFF;
+			srp = &(((struct SRIFEntry *)cookie)->srif_storage);
+			/**/
+			 printf("SIOCGSRVAR %d %d %d %d\n", ifsrr->sr_probe, idx, srp->array[idx].data, srp->array[idx].flag);
+			 /**/
+			ifsrr->sr_var.data = srp->array[idx].data;
+			ifsrr->sr_var.flag = srp->array[idx].flag;
+			error = 0;
+			break;
+        }
+		
+	}
+	return error; 
+}
+static errno_t
 sr_iff_in_fn( void *cookie,
 			 ifnet_t interface, 
 			 protocol_family_t protocol,
@@ -1183,6 +1247,7 @@ sr_iff_in_fn( void *cookie,
 	int *tag_ref;
 	struct ip *iph = NULL;
 	struct ipopt_sr *opt_sr = NULL;
+	if(sr_enable == 0 ) return error;
 	if(protocol != AF_INET)
 		return error;
 	status = mbuf_tag_find(*data, gsr_idtag, SR_TAG_TYPE, &len, (void**)&tag_ref);
@@ -1257,7 +1322,7 @@ sr_iff_in_fn( void *cookie,
 		debug_printf("sirens if-input: match TTL update TTL:%x:%x probe:%x from: %x\n",
 					 iph->ip_ttl, opt_sr->req_ttl, opt_sr->req_probe, ntohl(opt_sr->req_data.set));
 		tcksum = ntohl(opt_sr->req_data.set);
-		if(!sr_setparam(opt_sr, interface)){
+		if(!sr_setparam(opt_sr, interface, &(((struct SRIFEntry *)cookie)->srif_storage))){
 #if 0
 			debug_printf("re-compute checksum from %04x\n", ntohs(iph->ip_sum));
 			tmp = ((~ntohs(iph->ip_sum) & 0xffff)
@@ -1319,6 +1384,7 @@ sr_iff_out_fn (void *cookie,
 	u_int32_t *qp;
 	int i;
 	
+	if(sr_enable == 0 ) return error;
 	if(protocol != AF_INET)
 		return error;
 	status = mbuf_tag_find(*data, gsr_idtag, SR_TAG_TYPE, &len, (void**)&tag_ref);
@@ -1351,7 +1417,7 @@ sr_iff_out_fn (void *cookie,
 		{
 			u_int32_t tmp, tcksum;
 			tcksum = ntohl(opt_sr->req_data.set);
-			if(!sr_setparam(opt_sr, interface)){
+			if(!sr_setparam(opt_sr, interface, &(((struct SRIFEntry *)cookie)->srif_storage) )){
 				tmp = in_update_csum(ntohs(iph->ip_sum), (u_int16_t)(tcksum & 0xffff), (u_int16_t)(ntohl(opt_sr->req_data.set) & 0xffff));
 				tmp = in_update_csum((u_int16_t)tmp, (u_int16_t)(tcksum >> 16), (u_int16_t)(ntohl(opt_sr->req_data.set) >> 16));
 				iph->ip_sum = htons(tmp);
@@ -1364,11 +1430,10 @@ sr_iff_out_fn (void *cookie,
 	return error;
 }
 
-static errno_t
+static void
 sr_iff_detached_fn( void *cookie, ifnet_t interface)
 {
-	int error = 0;
-	return error;
+	return;
 }
 
 static struct iff_filter sr_iff_filter = { 
@@ -1389,6 +1454,7 @@ jp_hpcc_ikob_kext_sirensnke_start(kmod_info_t *ki, void *data)
 	int				ret = 0;
 	ifnet_t			*ifnetp;
 	u_int32_t ifcount;
+	SRIFEntry *srifp;
 	int i;
 	
 	printf("SIRENS_start\n");
@@ -1405,6 +1471,7 @@ jp_hpcc_ikob_kext_sirensnke_start(kmod_info_t *ki, void *data)
 	// initialize the queues which we are going to use.
 	TAILQ_INIT(&sr_list);
 	TAILQ_INIT(&sr_active);
+	TAILQ_INIT(&sr_iflist);
 	
 	gOSMallocTag = OSMalloc_Tagalloc(MYBUNDLEID, OSMT_DEFAULT);
 	// don't want the flag set to OSMT_PAGEABLE since
@@ -1452,7 +1519,23 @@ jp_hpcc_ikob_kext_sirensnke_start(kmod_info_t *ki, void *data)
 	for(i = 0; i < ifcount; i++){
 		if(strncmp(ifnet_name(ifnetp[i]), "lo", 2) == 0)
 			continue;
-		ret = iflt_attach(ifnetp[i], &sr_iff_filter, &(gsr_if_filter[i]));
+		srifp = (struct SRIFEntry *)OSMalloc(sizeof (struct SRIFEntry), gOSMallocTag);
+		if(srifp == NULL){
+			ifnet_list_free(ifnetp);
+			goto err;
+		}
+		bzero(srifp, sizeof(struct SRIFEntry));
+		srifp->srif_filter.iff_cookie = (void *)srifp;
+		srifp->srif_filter.iff_name = MYBUNDLEID;
+		srifp->srif_filter.iff_protocol = 0;
+		srifp->srif_filter.iff_input = sr_iff_in_fn;
+		srifp->srif_filter.iff_output = sr_iff_out_fn;
+		srifp->srif_filter.iff_event = NULL;
+		srifp->srif_filter.iff_ioctl = sr_iff_ioctl_fn;
+		srifp->srif_filter.iff_detached = sr_iff_detached_fn;
+		TAILQ_INSERT_TAIL(&sr_iflist, srifp, srif_list);
+		ret = iflt_attach(ifnetp[i], &(srifp->srif_filter), &(gsr_if_filter[i]));
+//		ret = iflt_attach(ifnetp[i], &sr_iff_filter, &(gsr_if_filter[i]));
 		if(ret == 0){
 			gifFilterRegistered++;
 			debug_printf("SIRENS filter is registered on \"%s%d\"\n", ifnet_name(ifnetp[i]), ifnet_unit(ifnetp[i]));
@@ -1478,6 +1561,10 @@ err:
 		for(i = 0 ; i < gifFilterRegistered ; i++){
 			iflt_detach(gsr_if_filter[i]);
 		}
+		for(srifp = TAILQ_FIRST(&sr_iflist) ; srifp ; srifp = TAILQ_FIRST(&sr_iflist)){
+			TAILQ_REMOVE(&sr_iflist, srifp, srif_list);
+			OSFree(srifp, sizeof(struct SRIFEntry), gOSMallocTag);
+		}		
 	}
 	free_locks();
 	return KERN_FAILURE;
@@ -1490,6 +1577,7 @@ extern int
 jp_hpcc_ikob_kext_sirensnke_flush()
 {
 	int ret = 0;
+	SRIFEntry *srifp;
 	if ((!gFilterRegistered && !gFilterRegistered_ip6 && !gipFilterRegistered && gifFilterRegistered == 0))
 		return KERN_SUCCESS;
 	
@@ -1539,6 +1627,10 @@ jp_hpcc_ikob_kext_sirensnke_flush()
 		int i;
 		for(i = 0 ; i < gifFilterRegistered ; i++){
 			iflt_detach(gsr_if_filter[i]);
+		}
+		for(srifp = TAILQ_FIRST(&sr_iflist) ; srifp ; srifp = TAILQ_FIRST(&sr_iflist)){
+			TAILQ_REMOVE(&sr_iflist, srifp, srif_list);
+			OSFree(srifp, sizeof(struct SRIFEntry), gOSMallocTag);
 		}
 	}
 	
