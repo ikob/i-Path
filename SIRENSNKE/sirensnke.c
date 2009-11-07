@@ -1190,7 +1190,7 @@ sr_iff_ioctl_fn(void *cookie,
 				unsigned long ioctl_cmd,
 				void *ioctl_arg){
 	int error = ENOTSUP;/* continue to normal process */
-	debug_printf("called iff_ioctl_fn %d\n", ioctl_cmd);
+//	debug_printf("SIRENSNKE:ioctl_fn: called iff_ioctl_fn %d\n", ioctl_cmd);
 	switch(ioctl_cmd){
 	case SIOCSSRVAR:
         {
@@ -1202,9 +1202,7 @@ sr_iff_ioctl_fn(void *cookie,
                 case IPSR_VAR_VALID:
 					srp->array[idx].data = ifsrr->sr_var.data;
 					srp->array[idx].flag = ifsrr->sr_var.flag;
-					/**/
-					 printf("SIOCSSRVAR %d %d %d %d\n", ifsrr->sr_probe, idx, srp->array[idx].data, srp->array[idx].flag);
-					 /**/
+//					 debug_printf("SIOCSSRVAR %d %d %d %d\n", ifsrr->sr_probe, idx, srp->array[idx].data, srp->array[idx].flag);
 					break;
                 case IPSR_VAR_INVAL:
 					srp->array[idx].flag = ifsrr->sr_var.flag;
@@ -1221,9 +1219,7 @@ sr_iff_ioctl_fn(void *cookie,
 			struct sr_storage *srp;
 			int idx = ifsrr->sr_probe & 0xFF;
 			srp = &(((struct SRIFEntry *)cookie)->srif_storage);
-			/**/
-			 printf("SIOCGSRVAR %d %d %d %d\n", ifsrr->sr_probe, idx, srp->array[idx].data, srp->array[idx].flag);
-			 /**/
+//			debug_printf("SIOCGSRVAR %d %d %d %d\n", ifsrr->sr_probe, idx, srp->array[idx].data, srp->array[idx].flag);
 			ifsrr->sr_var.data = srp->array[idx].data;
 			ifsrr->sr_var.flag = srp->array[idx].flag;
 			error = 0;
@@ -1382,7 +1378,7 @@ sr_iff_out_fn (void *cookie,
 	struct ip *iph;
 	struct ipopt_sr *opt_sr = NULL;
 	u_int32_t *qp;
-	int i;
+//	int i;
 	
 	if(sr_enable == 0 ) return error;
 	if(protocol != AF_INET)
@@ -1435,7 +1431,7 @@ sr_iff_detached_fn( void *cookie, ifnet_t interface)
 {
 	return;
 }
-
+#if 0
 static struct iff_filter sr_iff_filter = { 
     &sr_enable,
     MYBUNDLEID,
@@ -1446,7 +1442,7 @@ static struct iff_filter sr_iff_filter = {
 	NULL,
 	sr_iff_detached_fn
 };
-
+#endif
 /* =================================== */
 extern int
 jp_hpcc_ikob_kext_sirensnke_start(kmod_info_t *ki, void *data)
