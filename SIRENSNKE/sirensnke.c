@@ -81,7 +81,8 @@
 struct ipopt_sr *ip_sirens_dooptions_d(mbuf_t);
 
 
-#define DEBUG	1
+#define DEBUG	0
+#define SR_TIMEOUT 100
 
 #define SIRENS_HANDLE4 0x696b6f62		/* Temp hack to identify this filter */
 #define SIRENS_HANDLE6 0x696b6f64
@@ -570,7 +571,7 @@ sr_getoption_fn(void *cookie, socket_t so, sockopt_t opt)
 				return(EINVAL);
 			}
 			microtime(&tv);
-			tv.tv_sec -= 2;
+			tv.tv_sec -= SR_TIMEOUT;
 			switch(srp->sr_dreq.dir){
 				case 1:
 					thopdata = srp->inp_sr[i].sr_qdata;
@@ -626,7 +627,7 @@ sr_getoption_fn(void *cookie, socket_t so, sockopt_t opt)
 				return(EINVAL);
 			}
 			microtime(&tv);
-			tv.tv_sec -= 2;
+			tv.tv_sec -= SR_TIMEOUT;
 			switch(dreq->dir){
 				case 1:
 					thopdata = srp->inp_sr[i].sr_qdata;
@@ -838,7 +839,7 @@ sr_ipf_output(void *cookie, mbuf_t *data, ipf_pktopts_t options)
 					/* stack onto responce data */
 					microtime(&tv);
 					timevalsub(&tv, &srp->inp_sr[srp->sr_snext].sr_qdata[sttl].tv);
-					if(tv.tv_sec < 2 &&
+					if(tv.tv_sec < SR_TIMEOUT &&
 						   j + sttl <= srp->inp_sr[srp->sr_snext].smax_ttl &&
 						   sttl < 255){
 						resdata[j] = srp->inp_sr[srp->sr_snext].sr_qdata[sttl].val;
