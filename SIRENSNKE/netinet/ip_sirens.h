@@ -94,17 +94,25 @@ static char *sirens_probe_s[] = {
 #define		IPSR_VAR_INVAL 0x00000000
 /* SIRENS STORAGE */
 struct sr_var{
-	uint32_t flag;
-       	uint32_t data;
+	u_long flag;
+       	u_long data;
 };
 struct sr_storage {
 	struct sr_var array[SIRENS_PMAX];
 };
+#ifndef WIN32
 struct if_srvarreq {
 	char    ifr_name[IFNAMSIZ];             /* if name, e.g. "en0" */
 	int	sr_probe;
 	struct sr_var sr_var;
 };
+#else
+struct if_srvarreq {
+	int if_index;
+	int	sr_probe;
+	struct sr_var sr_var;
+};
+#endif
 
 #define SIRENS_DIR_IN	0x80
 #define SIRENS_DIR_OUT	0x00
@@ -113,15 +121,15 @@ struct if_srvarreq {
  * ext. SIRENS data
  */
 union u_sr_data {
-	uint32_t link;
-	uint32_t loss;
-	uint32_t queue;
-	uint32_t mtu;
+	u_long link;
+	u_long loss;
+	u_long queue;
+	u_long mtu;
 	struct {
-		uint16_t lamda;
-		uint16_t phy;
+		u_short lamda;
+		u_short phy;
 	} loc;
-	uint32_t set;
+	u_long set;
 };
 struct sr_hopdata{
 	struct timeval tv;
