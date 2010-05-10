@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		32A4FEBE0562C75700D090E7 /* sirensnke.c in Sources */ = {isa = PBXBuildFile; fileRef = 1A224C3CFF42312311CA2CB7 /* sirensnke.c */; settings = {ATTRIBUTES = (); }; };
+		F109EC741197A8DD0097E9C0 /* README in Resources */ = {isa = PBXBuildFile; fileRef = F109EC731197A8DD0097E9C0 /* README */; };
 		F17870AC1089462D000E6DC1 /* ip_sirens.h in Headers */ = {isa = PBXBuildFile; fileRef = F17870AB1089462D000E6DC1 /* ip_sirens.h */; };
 		F1A0A342107B2F3400B70183 /* sirensnke.h in Headers */ = {isa = PBXBuildFile; fileRef = F1A0A341107B2F3400B70183 /* sirensnke.h */; };
 		F1A87A791096C8820002411E /* mbuf.h in Headers */ = {isa = PBXBuildFile; fileRef = F1A87A781096C8820002411E /* mbuf.h */; };
@@ -19,6 +20,7 @@
 		1A224C3CFF42312311CA2CB7 /* sirensnke.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sirensnke.c; sourceTree = "<group>"; };
 		32A4FEC30562C75700D090E7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		32A4FEC40562C75800D090E7 /* sirensnke.kext */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = sirensnke.kext; sourceTree = BUILT_PRODUCTS_DIR; };
+		F109EC731197A8DD0097E9C0 /* README */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = README; sourceTree = "<group>"; };
 		F17870AB1089462D000E6DC1 /* ip_sirens.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ip_sirens.h; sourceTree = "<group>"; };
 		F1A0A341107B2F3400B70183 /* sirensnke.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sirensnke.h; sourceTree = "<group>"; };
 		F1A87A781096C8820002411E /* mbuf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = mbuf.h; path = sys/mbuf.h; sourceTree = "<group>"; };
@@ -43,6 +45,7 @@
 				247142CAFF3F8F9811CA285C /* Source */,
 				089C167CFE841241C02AAC07 /* Resources */,
 				19C28FB6FE9D52B211CA2CBB /* Products */,
+				F109EC731197A8DD0097E9C0 /* README */,
 			);
 			name = sirensnke;
 			sourceTree = "<group>";
@@ -151,6 +154,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F1A87A7C1096C8AF0002411E /* version.plist in Resources */,
+				F109EC741197A8DD0097E9C0 /* README in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

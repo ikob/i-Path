@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009 Katsushi Kobayashi
+ * Copyright (c) 2009, 2010 Katsushi Kobayashi
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

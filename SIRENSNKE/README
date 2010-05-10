@@ -1,0 +1,139 @@
+/*
+ * Copyright (c) 2009, 2010 Katsushi Kobayashi
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. All advertising materials mentioning features or use of this software
+ *    must display the acknowledgement as bellow:
+ *
+ *    This product includes software developed by K. Kobayashi
+ *
+ * 4. The name of the author may not be used to endorse or promote products
+ *    derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ * 
+ * This network visibility stack code is based on "Better End-to-End
+ * Visibility Leads Better Networks," in Proc. of 3rd International
+ * Conference on Future Internet Technologies, Seoul, 2008
+ *
+ */
+
+1. Introduction.
+
+This network visibility protyocol stack, SIRENS, is implementation for
+MacOS 10.6. This README will explain intstalattion steps.
+It shoukd be noted that this code is a prototype implementation
+for research purpose. If you cannot understand the functuonalities
+of the network visibility, please don't install this software.
+
+2. Kernel Installation
+
+2.1. Please install Xcode developper tool kit before installation.
+
+
+2.2. Get source code from i-Path SVN repository as:
+
+% svn co http://i-path.goto.info.waseda.ac.jp/svn/i-Path/trunk/SIRENSNKE
+A    SIRENSNKE/version.plist
+A    SIRENSNKE/sirensnke.c
+A    SIRENSNKE/Info.plist
+A    SIRENSNKE/netinet
+A    SIRENSNKE/netinet/ip_pcbopt.c
+A    SIRENSNKE/netinet/ip_sirens.h
+A    SIRENSNKE/sirensnke.h
+A    SIRENSNKE/sirensnke.xcodeproj
+A    SIRENSNKE/sirensnke.xcodeproj/ikob.mode1v3
+A    SIRENSNKE/sirensnke.xcodeproj/project.pbxproj
+A    SIRENSNKE/sirensnke.xcodeproj/ikob.pbxuser
+A    SIRENSNKE/English.lproj
+A    SIRENSNKE/sys
+A    SIRENSNKE/sys/mbuf.h
+Checked out revision 120.
+
+
+2.3. Open SIRENSNKE/sirensnke.xcodeproj from Xcode File menu.
+
+2.4. Choose build menu from Build tab.
+
+2.5. Copy kernel extension module to /tmp directory by superuser as:
+
+$ sudo cp -r sirensnke.kext /tmp
+
+2.6. Load kernel extention to existing kernel as:
+
+$ sudo kextload sirensnke.kext
+
+2.7. Confirm the kernel extension status as:
+
+$ kextstat
+
+...
+  129    0 0xa4559000 0x6000     0x5000     jp.hpcc.ikob.kext.sirensnke (1.0) <7 4 1>
+
+3. JNI UInstalattioon
+
+3.0. We provide JAVA Native Interface to manipulate SIRENS function.
+
+3.1. Get source code from i-Path SVN repository as:
+
+$ svn co http://i-path.goto.info.waseda.ac.jp/svn/i-Path/trunk/SIRENSJNI
+A    SIRENSJNI/jperf.sh
+A    SIRENSJNI/libSIRENSImpl.jnilib
+A    SIRENSJNI/SIRENSReqIndex.java
+A    SIRENSJNI/SIRENSServerSocket.java
+A    SIRENSJNI/jperfClient.java
+A    SIRENSJNI/SIRENSImpl.c
+A    SIRENSJNI/jperf.java
+A    SIRENSJNI/netinet
+A    SIRENSJNI/netinet/ip_sirens.h
+A    SIRENSJNI/jperfParam.java
+A    SIRENSJNI/java-getopt-1.0.13.jar
+A    SIRENSJNI/SIRENSSocket.java
+A    SIRENSJNI/Makefile
+A    SIRENSJNI/jperfServer.java
+A    SIRENSJNI/jperfThread.java
+Checked out revision 120.
+
+3.2. Do make in SIRENSJNI directory as:
+
+$ make
+
+3.3. Check protocol stack using sample application as:
+
+$ java -classpath java-getopt-1.0.13.jar:. jperf -s -Q &
+
+$  java -classpath java-getopt-1.0.13.jar:. jperf -c 127.0.0.1 -Q
+Start remote port 4444 local port 57969
+Start remote port 57969 local port 4444
+SO_SNDBUF size: 146.99 K
+SO_RCVBUF size: 538.96 K
+0- 10 sec    7.12 GBytes    5.70 Gbits/sec
+0- 10 sec    7.12 GBytes    5.70 Gbits/sec
+
+ 
+
+
+
+
+
+
+
+ 
