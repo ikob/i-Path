@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2009, 2010 Katsushi Kobayashi
+ * Copyright (c) 2009, 2010
+ * National Institute of Advanced Industrial Science and Technology (AIST).
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -13,7 +14,7 @@
  * 3. All advertising materials mentioning features or use of this software
  *    must display the acknowledgement as bellow:
  *
- *    This product includes software developed by K. Kobayashi and H. Shimokawa
+ *    This product includes software developed by AIST.
  *
  * 4. The name of the author may not be used to endorse or promote products
  *    derived from this software without specific prior written permission.
@@ -29,7 +30,7 @@
  * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
+ * 
  * $ $
  *
  */
