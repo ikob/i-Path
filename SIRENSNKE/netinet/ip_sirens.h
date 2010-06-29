@@ -43,6 +43,65 @@
  */
 #define IPOPT_SIRENS   94 /* [RFC4727] spcified in RFC3692 style experiment */
 
+/*
+ * SIRENS data storage
+ */
+union u_sr_data {
+	u_long link;
+	u_long loss;
+	u_long queue;
+	u_long mtu;
+	struct {
+		u_short lamda;
+		u_short phy;
+	} loc;
+	u_long set;
+};
+
+/*
+ * SIRENS IP option header
+ */
+struct ipopt_sr {
+	u_char type; /* always 94 */
+	u_char len; /* 12 */
+	u_char res_probe; /* responce data type */
+	u_char res_ttl; /* responce data TTL */
+	
+	u_char req_mode; /* request mode, {min, max, TTL} =  {1, 2, 3} */
+	u_char req_probe; /* request data type */
+	u_char res_mode; /* responce mode */
+	u_char req_ttl; /* request data TTL */
+	union u_sr_data req_data; /* SIRENS request data storage */
+#define SIRENSRESLEN 8
+	/*	res[SIRENSRESLEN]; */
+};
+#ifdef _KERNEL
+/*
+ * SIRENS packet tag.
+ */
+struct sirens_tag {
+	struct m_tag    tag;
+	u_char type; /* always 94 */
+	u_char len; /* more than 12 */
+	u_char res_probe;
+	u_char res_ttl;
+	
+	u_char req_mode;
+	u_char req_probe;
+	u_char res_mode;
+	u_char req_ttl;
+	union u_sr_data req_data;
+	union u_sr_data res[SIRENSRESLEN];
+};
+#endif /* KERNEL */
+/*
+ * SIRENS data cached in end systems
+ */
+struct sr_hopdata{
+	struct timeval tv;
+	union u_sr_data val;
+};
+
 #define SIRENS_DISABLE 0x00
 #define SIRENS_MIN 0x01
 #define SIRENS_MAX 0x02
@@ -63,15 +122,15 @@ static char *sirens_mode_s[] = {
 
 enum SIRENS_PROBE {
 	SIRENS_DUMMY,
-	SIRENS_LINK,
-	SIRENS_OBYTES,
-	SIRENS_IBYTES,
-	SIRENS_DROPS,
-	SIRENS_ERRORS,
-	SIRENS_QMAX,
-	SIRENS_QLEN,
-	SIRENS_MTU,
-	SIRENS_LOCATON,
+	SIRENS_LINK,		/* Link BW (bps) */
+	SIRENS_OBYTES,		/* output byte count */
+	SIRENS_IBYTES,		/* input byte count */
+	SIRENS_DROPS,		/* drop packets count */
+	SIRENS_ERRORS,		/* error count */
+	SIRENS_QMAX,		/* maximum used queue length */
+	SIRENS_QLEN,		/* output queue length limit */
+	SIRENS_MTU,			/* MTU size */
+	SIRENS_LOCATON,		/* Geographical location */
 /*
 	SIRENS_PMAX
 */
@@ -118,58 +177,7 @@ struct if_srvarreq {
 #define SIRENS_DIR_IN	0x80
 #define SIRENS_DIR_OUT	0x00
 #define SIRENS_DSIZE	32
-/*
- * ext. SIRENS data
- */
-union u_sr_data {
-	u_long link;
-	u_long loss;
-	u_long queue;
-	u_long mtu;
-	struct {
-		u_short lamda;
-		u_short phy;
-	} loc;
-	u_long set;
-};
-struct sr_hopdata{
-	struct timeval tv;
-	union u_sr_data val;
-};
-/* SIRENS IP option header */
-struct ipopt_sr {
-	u_char type; /* always 94 */
-	u_char len; /* more than 12 */
-	u_char res_probe;
-	u_char res_ttl;
 
-	u_char req_mode;
-	u_char req_probe;
-	u_char res_mode;
-	u_char req_ttl;
-	union u_sr_data req_data;
-#define SIRENSRESLEN 8
-/*	res[SIRENSRESLEN]; */
-};
-/*
- * SIRENS packet tag.
- */
-#ifdef _KERNEL
-struct sirens_tag {
-	struct m_tag    tag;
-	u_char type; /* always 94 */
-	u_char len; /* more than 12 */
-	u_char res_probe;
-	u_char res_ttl;
-
-	u_char req_mode;
-	u_char req_probe;
-	u_char res_mode;
-	u_char req_ttl;
-	union u_sr_data req_data;
-	union u_sr_data res[SIRENSRESLEN];
-};
-#endif /* KERNEL */
 #define IPOPTSIRENSLEN(i) (sizeof (struct ipopt_sr) + sizeof(union u_sr_data) * i)
 #define MAXIPOPTSIRENSLEN IPOPTSIRENSLEN(SIRENSRESLEN)
 #define IPOPTLENTORESLEN(j) ((j - sizeof (struct ipopt_sr)) / sizeof(union u_sr_data) )

@@ -372,6 +372,11 @@ sr_setoption_fn(void *cookie, socket_t so, sockopt_t opt)
 	int error = 0;
 	switch(sockopt_name(opt)){			
 		case IPSIRENS_IDX:
+			/*
+			 * Set probe information and areas
+			 * opt->val : {sr_ireq, srreq_index[0]..srreq_index[N]}
+			 * N: srireq.sr_nindex
+			 */
 			{
 				struct sr_ireq *srireq;
 				struct inpcb *inp;
@@ -505,6 +510,13 @@ sr_setoption_fn(void *cookie, socket_t so, sockopt_t opt)
 			}
 			break;
 		case IPSIRENS_SDATAX:
+			/*
+			 * Specify dataset to retrieve next getsockopt(s, IPSIRENS_SDATAX) call.
+			 * Python's getsockopt()  does not allows to give a paremater set, unlike UNIX.
+			 * So, we split getsockopt(s, IPSIRENS_STADA) into two phases,
+			 * i.e., to set dataset, and to get dataset. 
+			 * opt->val : {sr_dreq}
+			 */			
 			{
 				struct sr_dreq *dreq;
 
@@ -548,6 +560,10 @@ sr_getoption_fn(void *cookie, socket_t so, sockopt_t opt)
 			error = EINVAL;
 			break;
 		case IPSIRENS_SDATAX:
+			/*
+			 * Retrieve dataset specified previous setsockopt(s, IPSIRENS_SDATAX) call.
+			 * opt->val : {u_sr_dreq[256]}
+			 */
 		{
 			int i, j;        
 			struct timeval tv;
@@ -582,6 +598,7 @@ sr_getoption_fn(void *cookie, socket_t so, sockopt_t opt)
 					thopdata = srp->inp_sr[i].sr_sdata;
 					break;
 			}
+			/* omit old data */
 			for(j = 0 ; j < 256 ; j++){
 				if(timevalcmp(&tv, &thopdata[j].tv, <)){
 					sr_data[j] = thopdata[j].val;
@@ -597,6 +614,11 @@ sr_getoption_fn(void *cookie, socket_t so, sockopt_t opt)
 		}
 			break;
 		case IPSIRENS_SDATA:
+			/*
+			 * Retrieve dataset specified in given parameters.
+			 * given: opt->val : {sr_dreq}
+			 * retuen: opt->cal : {sr_dreq, u_sr_data[256]}
+			 */	
 		{
 			struct sr_dreq *dreq;
 			int i, j;
@@ -638,11 +660,12 @@ sr_getoption_fn(void *cookie, socket_t so, sockopt_t opt)
 					thopdata = srp->inp_sr[i].sr_sdata;
 					break;
 			}
+			/* omit old data */
 			for(j = 0 ; j < 256 ; j++){
 				if(timevalcmp(&tv, &thopdata[j].tv, <)){
 					sr_data[j] = thopdata[j].val;
 				} else {
-					sr_data[j].set = -1;
+					sr_data[j].set = -1; /* invalid */
 				}
 			}
 			error = sockopt_copyout(opt, dreq, IPSIRENS_DREQSIZE(256));
