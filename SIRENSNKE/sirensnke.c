@@ -780,10 +780,15 @@ sr_ipf_output(void *cookie, mbuf_t *data, ipf_pktopts_t options)
 	int *tag_ref;
 	size_t	len;
 	struct ipopt_sr *opt_sr = NULL;
-	struct tcphdr *tp, th;
 	struct ip *iph;
 	struct inpcb *inp;
-	struct SRSFEntry *srp, *nsrp = NULL;	
+	int pktlen;
+	struct SRSFEntry *srp, *nsrp = NULL;
+	
+	status = mbuf_tag_find(*data, gsr_idtag, SR_TAG_TYPE, &len, (void**)&tag_ref);
+	if(status == 0){
+		debug_printf("sr_ipf_output: found a tag len %x: %x %x %x : pktlen, %x\n", len, tag_ref[0], tag_ref[1], tag_ref[2], mbuf_pkthdr_len(*data));
+	}
 	
 	opt_sr = ip_sirens_dooptions_d(*data);
 	if(opt_sr == NULL)
@@ -794,87 +799,94 @@ sr_ipf_output(void *cookie, mbuf_t *data, ipf_pktopts_t options)
 
 	switch (iph->ip_p) {
 		case IPPROTO_TCP:
-			tp = &th;
-			mbuf_copydata(*data, iph->ip_hl << 2, sizeof(th), tp);
+		{
+				struct tcphdr *tp, th;
+				tp = &th;
+				mbuf_copydata(*data, iph->ip_hl << 2, sizeof(th), tp);
 			/**/
-			for(srp = TAILQ_FIRST(&sr_active); srp ; srp = nsrp){
-				nsrp = TAILQ_NEXT(srp, sre_list);
-				inp = (struct inpcb *)(((struct socket *)(srp->sre_so))->so_pcb);
+				for(srp = TAILQ_FIRST(&sr_active); srp ; srp = nsrp){
+					nsrp = TAILQ_NEXT(srp, sre_list);
+					inp = (struct inpcb *)(((struct socket *)(srp->sre_so))->so_pcb);
 				
 //				debug_printf("%2x %08x %08x %04x %04x\n",
 //							 iph->ip_p, iph->ip_dst, iph->ip_src, tp->th_dport, tp->th_sport);				
 //				debug_printf("%2x %08x %08x %04x %04x\n",
 //							 inp->inp_ip_p, inp->inp_laddr, inp->inp_faddr, inp->inp_lport, inp->inp_fport);
 				/* how to determine upper layer protocol from inpcb ???? */
-				if((inp->inp_vflag == INP_IPV4)
-				   &&(inp->inp_laddr.s_addr == iph->ip_src.s_addr)
-				   && (inp->inp_faddr.s_addr == iph->ip_dst.s_addr)
-				   && (inp->inp_lport == tp->th_sport)
-				   && (inp->inp_fport == tp->th_dport))
+					if((inp->inp_vflag == INP_IPV4)
+					   &&(inp->inp_laddr.s_addr == iph->ip_src.s_addr)
+					   && (inp->inp_faddr.s_addr == iph->ip_dst.s_addr)
+					   && (inp->inp_lport == tp->th_sport)
+					   && (inp->inp_fport == tp->th_dport))
+						break;
+				}
+				if(srp == NULL)
 					break;
-			}
-			if(srp == NULL)
-				break;
 //			debug_printf("found outgoing flow so:0x%08x %d %d\n", srp->sre_so, srp->sr_nmax, srp->sre_flag);
 			
-			if(srp->sr_nmax > 0 && srp->sre_flag & SRE_FL_ARMED){
-                int reslen, j;
-                union u_sr_data *resdata;
-				u_int qttl, sttl;
-				srp->sr_qnext %= srp->sr_nmax;
-				qttl = srp->sr_qttl;
-				qttl++;
-				if(qttl > (u_int)srp->inp_sr[srp->sr_qnext].qmax_ttl || qttl > 255){
-					srp->sr_qnext++;
+				if(srp->sr_nmax > 0 && srp->sre_flag & SRE_FL_ARMED){
+					int reslen, j;
+					union u_sr_data *resdata;
+					u_int qttl, sttl;
 					srp->sr_qnext %= srp->sr_nmax;
-					qttl = srp->inp_sr[srp->sr_qnext].qmin_ttl;
-				}
-				if(qttl < (u_int)srp->inp_sr[srp->sr_qnext].qmin_ttl) {
-					qttl = srp->inp_sr[srp->sr_qnext].qmin_ttl;
-				}
-				srp->sr_qttl = qttl;
-				opt_sr->req_mode = srp->inp_sr[srp->sr_qnext].mode;
-				opt_sr->req_probe = srp->inp_sr[srp->sr_qnext].probe;
-				opt_sr->req_ttl = qttl;
-				opt_sr->req_data.set = -1;
+					qttl = srp->sr_qttl;
+					qttl++;
+					if(qttl > (u_int)srp->inp_sr[srp->sr_qnext].qmax_ttl || qttl > 255){
+						srp->sr_qnext++;
+						srp->sr_qnext %= srp->sr_nmax;
+						qttl = srp->inp_sr[srp->sr_qnext].qmin_ttl;
+					}
+					if(qttl < (u_int)srp->inp_sr[srp->sr_qnext].qmin_ttl) {
+						qttl = srp->inp_sr[srp->sr_qnext].qmin_ttl;
+					}
+					srp->sr_qttl = qttl;
+					opt_sr->req_mode = srp->inp_sr[srp->sr_qnext].mode;
+					opt_sr->req_probe = srp->inp_sr[srp->sr_qnext].probe;
+					opt_sr->req_ttl = qttl;
+					opt_sr->req_data.set = -1;
 					
-				reslen = IPOPTLENTORESLEN(opt_sr->len);
+					reslen = IPOPTLENTORESLEN(opt_sr->len);
 					
-				srp->sr_snext %= srp->sr_nmax;
-				sttl = srp->sr_sttl;
-				if(sttl > srp->inp_sr[srp->sr_snext].smax_ttl || sttl > 255){
-					srp->sr_snext++;
 					srp->sr_snext %= srp->sr_nmax;
-					sttl = srp->inp_sr[srp->sr_snext].smin_ttl;
-				}
-				if(sttl < srp->inp_sr[srp->sr_snext].smin_ttl) {
-					sttl = srp->inp_sr[srp->sr_snext].smin_ttl;
-				}
-				opt_sr->res_mode = srp->inp_sr[srp->sr_snext].mode;
-				opt_sr->res_probe = srp->inp_sr[srp->sr_snext].probe;
-				opt_sr->res_ttl = sttl;
-				resdata = (union u_sr_data *)(opt_sr + 1);
+					sttl = srp->sr_sttl;
+					if(sttl > srp->inp_sr[srp->sr_snext].smax_ttl || sttl > 255){
+						srp->sr_snext++;
+						srp->sr_snext %= srp->sr_nmax;
+						sttl = srp->inp_sr[srp->sr_snext].smin_ttl;
+					}
+					if(sttl < srp->inp_sr[srp->sr_snext].smin_ttl) {
+						sttl = srp->inp_sr[srp->sr_snext].smin_ttl;
+					}
+					opt_sr->res_mode = srp->inp_sr[srp->sr_snext].mode;
+					opt_sr->res_probe = srp->inp_sr[srp->sr_snext].probe;
+					opt_sr->res_ttl = sttl;
+					resdata = (union u_sr_data *)(opt_sr + 1);
 
 //				debug_printf("output: start lock\n");
 
-				lck_mtx_lock(gmutex);   
-				for(j = 0 ; j < reslen; j++){
-					struct timeval tv;
+					lck_mtx_lock(gmutex);   
+					for(j = 0 ; j < reslen; j++){
+						struct timeval tv;
 					/* stack onto responce data */
-					microtime(&tv);
-					timevalsub(&tv, &srp->inp_sr[srp->sr_snext].sr_qdata[sttl].tv);
-					if(tv.tv_sec < SR_TIMEOUT &&
-						   j + sttl <= srp->inp_sr[srp->sr_snext].smax_ttl &&
-						   sttl < 255){
-						resdata[j] = srp->inp_sr[srp->sr_snext].sr_qdata[sttl].val;
-					}else{
-						resdata[j].set = -1;
+						microtime(&tv);
+						timevalsub(&tv, &srp->inp_sr[srp->sr_snext].sr_qdata[sttl].tv);
+						if(tv.tv_sec < SR_TIMEOUT &&
+							j + sttl <= srp->inp_sr[srp->sr_snext].smax_ttl &&
+							sttl < 255){
+							resdata[j] = srp->inp_sr[srp->sr_snext].sr_qdata[sttl].val;
+						}else{
+							resdata[j].set = -1;
+						}
 					}
+					lck_mtx_unlock(gmutex);
+					srp->sr_sttl = sttl + j;
 				}
-				lck_mtx_unlock(gmutex);
-				srp->sr_sttl = sttl + j;
-			}
+		}
 			break;
+		case IPPROTO_ICMP:
+		{
+				
+		}
 		default:
 			break;
 	}
@@ -903,7 +915,6 @@ sr_ipf_input(void *cookie, mbuf_t *data, int offset, u_int8_t protocol){
 	int *tag_ref;
 	size_t	len;
 	struct ipopt_sr *opt_sr = NULL;
-	struct tcphdr *tp, th;
 	struct ip *iph;
 	struct inpcb *inp;
 	struct SRSFEntry *srp, *nsrp = NULL;
@@ -964,55 +975,60 @@ sr_ipf_input(void *cookie, mbuf_t *data, int offset, u_int8_t protocol){
 //	debug_printf("ipf_input found SIRENS\n");
 	switch (iph->ip_p) {
 		case IPPROTO_TCP:
-			tp = &th;
-			mbuf_copydata(*data, iph->ip_hl << 2, sizeof(th), tp);
+			{
+				struct tcphdr *tp, th;
+				tp = &th;
+				mbuf_copydata(*data, iph->ip_hl << 2, sizeof(th), tp);
 /**/
-			for(srp = TAILQ_FIRST(&sr_active); srp ; srp = nsrp){
-				nsrp = TAILQ_NEXT(srp, sre_list);
-				inp = (struct inpcb *)(((struct socket *)(srp->sre_so))->so_pcb);
-				if((inp->inp_vflag == INP_IPV4)
-				   && (inp->inp_laddr.s_addr == iph->ip_dst.s_addr)
-				   && (inp->inp_faddr.s_addr == iph->ip_src.s_addr)
-				   && (inp->inp_lport == tp->th_dport)
-				   && (inp->inp_fport == tp->th_sport))
+				for(srp = TAILQ_FIRST(&sr_active); srp ; srp = nsrp){
+					nsrp = TAILQ_NEXT(srp, sre_list);
+					inp = (struct inpcb *)(((struct socket *)(srp->sre_so))->so_pcb);
+					if((inp->inp_vflag == INP_IPV4)
+					   && (inp->inp_laddr.s_addr == iph->ip_dst.s_addr)
+					   && (inp->inp_faddr.s_addr == iph->ip_src.s_addr)
+					   && (inp->inp_lport == tp->th_dport)
+					   && (inp->inp_fport == tp->th_sport))
+						break;
+				}
+				if(srp == NULL)
 					break;
-			}
-			if(srp == NULL)
-				break;
-			if(srp->sr_nmax > 0 && srp->sre_flag & SRE_FL_ARMED){
-				int j, i, n;
-				struct timeval tv;
-				union u_sr_data *sr_data;
+				if(srp->sr_nmax > 0 && srp->sre_flag & SRE_FL_ARMED){
+					int j, i, n;
+					struct timeval tv;
+					union u_sr_data *sr_data;
 				
-				getmicrotime(&tv);
-				for( j = 0 ; j < srp->sr_nmax ; j++){
-					if(srp->inp_sr[j].mode == opt_sr->req_mode
-					   && srp->inp_sr[j].probe == opt_sr->req_probe)
-						break;
-                }
-				lck_mtx_lock(gmutex);
-                if( j == srp->sr_nmax ) goto skip_req;
-                srp->inp_sr[j].sr_qdata[opt_sr->req_ttl].tv = tv;
-                srp->inp_sr[j].sr_qdata[opt_sr->req_ttl].val = opt_sr->req_data;
+					getmicrotime(&tv);
+					for( j = 0 ; j < srp->sr_nmax ; j++){
+						if(srp->inp_sr[j].mode == opt_sr->req_mode
+						   && srp->inp_sr[j].probe == opt_sr->req_probe)
+							break;
+					}
+					lck_mtx_lock(gmutex);
+					if( j == srp->sr_nmax ) goto skip_req;
+					srp->inp_sr[j].sr_qdata[opt_sr->req_ttl].tv = tv;
+					srp->inp_sr[j].sr_qdata[opt_sr->req_ttl].val = opt_sr->req_data;
 skip_req:
-                if((n = IPOPTLENTORESLEN(opt_sr->len)) == 0 )
-					goto skip_res;
-                for( j = 0 ; j < srp->sr_nmax ; j++){
-					if(srp->inp_sr[j].mode == opt_sr->res_mode
-					   && srp->inp_sr[j].probe == opt_sr->res_probe)
-						break;
-                }
-                if( j == srp->sr_nmax ) goto skip_res;
-                sr_data = (union u_sr_data *)(opt_sr + 1);
-                for( i = 0 ; i < n ; i++){
-					if(opt_sr->res_ttl + i > 255) break;
-					srp->inp_sr[j].sr_sdata[opt_sr->res_ttl + i].tv = tv;
-					srp->inp_sr[j].sr_sdata[opt_sr->res_ttl + i].val = sr_data[i];
-                }
+					if((n = IPOPTLENTORESLEN(opt_sr->len)) == 0 )
+						goto skip_res;
+					for( j = 0 ; j < srp->sr_nmax ; j++){
+						if(srp->inp_sr[j].mode == opt_sr->res_mode
+						   && srp->inp_sr[j].probe == opt_sr->res_probe)
+							break;
+					}
+					if( j == srp->sr_nmax ) goto skip_res;
+					sr_data = (union u_sr_data *)(opt_sr + 1);
+					for( i = 0 ; i < n ; i++){
+						if(opt_sr->res_ttl + i > 255) break;
+						srp->inp_sr[j].sr_sdata[opt_sr->res_ttl + i].tv = tv;
+						srp->inp_sr[j].sr_sdata[opt_sr->res_ttl + i].val = sr_data[i];
+					}
 skip_res:
-				lck_mtx_unlock(gmutex);
-/* allocate tag for later process */
+					lck_mtx_unlock(gmutex);
+				}
+				break;
 			}
+		case IPPROTO_ICMP:
+/* Should re-implement icmp_echoreply, in order to reflect collected SIRENS data */
 			break;
 		default:
 			break;
@@ -1254,6 +1270,11 @@ sr_iff_ioctl_fn(void *cookie,
 	}
 	return error; 
 }
+/* 
+ * XXX: ad-hoc SIRENS header traversal is problematic.
+ * XXX: Preserving input interface info. using mbuf_tag
+ * XXX: realizes post-update on output phase.
+ */
 static errno_t
 sr_iff_in_fn( void *cookie,
 			 ifnet_t interface, 
@@ -1379,8 +1400,9 @@ sr_iff_in_fn( void *cookie,
 	}
 	status = mbuf_tag_allocate(*data, gsr_idtag, SR_TAG_TYPE, 4 * sizeof(int), MBUF_WAITOK, (void**)&tag_ref);
 	if(status == 0){
-		tag_ref[0] = iph->ip_len;
-		tag_ref[1] = sizeof(struct ip);
+		tag_ref[0] = ntohs(iph->ip_len);
+//		tag_ref[1] = sizeof(struct ip);
+		tag_ref[1] = iph->ip_hl << 2;
 //		tag_ref[1] = (caddr_t)opt_sr - (caddr_t)iph;
 		tag_ref[2] = opt_sr->req_data.set;
 	}else{
@@ -1414,7 +1436,7 @@ sr_iff_out_fn (void *cookie,
 	}
 	pktlen = mbuf_pkthdr_len(*data);
 	if(pktlen < tag_ref[0]){
-		debug_printf("found tag but error %x < %x\n", pktlen, *tag_ref);
+		debug_printf("iff_out_fn: found tag but error %x < %x\n", pktlen, *tag_ref);
 		return error;
 	}
 	error = mbuf_pullup(data, pktlen - *tag_ref + sizeof (struct ip) + sizeof(struct ipopt_sr));
