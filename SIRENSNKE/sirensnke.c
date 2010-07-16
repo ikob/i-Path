@@ -82,7 +82,7 @@
 struct ipopt_sr *ip_sirens_dooptions_d(mbuf_t);
 
 
-#define DEBUG	0
+#define DEBUG	1
 #define SR_TIMEOUT 100
 
 #define SIRENS_HANDLE4 0x696b6f62		/* Temp hack to identify this filter */
