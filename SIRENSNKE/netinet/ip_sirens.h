@@ -136,7 +136,7 @@ enum SIRENS_PROBE {
 */
 };
 #define SIRENS_PMAX 256
-#ifndef _KERNEL
+#ifndef KERNEL
 static char *sirens_probe_s[] = {
 	"dummy",
 	"link",
@@ -149,7 +149,7 @@ static char *sirens_probe_s[] = {
 	"mtu",
 	"location",
 };
-#endif /* _KERNEL */
+#endif /* KERNEL */
 #define		IPSR_VAR_VALID 0x00000001
 #define		IPSR_VAR_INVAL 0x00000000
 /* SIRENS STORAGE */
@@ -182,10 +182,10 @@ struct if_srvarreq {
 #define MAXIPOPTSIRENSLEN IPOPTSIRENSLEN(SIRENSRESLEN)
 #define IPOPTLENTORESLEN(j) ((j - sizeof (struct ipopt_sr)) / sizeof(union u_sr_data) )
 
-#ifdef _KERNEL
+#ifdef KERNEL
 caddr_t ip_getsirensoptions __P((struct mbuf *));
 #ifdef __APPLE__
-int sr_setparam __P((struct ipopt_sr *, ifnet_t));
+int sr_setparam __P((struct ipopt_sr *, ifnet_t, struct sr_storage *));
 #else
 int sr_setparam __P((struct ipopt_sr *, struct ifnet *));
 #endif

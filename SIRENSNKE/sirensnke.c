@@ -945,7 +945,7 @@ sr_ipf_input(void *cookie, mbuf_t *data, int offset, u_int8_t protocol){
 		interface = mbuf_pkthdr_rcvif(*data);
 		if(interface == NULL) goto in;
 		if(opt_sr->req_probe & SIRENS_DIR_IN){
-			if(!sr_setparam(opt_sr, interface)){
+			if(!sr_setparam(opt_sr, interface, &(((struct SRIFEntry *)cookie)->srif_storage))){
 /* ip_checksum is already checked before goto ours in ip_input() */
 #if 0
 
@@ -971,6 +971,7 @@ sr_ipf_input(void *cookie, mbuf_t *data, int offset, u_int8_t protocol){
 			}
 		}
 	}
+in:
 	
 //	debug_printf("ipf_input found SIRENS\n");
 	switch (iph->ip_p) {
@@ -1033,9 +1034,7 @@ skip_res:
 		default:
 			break;
 	}
-	
-	goto in;
-in:
+err:
 	return ret;
 }
 
