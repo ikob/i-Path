@@ -921,13 +921,13 @@ sr_ipf_input(void *cookie, mbuf_t *data, int offset, u_int8_t protocol){
 
 	/* Take fast path, if there is no IP option */
 	if(offset == sizeof(struct ip)){
-		goto in; 
+		goto out;
 	}
 
 	iph = (struct ip*) mbuf_data(*data);
 	opt_sr = ip_sirens_dooptions_d(*data);
 	if(opt_sr == NULL)
-			goto in;
+			goto out;
 
 	if(opt_sr->req_mode == SIRENS_TTL
 	   && iph->ip_ttl == opt_sr->req_ttl){
@@ -1034,8 +1034,8 @@ skip_res:
 		default:
 			break;
 	}
-err:
-	return ret;
+out:
+	return out;
 }
 
 static void
