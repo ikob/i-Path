@@ -972,7 +972,6 @@ sr_ipf_input(void *cookie, mbuf_t *data, int offset, u_int8_t protocol){
 		}
 	}
 in:
-	
 //	debug_printf("ipf_input found SIRENS\n");
 	switch (iph->ip_p) {
 		case IPPROTO_TCP:
@@ -1035,7 +1034,7 @@ skip_res:
 			break;
 	}
 out:
-	return out;
+	return ret;
 }
 
 static void
