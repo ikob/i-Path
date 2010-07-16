@@ -864,16 +864,16 @@ sr_ipf_output(void *cookie, mbuf_t *data, ipf_pktopts_t options)
 
 //				debug_printf("output: start lock\n");
 
-					lck_mtx_lock(gmutex);   
-					for(j = 0 ; j < reslen; j++){
+					lck_mtx_lock(gmutex); 
+					for(j = 0 ; j < reslen ; j++){
 						struct timeval tv;
 					/* stack onto responce data */
 						microtime(&tv);
-						timevalsub(&tv, &srp->inp_sr[srp->sr_snext].sr_qdata[sttl].tv);
+						timevalsub(&tv, &srp->inp_sr[srp->sr_snext].sr_qdata[sttl + j].tv);
 						if(tv.tv_sec < SR_TIMEOUT &&
 							j + sttl <= srp->inp_sr[srp->sr_snext].smax_ttl &&
-							sttl < 255){
-							resdata[j] = srp->inp_sr[srp->sr_snext].sr_qdata[sttl].val;
+							(sttl + j) < 255){
+							resdata[j] = srp->inp_sr[srp->sr_snext].sr_qdata[sttl + j].val;
 						}else{
 							resdata[j].set = -1;
 						}
