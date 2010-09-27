@@ -1,0 +1,25 @@
+#
+# Makefile of SIRENS vifset for Linux
+#
+# NOTE: to compile this program, you may need these packages
+#	below installed in your linux BOX.
+#
+#	snmp, libsnmp-dev, libconfig, libconfig-dev
+#
+
+PROG	= vifset
+OBJS	= vifset.o
+CC	= gcc
+CFLAGS	= -g -Wall -Werror `net-snmp-config --cflags`
+LIBS	= `net-snmp-config --libs` -lconfig
+INSTALL	= install
+INSTALL_DIR = /usr/local/sbin
+
+$(PROG): $(OBJS)
+	$(CC) $(LDLAGS) -o $@ $< $(LIBS)
+
+install: $(PROG)
+	$(INSTALL) $(PROG) $(INSTALL_DIR)/
+
+clean:
+	rm -f *.o $(PROG)
