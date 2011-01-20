@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2010
+ * Copyright (c) 2009, 2010, 2011
  * National Institute of Advanced Industrial Science and Technology (AIST).
  * All rights reserved.
  *
@@ -67,9 +67,11 @@
 #include <sys/time.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
+#include <netinet/ip_var.h>
 #include <netinet/in_pcb.h>
 #include <netinet/tcp.h>
 #include <netinet/tcp_var.h>
+#include <netinet/udp.h>
 #include <netinet/kpi_ipfilter.h>
 
 #include <net/if_types.h>
@@ -83,10 +85,38 @@ struct ipopt_sr *ip_sirens_dooptions_d(mbuf_t);
 
 
 #define DEBUG	1
+
+/*
+ * 
+ */
+#if DEBUG > 0
+static void
+debug_printf(const char *fmt, ...)
+{
+
+	va_list listp;
+	char log_buffer[92];
+	
+	va_start(listp, fmt);
+	
+	vsnprintf(log_buffer, sizeof(log_buffer), fmt, listp);
+	printf("%s", log_buffer);
+	
+	va_end(listp);
+}
+#else
+inline debug_printf(char *fmt, ...)
+{
+	/* do nothing */
+}
+#endif
+
 #define SR_TIMEOUT 100
 
-#define SIRENS_HANDLE4 0x696b6f62		/* Temp hack to identify this filter */
-#define SIRENS_HANDLE6 0x696b6f64
+#define SIRENS_HANDLE4TCP 0x696b6f62		/* Temp hack to identify this filter */
+#define SIRENS_HANDLE4UDP 0x696b6f63
+#define SIRENS_HANDLE6TCP 0x696b6f64
+#define SIRENS_HANDLE6UDP 0x696b6f65
 /*
  Used a registered creator type here - to register for one - go to the
  Apple Developer Connection Datatype Registration page
@@ -106,13 +136,21 @@ static	int sr_count = 0;
 static OSMallocTag		gOSMallocTag;	// tag for use with OSMalloc calls which is used to associate memory
 // allocations made with this kext. Preferred to using MALLOC and FREE
 
-static boolean_t	gFilterRegistered = FALSE;
-static boolean_t	gUnregisterProc_started = FALSE;
-static boolean_t	gUnregisterProc_complete = FALSE;
+static boolean_t	gFReged_ip4_tcp = FALSE;
+static boolean_t	gUnreg_started_ip4_tcp = FALSE;
+static boolean_t	gUnreg_complete_ip4_tcp = FALSE;
 
-static boolean_t	gFilterRegistered_ip6 = FALSE;
-static boolean_t	gUnregisterProc_started_ip6 = FALSE;
-static boolean_t	gUnregisterProc_complete_ip6 = FALSE;
+static boolean_t	gFReged_ip4_udp = FALSE;
+static boolean_t	gUnreg_started_ip4_udp = FALSE;
+static boolean_t	gUnreg_complete_ip4_udp = FALSE;
+
+static boolean_t	gFReged_ip6_tcp = FALSE;
+static boolean_t	gUnreg_started_ip6_tcp = FALSE;
+static boolean_t	gUnreg_complete_ip6_tcp = FALSE;
+
+static boolean_t	gFReged_ip6_udp = FALSE;
+static boolean_t	gUnreg_started_ip6_udp = FALSE;
+static boolean_t	gUnreg_complete_ip6_udp = FALSE;
 
 static boolean_t	gipFilterRegistered = FALSE;
 
@@ -161,7 +199,9 @@ struct SRSFEntry {
 		u_char mode, probe;
 		u_char qmin_ttl, qmax_ttl, smin_ttl, smax_ttl;
 		struct sr_hopdata *sr_qdata, *sr_sdata;
-	} inp_sr[INPSIRENSMAX];	
+	} inp_sr[INPSIRENSMAX];
+	struct in_addr faddr;
+	struct in_addr group;
 };
 #define SRE_FL_NONE		0
 #define	SRE_FL_ACTIVE	1
@@ -180,7 +220,7 @@ TAILQ_HEAD(sr_iflist, SRIFEntry);
 static ipfilter_t sr_ipf_ref = NULL;
 
 static void  sr_remove(struct SRSFEntry *srp);
-static void	 debug_printf(const char *fmt, ...);
+//static void	 debug_printf(const char *fmt, ...);
 static errno_t alloc_locks(void);
 static void free_locks(void);
 static errno_t sr_fl_arm(struct SRSFEntry *srp);
@@ -204,13 +244,21 @@ sr_unregistered_fn(sflt_handle handle)
 {
 	debug_printf("sr_unregistered_func entered\n");
 	switch (handle) {
-		case SIRENS_HANDLE4:
-			gUnregisterProc_complete = TRUE;
-			gFilterRegistered = FALSE;
+		case SIRENS_HANDLE4TCP:
+			gUnreg_complete_ip4_tcp = TRUE;
+			gFReged_ip4_tcp = FALSE;
 			break;
-		case SIRENS_HANDLE6:
-			gUnregisterProc_complete_ip6 = TRUE;
-			gFilterRegistered_ip6 = FALSE;
+		case SIRENS_HANDLE4UDP:
+			gUnreg_complete_ip4_udp = TRUE;
+			gFReged_ip4_udp = FALSE;
+			break;			
+		case SIRENS_HANDLE6TCP:
+			gUnreg_complete_ip6_tcp = TRUE;
+			gFReged_ip6_tcp = FALSE;
+			break;
+		case SIRENS_HANDLE6UDP:
+			gUnreg_complete_ip6_tcp = TRUE;
+			gFReged_ip6_udp = FALSE;
 			break;
 		default:
 			break;
@@ -325,7 +373,21 @@ sr_connect_in_fn(void *cookie, socket_t so, const struct sockaddr *to)
 	debug_printf("sr_connect_in_fn        - so: 0x%X 0x%X\n", so, srp);
 	return 0;
 }
-
+/*
+ */
+static errno_t
+sr_bind_fn(void *cookie, socket_t so, const struct sockaddr *to){
+	struct SRSFEntry *srp = SRSFEntryFromCookie(cookie);
+	debug_printf("sr_bind_fn        - so: 0x%X 0x%X\n", so, srp);
+	if(srp->sre_flag & SRE_FL_ARMED){
+		debug_printf("sr_bind_fn        - so: 0x%X already armed.\n");
+	}
+	if(srp->sre_flag & SRE_FL_ACTIVE && !(srp->sre_flag & SRE_FL_ARMED)){
+		sr_fl_arm(srp);
+	}
+}
+/*
+ */
 static void
 sr_add_active_locked(struct SRSFEntry *srp)
 {
@@ -348,7 +410,7 @@ err:
 static	errno_t
 sr_fl_arm(struct SRSFEntry *srp)
 {
-	int i;
+	int i, j;
 	debug_printf("sr_fl_arm        - so:0X%08x srp:0X%08x\n", srp->sre_so, srp);
 	if (sr_enable == 0)
 		return 0;
@@ -358,9 +420,15 @@ sr_fl_arm(struct SRSFEntry *srp)
 		srp->inp_sr[i].sr_qdata = (struct sr_hopdata *)
 			OSMalloc(sizeof(struct sr_hopdata) * 256, gOSMallocTag);
 		bzero(srp->inp_sr[i].sr_qdata, sizeof(struct sr_hopdata) * 256);
+		for(j = 0 ; j < 256 ; j++){
+			srp->inp_sr[i].sr_qdata[j].val.set = 0xffffffff;
+		}
 		srp->inp_sr[i].sr_sdata = (struct sr_hopdata *)
 			OSMalloc(sizeof(struct sr_hopdata) * 256, gOSMallocTag);
-		bzero(srp->inp_sr[i].sr_sdata, sizeof(struct sr_hopdata) * 256);		
+		bzero(srp->inp_sr[i].sr_sdata, sizeof(struct sr_hopdata) * 256);
+		for(j = 0 ; j < 256 ; j++){
+			srp->inp_sr[i].sr_sdata[j].val.set = 0xffffffff;
+		}		
 	}
 	srp->sre_flag |= SRE_FL_ARMED;
 	return 0;
@@ -375,7 +443,38 @@ sr_setoption_fn(void *cookie, socket_t so, sockopt_t opt)
 	struct SRSFEntry *srp = SRSFEntryFromCookie(cookie);
 	debug_printf("sr_setoption_fn   - so: 0x%X, 0x%X %d %d\n", so, srp, sockopt_name(opt), sockopt_valsize(opt));
 	int error = 0;
-	switch(sockopt_name(opt)){			
+	int tcp = 0;
+	int so_domain, so_type, so_protocol;
+	if(sock_gettype(so, &so_domain, &so_type, &so_protocol) != 0){
+		return EPROTO;
+	}
+	if(so_domain == AF_INET && so_type == SOCK_STREAM){
+		tcp = 1;
+	}
+	switch(sockopt_name(opt)){
+		case IP_ADD_MEMBERSHIP:
+		{
+			struct ip_mreq mreq;
+			debug_printf("Catch add membership");
+			error = sockopt_copyin(opt, &mreq, sockopt_valsize(opt));
+			if(error) return error;
+			if(srp->group.s_addr == INADDR_ANY){
+				srp->group.s_addr = mreq.imr_multiaddr.s_addr;
+				srp->faddr.s_addr = INADDR_ANY;
+			}
+			break;
+		}
+		case IP_DROP_MEMBERSHIP:
+		{
+			struct ip_mreq mreq;
+			debug_printf("Catch drop membership");
+			error = sockopt_copyin(opt, &mreq, sockopt_valsize(opt));
+			if(error) return error;
+			if(srp->group.s_addr == mreq.imr_multiaddr.s_addr){
+				srp->group.s_addr = INADDR_ANY;
+				srp->faddr.s_addr = INADDR_ANY;
+			}
+		}	
 		case IPSIRENS_IDX:
 			/*
 			 * Set probe information and areas
@@ -431,7 +530,7 @@ sr_setoption_fn(void *cookie, socket_t so, sockopt_t opt)
 				mbuf_setlen(data, IPOPTSIRENSLEN(srireq->sr_smax));
 				inp = (struct inpcb *)(((struct socket *)so)->so_pcb);
 				debug_printf("sr_setoption_fn   - so: 0x%X, 0x%X 0x%X 0x%X\n", so, inp, &inp->inp_options, (struct mbuf *)data);
-
+#if 0
 				debug_printf("From:\n");
 				{
 					int i;
@@ -441,9 +540,11 @@ sr_setoption_fn(void *cookie, socket_t so, sockopt_t opt)
 					}
 					debug_printf("\n");
 				}
-
+#endif
+				
 				error = ip_pcbopts(sockopt_name(opt), (caddr_t)(&inp->inp_options) + 4, (struct mbuf *)data);
 #else
+#if 0
 				debug_printf("From:\n");
 				{
 					int i;
@@ -453,6 +554,7 @@ sr_setoption_fn(void *cookie, socket_t so, sockopt_t opt)
 					}
 					debug_printf("\n");
 				}
+#endif
 				{
 					int sodomain, sotype, soprotocol;
 					
@@ -473,6 +575,7 @@ sr_setoption_fn(void *cookie, socket_t so, sockopt_t opt)
 					}
 				}
 #endif
+#if 0
 
 				debug_printf("To:\n");
 				{
@@ -483,8 +586,7 @@ sr_setoption_fn(void *cookie, socket_t so, sockopt_t opt)
 					}
 					debug_printf("\n");
 				}
-/* if sock is connected, to provide SIRENS state */
-				
+#endif
 				if (srireq->sr_nindex > 0 && srp->sr_nmax == 0){
 					int i;
 					srp->sr_qnext = 0;
@@ -500,9 +602,17 @@ sr_setoption_fn(void *cookie, socket_t so, sockopt_t opt)
 						srp->inp_sr[i].sr_qdata = NULL;
 						srp->inp_sr[i].sr_sdata = NULL;
 					}
+				/* if sock is connected, to attach SIRENS storage */
+					/* && sock_gettype(so, AF_INET, SOCK_STREAM, NULL)*/
 					if(sock_isconnected(so)){
 						sr_fl_arm(srp);
 					}
+				/* if sock is binded (UDP), to attach SIRENS storage */
+					if(tcp != 1 && (inp->inp_lport || inp->inp_laddr.s_addr != INADDR_ANY)){
+						debug_printf("sr_setoption_fn UDP\n");
+						sr_fl_arm(srp);
+					}
+					
 				}
 				srp->sr_nmax = srireq->sr_nindex;
 
@@ -630,6 +740,7 @@ sr_getoption_fn(void *cookie, socket_t so, sockopt_t opt)
 			struct timeval tv;
 			struct sr_hopdata *thopdata;
 			union u_sr_data *sr_data;
+
 			if(IPSIRENS_DREQSIZE(0) > sockopt_valsize(opt)){
 				return(EINVAL);
 			}
@@ -645,7 +756,8 @@ sr_getoption_fn(void *cookie, socket_t so, sockopt_t opt)
 				OSFree(dreq, IPSIRENS_DREQSIZE(256), gOSMallocTag);
 				return(error);
 			}
-			error = sockopt_copyin(opt, dreq, IPSIRENS_DREQSIZE(256));
+//			error = sockopt_copyin(opt, dreq, IPSIRENS_DREQSIZE(256));
+			error = sockopt_copyin(opt, dreq, sockopt_valsize(opt));
 			for(i = 0 ; i < srp->sr_nmax ; i++){
 				if(srp->inp_sr[i].mode == dreq->mode
 					&& srp->inp_sr[i].probe == dreq->probe) break;
@@ -673,7 +785,8 @@ sr_getoption_fn(void *cookie, socket_t so, sockopt_t opt)
 					sr_data[j].set = -1; /* invalid */
 				}
 			}
-			error = sockopt_copyout(opt, dreq, IPSIRENS_DREQSIZE(256));
+//			error = sockopt_copyout(opt, dreq, IPSIRENS_DREQSIZE(256));
+			error = sockopt_copyout(opt, dreq, sockopt_valsize(opt));
 			OSFree(dreq, IPSIRENS_DREQSIZE(256), gOSMallocTag);
 			if (error)
 				return(error);
@@ -732,8 +845,8 @@ sr_accept_fn(void *cookie, socket_t so_listen, socket_t so, struct sockaddr *loc
 #pragma mark SIRENS Filter Definition
 
 /* Dispatch vector for SIRENS socket functions */
-static struct sflt_filter sr_sflt_filter = {
-	SIRENS_HANDLE4,			/* sflt_handle - use a registered creator type - <http://developer.apple.com/datatype/> */
+static struct sflt_filter sr_sflt_ip4_tcp = {
+	SIRENS_HANDLE4TCP,			/* sflt_handle - use a registered creator type - <http://developer.apple.com/datatype/> */
 	SFLT_GLOBAL | SFLT_EXTENDED,			/* sf_flags */
 	MYBUNDLEID,				/* sf_name - cannot be nil else param err results */
 	sr_unregistered_fn,		/* sf_unregistered_func */
@@ -753,10 +866,53 @@ static struct sflt_filter sr_sflt_filter = {
 	NULL					/* sf_iocsr_func */
 /*	sr_accept_fn			is in extension part in filter */
 };
+static struct sflt_filter sr_sflt_ip4_udp = {
+	SIRENS_HANDLE4UDP,			/* sflt_handle - use a registered creator type - <http://developer.apple.com/datatype/> */
+	SFLT_GLOBAL | SFLT_EXTENDED,			/* sf_flags */
+	MYBUNDLEID,				/* sf_name - cannot be nil else param err results */
+	sr_unregistered_fn,		/* sf_unregistered_func */
+	sr_attach_fn,			/* sf_attach_func - cannot be nil else param err results */			
+	sr_detach_fn,			/* sf_detach_func - cannot be nil else param err results */
+	NULL,					/* sf_notify_func */
+	NULL,					/* sf_getpeername_func */
+	NULL,					/* sf_getsockname_func */
+	NULL,					/* sf_data_in_func */
+	NULL,					/* sf_data_out_func */
+	sr_connect_in_fn,		/* sf_connect_in_func */
+	sr_connect_out_fn,		/* sf_connect_out_func */
+	sr_bind_fn,				/* sf_bind_func */
+	sr_setoption_fn,		/* sf_setoption_func */
+	sr_getoption_fn,		/* sf_getoption_func */
+	NULL,					/* sf_listen_func */
+	NULL					/* sf_iocsr_func */
+	/*	sr_accept_fn			is in extension part in filter */
+};
+
 
 /* Dispatch vector for SIRENS socket functions */
-static struct sflt_filter sr_sflt_filter_ip6 = {
-	SIRENS_HANDLE6,			/* sflt_handle - use a registered creator type - <http://developer.apple.com/datatype/> */
+static struct sflt_filter sr_sflt_ip6_tcp = {
+	SIRENS_HANDLE6TCP,			/* sflt_handle - use a registered creator type - <http://developer.apple.com/datatype/> */
+	SFLT_GLOBAL | SFLT_EXTENDED,			/* sf_flags */
+	MYBUNDLEID,				/* sf_name - cannot be nil else param err results */
+	sr_unregistered_fn,		/* sf_unregistered_func */
+	sr_attach_fn,			/* sf_attach_func - cannot be nil else param err results */			
+	sr_detach_fn,			/* sf_detach_func - cannot be nil else param err results */
+	NULL,					/* sf_notify_func */
+	NULL,					/* sf_getpeername_func */
+	NULL,					/* sf_getsockname_func */
+	NULL,					/* sf_data_in_func */
+	NULL,					/* sf_data_out_func */
+	sr_connect_in_fn,		/* sf_connect_in_func */
+	sr_connect_out_fn,		/* sf_connect_out_func */
+	NULL,					/* sf_bind_func */
+	sr_setoption_fn,		/* sf_setoption_func */
+	sr_getoption_fn,		/* sf_getoption_func */
+	NULL,					/* sf_listen_func */
+	NULL					/* sf_iocsr_func */
+	/*	sr_accept_fn			is in extension part in filter */
+};
+static struct sflt_filter sr_sflt_ip6_udp = {
+	SIRENS_HANDLE6UDP,			/* sflt_handle - use a registered creator type - <http://developer.apple.com/datatype/> */
 	SFLT_GLOBAL | SFLT_EXTENDED,			/* sf_flags */
 	MYBUNDLEID,				/* sf_name - cannot be nil else param err results */
 	sr_unregistered_fn,		/* sf_unregistered_func */
@@ -787,7 +943,8 @@ sr_ipf_output(void *cookie, mbuf_t *data, ipf_pktopts_t options)
 	struct ipopt_sr *opt_sr = NULL;
 	struct ip *iph;
 	struct inpcb *inp;
-	struct SRSFEntry *srp, *nsrp = NULL;
+	struct SRSFEntry *srp = NULL, *nsrp = NULL;
+	boolean_t local = FALSE;
 	
 	status = mbuf_tag_find(*data, gsr_idtag, SR_TAG_TYPE, &len, (void**)&tag_ref);
 	if(status == 0){
@@ -798,11 +955,49 @@ sr_ipf_output(void *cookie, mbuf_t *data, ipf_pktopts_t options)
 	opt_sr = ip_sirens_dooptions_d(*data);
 	if(opt_sr == NULL)
 			goto out;
+	
+	if(mbuf_pkthdr_rcvif(*data) == NULL
+		|| mbuf_pkthdr_rcvif(*data) == ifunit("lo0")){
+		local = TRUE;
+	}
 
 //	debug_printf("ipf_output found SIRENS\n");
 	iph = (struct ip*) mbuf_data(*data);
 
+//	debug_printf("ipf_output proto %d\n", iph->ip_p, IPPROTO_UDP);
+	
+
 	switch (iph->ip_p) {
+		case IPPROTO_UDP:
+		{
+			struct udphdr *up, uh;
+			up = &uh;
+			mbuf_copydata(*data, iph->ip_hl << 2, sizeof(uh), up);
+			/**/
+			for(srp = TAILQ_FIRST(&sr_active); srp ; srp = nsrp){
+				nsrp = TAILQ_NEXT(srp, sre_list);
+				inp = (struct inpcb *)(((struct socket *)(srp->sre_so))->so_pcb);
+								debug_printf("pkt: %2x %08x %08x %04x %04x\n",
+											 iph->ip_p, iph->ip_dst, iph->ip_src, up->uh_sport, up->uh_dport);				
+								debug_printf("flt: %2x %08x %08x %04x %04x\n",
+											 inp->inp_ip_p, inp->inp_laddr, inp->inp_faddr, inp->inp_lport, inp->inp_fport);
+//				if(IN_MULTICAST(ntohl(iph->ip_dst.s_addr))){
+					if((inp->inp_vflag == INP_IPV4)
+					   && local
+					   && (inp->inp_faddr.s_addr == INADDR_ANY)
+					   && (inp->inp_lport == up->uh_sport))
+						break;
+//				}else {
+					if((inp->inp_vflag == INP_IPV4)
+					   && (inp->inp_laddr.s_addr == iph->ip_src.s_addr)
+					   && (inp->inp_faddr.s_addr == iph->ip_dst.s_addr)
+					   && (inp->inp_lport == up->uh_sport)
+					   && (inp->inp_fport == up->uh_dport))
+						break;
+//				}
+			}
+		}
+			break;
 		case IPPROTO_TCP:
 			{
 				struct tcphdr *tp, th;
@@ -817,14 +1012,14 @@ sr_ipf_output(void *cookie, mbuf_t *data, ipf_pktopts_t options)
 //							 iph->ip_p, iph->ip_dst, iph->ip_src, tp->th_dport, tp->th_sport);				
 //				debug_printf("%2x %08x %08x %04x %04x\n",
 //							 inp->inp_ip_p, inp->inp_laddr, inp->inp_faddr, inp->inp_lport, inp->inp_fport);
-				/* how to determine upper layer protocol from inpcb ???? */
 					if((inp->inp_vflag == INP_IPV4)
-					   &&(inp->inp_laddr.s_addr == iph->ip_src.s_addr)
+					   && (inp->inp_laddr.s_addr == iph->ip_src.s_addr)
 					   && (inp->inp_faddr.s_addr == iph->ip_dst.s_addr)
 					   && (inp->inp_lport == tp->th_sport)
 					   && (inp->inp_fport == tp->th_dport))
 						break;
 				}
+#if 0
 				if(srp == NULL)
 					break;
 //			debug_printf("found outgoing flow so:0x%08x %d %d\n", srp->sre_so, srp->sr_nmax, srp->sre_flag);
@@ -886,6 +1081,7 @@ sr_ipf_output(void *cookie, mbuf_t *data, ipf_pktopts_t options)
 					lck_mtx_unlock(gmutex);
 					srp->sr_sttl = sttl + j;
 				}
+#endif
 			}
 			break;
 		case IPPROTO_ICMP:
@@ -895,6 +1091,69 @@ sr_ipf_output(void *cookie, mbuf_t *data, ipf_pktopts_t options)
 		default:
 			break;
 	}
+	
+	if(srp != NULL){
+		debug_printf("found outgoing flow so:0x%08x %d %d\n", srp->sre_so, srp->sr_nmax, srp->sre_flag);
+	}
+	
+	if(srp != NULL && srp->sr_nmax > 0 && srp->sre_flag & SRE_FL_ARMED){
+		int reslen, j;
+		union u_sr_data *resdata;
+		u_int qttl, sttl;
+		srp->sr_qnext %= srp->sr_nmax;
+		qttl = srp->sr_qttl;
+		qttl++;
+		if(qttl > (u_int)srp->inp_sr[srp->sr_qnext].qmax_ttl || qttl > 255){
+			srp->sr_qnext++;
+			srp->sr_qnext %= srp->sr_nmax;
+			qttl = srp->inp_sr[srp->sr_qnext].qmin_ttl;
+		}
+		if(qttl < (u_int)srp->inp_sr[srp->sr_qnext].qmin_ttl) {
+			qttl = srp->inp_sr[srp->sr_qnext].qmin_ttl;
+		}
+		srp->sr_qttl = qttl;
+		opt_sr->req_mode = srp->inp_sr[srp->sr_qnext].mode;
+		opt_sr->req_probe = srp->inp_sr[srp->sr_qnext].probe;
+		opt_sr->req_ttl = qttl;
+		opt_sr->req_data.set = -1;
+		
+		reslen = IPOPTLENTORESLEN(opt_sr->len);
+		
+		srp->sr_snext %= srp->sr_nmax;
+		sttl = srp->sr_sttl;
+		if(sttl > srp->inp_sr[srp->sr_snext].smax_ttl || sttl > 255){
+			srp->sr_snext++;
+			srp->sr_snext %= srp->sr_nmax;
+			sttl = srp->inp_sr[srp->sr_snext].smin_ttl;
+		}
+		if(sttl < srp->inp_sr[srp->sr_snext].smin_ttl) {
+			sttl = srp->inp_sr[srp->sr_snext].smin_ttl;
+		}
+		opt_sr->res_mode = srp->inp_sr[srp->sr_snext].mode;
+		opt_sr->res_probe = srp->inp_sr[srp->sr_snext].probe;
+		opt_sr->res_ttl = sttl;
+		resdata = (union u_sr_data *)(opt_sr + 1);
+		
+		//				debug_printf("output: start lock\n");
+		
+		lck_mtx_lock(gmutex); 
+		for(j = 0 ; j < reslen ; j++){
+			struct timeval tv;
+			/* stack onto responce data */
+			microtime(&tv);
+			timevalsub(&tv, &srp->inp_sr[srp->sr_snext].sr_qdata[sttl + j].tv);
+			if(tv.tv_sec < SR_TIMEOUT &&
+			   j + sttl <= srp->inp_sr[srp->sr_snext].smax_ttl &&
+			   (sttl + j) < 255){
+				resdata[j] = srp->inp_sr[srp->sr_snext].sr_qdata[sttl + j].val;
+			}else{
+				resdata[j].set = -1;
+			}
+		}
+		lck_mtx_unlock(gmutex);
+		srp->sr_sttl = sttl + j;
+	}
+	
 	status = mbuf_tag_find(*data, gsr_idtag, SR_TAG_TYPE, &len, (void**)&tag_ref);
 	if(!status){
 		goto out;
@@ -902,6 +1161,7 @@ sr_ipf_output(void *cookie, mbuf_t *data, ipf_pktopts_t options)
 	if(opt_sr->req_mode == SIRENS_TTL
 	   && !(opt_sr->req_probe & SIRENS_DIR_IN)
 	   && iph->ip_ttl == opt_sr->req_ttl){
+		printf("sr_ipf_output: allocate tag for post-processing on outgoing if\n");
 		status = mbuf_tag_allocate(*data, gsr_idtag, SR_TAG_TYPE, 4 * sizeof(int), MBUF_WAITOK, (void**)&tag_ref);
 		if(status == 0){
 			tag_ref->len = ntohs(iph->ip_len);
@@ -960,7 +1220,50 @@ sr_ipf_input(void *cookie, mbuf_t *data, int offset, u_int8_t protocol){
 		bcopy(opt_sr, &tag_ref->opt_sr, sizeof(struct ipopt_sr));
 	}
 in:
+	debug_printf("ipf_input proto %d\n", iph->ip_p, IPPROTO_UDP);
 	switch (iph->ip_p) {
+		case IPPROTO_UDP:
+		{
+			struct ip_moptions      *imo;
+			struct udphdr *up, uh;
+			up = &uh;
+			mbuf_copydata(*data, iph->ip_hl << 2, sizeof(uh), up);
+			/**/
+			for(srp = TAILQ_FIRST(&sr_active); srp ; srp = nsrp){
+				nsrp = TAILQ_NEXT(srp, sre_list);
+				inp = (struct inpcb *)(((struct socket *)(srp->sre_so))->so_pcb);
+#if 1
+				debug_printf("pkt: %2x %08x %08x %04x %04x\n",
+							 iph->ip_p, iph->ip_src, iph->ip_dst, up->uh_sport, up->uh_dport);				
+				debug_printf("flt: %2x %08x %08x %04x %04x\n",
+							 inp->inp_ip_p, inp->inp_faddr, inp->inp_laddr, inp->inp_fport, inp->inp_lport);	
+				debug_printf("srp:     %08x %08x %08x\n",
+							 srp->faddr.s_addr, srp->group.s_addr, srp->sre_flag);		
+#endif				
+				if((inp->inp_vflag == INP_IPV4)
+//				   && (inp->inp_ip_p == iph->ip_p)
+				   && (inp->inp_laddr.s_addr == iph->ip_dst.s_addr)
+				   && (inp->inp_faddr.s_addr == iph->ip_src.s_addr)
+				   && (inp->inp_lport == up->uh_dport)
+				   && (inp->inp_fport == up->uh_sport))
+					break;
+				if((inp->inp_vflag == INP_IPV4)
+				   && (srp->group.s_addr == iph->ip_dst.s_addr)
+				   && (srp->faddr.s_addr == iph->ip_src.s_addr)
+				   && (inp->inp_lport == up->uh_dport)){				   
+					break;
+				}
+				if((inp->inp_vflag == INP_IPV4)
+				   && (srp->group.s_addr == iph->ip_dst.s_addr)
+				   && (inp->inp_lport == up->uh_dport)){
+					srp->faddr.s_addr = iph->ip_src.s_addr;
+					break;
+				}
+			}
+			if(srp != NULL)
+				debug_printf("sr_ipf_input: match SRF and UDP PCB!\n");
+		}
+			break;
 		case IPPROTO_TCP:
 			{
 				struct tcphdr *tp, th;
@@ -971,12 +1274,14 @@ in:
 					nsrp = TAILQ_NEXT(srp, sre_list);
 					inp = (struct inpcb *)(((struct socket *)(srp->sre_so))->so_pcb);
 					if((inp->inp_vflag == INP_IPV4)
+//					   && (inp->inp_ip_p == iph->ip_p)
 					   && (inp->inp_laddr.s_addr == iph->ip_dst.s_addr)
 					   && (inp->inp_faddr.s_addr == iph->ip_src.s_addr)
 					   && (inp->inp_lport == tp->th_dport)
 					   && (inp->inp_fport == tp->th_sport))
 						break;
 				}
+#if 0
 				if(srp == NULL)
 					break;
 				if(srp->sr_nmax > 0 && srp->sre_flag & SRE_FL_ARMED){
@@ -1012,10 +1317,45 @@ skip_req:
 skip_res:
 					lck_mtx_unlock(gmutex);
 				}
+#endif
 			}
 			break;
 		default:
 			break;
+	}
+	if(srp != NULL && srp->sr_nmax > 0 && srp->sre_flag & SRE_FL_ARMED){
+		int j, i, n;
+		struct timeval tv;
+		union u_sr_data *sr_data;
+		
+		getmicrotime(&tv);
+		for( j = 0 ; j < srp->sr_nmax ; j++){
+			debug_printf("ipf_input %08x:%08x %08x:%08x\n", srp->inp_sr[j].mode, opt_sr->req_mode, srp->inp_sr[j].probe, opt_sr->req_probe);
+			if(srp->inp_sr[j].mode == opt_sr->req_mode
+			   && srp->inp_sr[j].probe == opt_sr->req_probe)
+				break;
+		}
+		lck_mtx_lock(gmutex);
+		if( j == srp->sr_nmax ) goto skip_req;
+		srp->inp_sr[j].sr_qdata[opt_sr->req_ttl].tv = tv;
+		srp->inp_sr[j].sr_qdata[opt_sr->req_ttl].val = opt_sr->req_data;
+skip_req:
+		if((n = IPOPTLENTORESLEN(opt_sr->len)) == 0 )
+			goto skip_res;
+		for( j = 0 ; j < srp->sr_nmax ; j++){
+			if(srp->inp_sr[j].mode == opt_sr->res_mode
+			   && srp->inp_sr[j].probe == opt_sr->res_probe)
+				break;
+		}
+		if( j == srp->sr_nmax ) goto skip_res;
+		sr_data = (union u_sr_data *)(opt_sr + 1);
+		for( i = 0 ; i < n ; i++){
+			if(opt_sr->res_ttl + i > 255) break;
+			srp->inp_sr[j].sr_sdata[opt_sr->res_ttl + i].tv = tv;
+			srp->inp_sr[j].sr_sdata[opt_sr->res_ttl + i].val = sr_data[i];
+		}
+skip_res:
+		lck_mtx_unlock(gmutex);		
 	}
 out:
 	return ret;
@@ -1255,7 +1595,7 @@ sr_iff_ioctl_fn(void *cookie,
 /* 
  * XXX: ad-hoc SIRENS header traversal is problematic.
  * XXX: Preserving input interface info. using mbuf_tag
- * XXX: realizes post-update on output phase.
+ * XXX: enables post-update on iff_out() phase.
  */
 static errno_t
 sr_iff_in_fn( void *cookie,
@@ -1398,6 +1738,9 @@ sr_iff_in_fn( void *cookie,
 in:
 	return error;
 }
+/*
+ * iff_input() and ipf_output() give a tag in case header modification is required on outgoing if.
+ */
 static errno_t
 sr_iff_out_fn (void *cookie,
 			   ifnet_t interface,
@@ -1518,22 +1861,43 @@ jp_hpcc_ikob_kext_sirensnke_start(kmod_info_t *ki, void *data)
 	}
 		
 	/* Later extension part of filter */
-	sr_sflt_filter.sf_len = sizeof(struct sflt_filter_ext);
-	sr_sflt_filter.sf_accept = (sf_accept_func) sr_accept_fn;
+	sr_sflt_ip4_tcp.sf_len = sizeof(struct sflt_filter_ext);
+	sr_sflt_ip4_tcp.sf_accept = (sf_accept_func) sr_accept_fn;
+	
+	bzero(&sr_sflt_ip4_udp.sf_ext, sizeof(sr_sflt_ip4_udp.sf_ext));
+	bzero(&sr_sflt_ip6_tcp.sf_ext, sizeof(sr_sflt_ip6_tcp.sf_ext));
+	bzero(&sr_sflt_ip6_udp.sf_ext, sizeof(sr_sflt_ip6_udp.sf_ext));
 
 	// register the filter with AF_INET domain, SOCK_STREAM type, TCP protocol and set the global flag	
-	ret = sflt_register(&sr_sflt_filter, PF_INET, SOCK_STREAM, IPPROTO_TCP);
-	debug_printf("sflt_register returned result %d for ip4 filter.\n", ret);
+	ret = sflt_register(&sr_sflt_ip4_tcp, PF_INET, SOCK_STREAM, IPPROTO_TCP);
+	debug_printf("sflt_register returned result %d for ip4 TCP filter.\n", ret);
 	if (ret == 0)
-		gFilterRegistered = TRUE;
+		gFReged_ip4_tcp = TRUE;
 	else
 		goto err;
 
-	// register the filter with AF_INET6 domain, SOCK_STREAM type, TCP protocol and set the global flag	
-	ret = sflt_register(&sr_sflt_filter_ip6, PF_INET6, SOCK_STREAM, IPPROTO_TCP);
-	debug_printf("sflt_register returned result %d for ip6 filter.\n", ret);
+	// register the filter with AF_INET domain, SOCKDGRAM type, UDP protocol and set the global flag	
+	ret = sflt_register(&sr_sflt_ip4_udp, PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	debug_printf("sflt_register returned result %d for ip4 UDP filter.\n", ret);
 	if (ret == 0)
-		gFilterRegistered_ip6 = TRUE;
+		gFReged_ip4_tcp = TRUE;
+	else
+		goto err;
+	
+
+	// register the filter with AF_INET6 domain, SOCK_STREAM type, TCP protocol and set the global flag	
+	ret = sflt_register(&sr_sflt_ip6_tcp, PF_INET6, SOCK_STREAM, IPPROTO_TCP);
+	debug_printf("sflt_register returned result %d for ip6 TCP filter.\n", ret);
+	if (ret == 0)
+		gFReged_ip6_tcp = TRUE;
+	else
+		goto err;
+
+	// register the filter with AF_INET6 domain, SOCK_DGRAM type, TCP protocol and set the global flag	
+	ret = sflt_register(&sr_sflt_ip6_udp, PF_INET6, SOCK_DGRAM, IPPROTO_UDP);
+	debug_printf("sflt_register returned result %d for ip6 UDP filter.\n", ret);
+	if (ret == 0)
+		gFReged_ip6_tcp = TRUE;
 	else
 		goto err;
 	
@@ -1578,12 +1942,18 @@ jp_hpcc_ikob_kext_sirensnke_start(kmod_info_t *ki, void *data)
 	return KERN_SUCCESS;
 	
 err:
-	if (gFilterRegistered){
-		sflt_unregister(SIRENS_HANDLE4);
+	if (gFReged_ip4_tcp){
+		sflt_unregister(SIRENS_HANDLE4TCP);
 	}
-	if(gFilterRegistered_ip6){
-		sflt_unregister(SIRENS_HANDLE6);
+	if (gFReged_ip4_udp){
+		sflt_unregister(SIRENS_HANDLE4UDP);
+	}	
+	if(gFReged_ip6_tcp){
+		sflt_unregister(SIRENS_HANDLE6TCP);
 	}
+	if(gFReged_ip6_tcp){
+		sflt_unregister(SIRENS_HANDLE6UDP);
+	}	
 	if (gipFilterRegistered){
 		ipf_remove(sr_ipf_ref);
 	}
@@ -1608,7 +1978,12 @@ jp_hpcc_ikob_kext_sirensnke_flush()
 {
 	int ret = 0;
 	SRIFEntry *srifp;
-	if ((!gFilterRegistered && !gFilterRegistered_ip6 && !gipFilterRegistered && gifFilterRegistered == 0))
+	if ((!gFReged_ip4_tcp
+		 && !gFReged_ip4_udp
+		 && !gFReged_ip6_tcp
+		 && !gFReged_ip6_udp
+		 && !gipFilterRegistered
+		 && gifFilterRegistered == 0))
 		return KERN_SUCCESS;
 	
 	if (!sirens_initted)
@@ -1628,26 +2003,42 @@ jp_hpcc_ikob_kext_sirensnke_flush()
 	}
 	lck_mtx_unlock(gmutex);
 	
-	if (gUnregisterProc_started == FALSE) {
-		ret = sflt_unregister(SIRENS_HANDLE4);
+	if (gUnreg_started_ip4_tcp == FALSE) {
+		ret = sflt_unregister(SIRENS_HANDLE4TCP);
 		if (ret != 0)
-			debug_printf( "sirensnke_flush: sflt_unregister failed for ip4 %d\n", ret);
+			debug_printf( "sirensnke_flush: sflt_unregister failed for ip4 TCP %d\n", ret);
 		else {
-			gUnregisterProc_started = TRUE;	// indicate that we've started the unreg process.
+			gUnreg_started_ip4_tcp = TRUE;	// indicate that we've started the unreg process.
 		}
 	}
-	if (gUnregisterProc_started_ip6 == FALSE) {
-		ret = sflt_unregister(SIRENS_HANDLE6);
+	if (gUnreg_started_ip4_udp == FALSE) {
+		ret = sflt_unregister(SIRENS_HANDLE4UDP);
+		if (ret != 0)
+			debug_printf( "sirensnke_flush: sflt_unregister failed for ip4 UDP %d\n", ret);
+		else {
+			gUnreg_started_ip4_udp = TRUE;	// indicate that we've started the unreg process.
+		}
+	}	
+	if (gUnreg_started_ip6_tcp == FALSE) {
+		ret = sflt_unregister(SIRENS_HANDLE6TCP);
+		if (ret != 0)
+			debug_printf( "sirensnke_flush: sflt_unregister failed for ip6 TCP %d\n", ret);
+		else {
+			gUnreg_started_ip6_tcp = TRUE;	// indicate that we've started the unreg process.
+		}
+	}
+	if (gUnreg_started_ip6_udp == FALSE) {
+		ret = sflt_unregister(SIRENS_HANDLE6UDP);
 		if (ret != 0)
 			debug_printf( "sirensnke_flush: sflt_unregister failed for ip6 %d\n", ret);
 		else {
-			gUnregisterProc_started_ip6 = TRUE;	// indicate that we've started the unreg process.
+			gUnreg_started_ip6_udp = TRUE;	// indicate that we've started the unreg process.
 		}
-	}
+	}	
 	if (gipFilterRegistered == TRUE) {
 		ret = ipf_remove(sr_ipf_ref);
 		if (ret != 0)
-			debug_printf( "sirensnke_flush: sflt_unregister failed for ip4 %d\n", ret);
+			debug_printf( "sirensnke_flush: ipflt_unregister failed for ip4 %d\n", ret);
 		else {
 			gipFilterRegistered = FALSE;	// indicate that we've started the unreg process.
 		}			
@@ -1664,8 +2055,10 @@ jp_hpcc_ikob_kext_sirensnke_flush()
 		}
 	}
 	
-	if ((gUnregisterProc_complete &&
-		 gUnregisterProc_complete_ip6 &&
+	if ((gUnreg_complete_ip4_tcp &&
+		 gUnreg_complete_ip4_udp &&
+		 gUnreg_complete_ip6_tcp &&
+		 gUnreg_complete_ip6_udp &&
 		 !(gipFilterRegistered &&
 		 (gifFilterRegistered == 0)))){
 		ret = KERN_SUCCESS;
@@ -1695,7 +2088,11 @@ jp_hpcc_ikob_kext_sirensnke_stop(kmod_info_t *ki, void *data)
 	struct SRSFEntry *srp, *srpnext = NULL;
 #endif
 	
-	if ((!gFilterRegistered && !gFilterRegistered_ip6 && !gipFilterRegistered))
+	if ((!gFReged_ip4_tcp 
+		 && !gFReged_ip4_udp
+		 && !gFReged_ip6_tcp
+		 && !gFReged_ip6_udp 
+		 && !gipFilterRegistered))
 		return KERN_SUCCESS;
 	
 	if (!sirens_initted)
@@ -1724,26 +2121,6 @@ jp_hpcc_ikob_kext_sirensnke_stop(kmod_info_t *ki, void *data)
 	
 	printf("jp_hpcc_ikob_sirens_kext_stop end %d\n", ret);
 	return ret;
-}
-
-/*
- * 
- */
-
-static void
-debug_printf(const char *fmt, ...)
-{
-#if DEBUG
-	va_list listp;
-	char log_buffer[92];
-	
-	va_start(listp, fmt);
-	
-	vsnprintf(log_buffer, sizeof(log_buffer), fmt, listp);
-	printf("%s", log_buffer);
-	
-	va_end(listp);
-#endif
 }
 
 static errno_t alloc_locks(void)

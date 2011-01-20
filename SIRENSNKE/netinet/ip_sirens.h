@@ -47,15 +47,15 @@
  * SIRENS data storage
  */
 union u_sr_data {
-	u_long link;
-	u_long loss;
-	u_long queue;
-	u_long mtu;
+	u_int32_t link;
+	u_int32_t queue;
+	u_int32_t loss;
+	u_int32_t mtu;
 	struct {
-		u_short lamda;
-		u_short phy;
+		u_int16_t lamda;
+		u_int16_t phy;
 	} loc;
-	u_long set;
+	u_int32_t set;
 };
 
 /*
