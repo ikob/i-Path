@@ -868,7 +868,7 @@ static struct sflt_filter sr_sflt_ip4_tcp = {
 };
 static struct sflt_filter sr_sflt_ip4_udp = {
 	SIRENS_HANDLE4UDP,			/* sflt_handle - use a registered creator type - <http://developer.apple.com/datatype/> */
-	SFLT_GLOBAL | SFLT_EXTENDED,			/* sf_flags */
+	SFLT_GLOBAL,			/* sf_flags */
 	MYBUNDLEID,				/* sf_name - cannot be nil else param err results */
 	sr_unregistered_fn,		/* sf_unregistered_func */
 	sr_attach_fn,			/* sf_attach_func - cannot be nil else param err results */			
@@ -892,7 +892,7 @@ static struct sflt_filter sr_sflt_ip4_udp = {
 /* Dispatch vector for SIRENS socket functions */
 static struct sflt_filter sr_sflt_ip6_tcp = {
 	SIRENS_HANDLE6TCP,			/* sflt_handle - use a registered creator type - <http://developer.apple.com/datatype/> */
-	SFLT_GLOBAL | SFLT_EXTENDED,			/* sf_flags */
+	SFLT_GLOBAL,			/* sf_flags */
 	MYBUNDLEID,				/* sf_name - cannot be nil else param err results */
 	sr_unregistered_fn,		/* sf_unregistered_func */
 	sr_attach_fn,			/* sf_attach_func - cannot be nil else param err results */			
@@ -913,7 +913,7 @@ static struct sflt_filter sr_sflt_ip6_tcp = {
 };
 static struct sflt_filter sr_sflt_ip6_udp = {
 	SIRENS_HANDLE6UDP,			/* sflt_handle - use a registered creator type - <http://developer.apple.com/datatype/> */
-	SFLT_GLOBAL | SFLT_EXTENDED,			/* sf_flags */
+	SFLT_GLOBAL,			/* sf_flags */
 	MYBUNDLEID,				/* sf_name - cannot be nil else param err results */
 	sr_unregistered_fn,		/* sf_unregistered_func */
 	sr_attach_fn,			/* sf_attach_func - cannot be nil else param err results */			
@@ -1182,7 +1182,7 @@ sr_ipf_input(void *cookie, mbuf_t *data, int offset, u_int8_t protocol){
 	struct ipopt_sr *opt_sr = NULL;
 	struct ip *iph;
 	struct inpcb *inp;
-	struct SRSFEntry *srp, *nsrp = NULL;
+	struct SRSFEntry *srp = NULL, *nsrp = NULL;
 
 	/* Take fast path, if there is no IP option */
 	if(offset == sizeof(struct ip)){
@@ -1220,7 +1220,6 @@ sr_ipf_input(void *cookie, mbuf_t *data, int offset, u_int8_t protocol){
 		bcopy(opt_sr, &tag_ref->opt_sr, sizeof(struct ipopt_sr));
 	}
 in:
-	debug_printf("ipf_input proto %d\n", iph->ip_p, IPPROTO_UDP);
 	switch (iph->ip_p) {
 		case IPPROTO_UDP:
 		{
@@ -1880,10 +1879,9 @@ jp_hpcc_ikob_kext_sirensnke_start(kmod_info_t *ki, void *data)
 	ret = sflt_register(&sr_sflt_ip4_udp, PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	debug_printf("sflt_register returned result %d for ip4 UDP filter.\n", ret);
 	if (ret == 0)
-		gFReged_ip4_tcp = TRUE;
+		gFReged_ip4_udp = TRUE;
 	else
 		goto err;
-	
 
 	// register the filter with AF_INET6 domain, SOCK_STREAM type, TCP protocol and set the global flag	
 	ret = sflt_register(&sr_sflt_ip6_tcp, PF_INET6, SOCK_STREAM, IPPROTO_TCP);
@@ -1897,7 +1895,7 @@ jp_hpcc_ikob_kext_sirensnke_start(kmod_info_t *ki, void *data)
 	ret = sflt_register(&sr_sflt_ip6_udp, PF_INET6, SOCK_DGRAM, IPPROTO_UDP);
 	debug_printf("sflt_register returned result %d for ip6 UDP filter.\n", ret);
 	if (ret == 0)
-		gFReged_ip6_tcp = TRUE;
+		gFReged_ip6_udp = TRUE;
 	else
 		goto err;
 	
@@ -1951,7 +1949,7 @@ err:
 	if(gFReged_ip6_tcp){
 		sflt_unregister(SIRENS_HANDLE6TCP);
 	}
-	if(gFReged_ip6_tcp){
+	if(gFReged_ip6_udp){
 		sflt_unregister(SIRENS_HANDLE6UDP);
 	}	
 	if (gipFilterRegistered){
