@@ -1320,6 +1320,7 @@ skip_res:
 			}
 			break;
 		default:
+			srp = NULL:
 			break;
 	}
 	if(srp != NULL && srp->sr_nmax > 0 && srp->sre_flag & SRE_FL_ARMED){
