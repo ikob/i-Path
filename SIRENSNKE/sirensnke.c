@@ -81,7 +81,7 @@
 #include <netinet/ip_sirens.h>
 
 
-struct ipopt_sr *ip_sirens_dooptions_d(mbuf_t);
+struct ipopt_sr *ip_sirens_dooptions_d(mbuf_t, size_t);
 
 
 #define DEBUG	1
@@ -157,6 +157,8 @@ static boolean_t	gipFilterRegistered = FALSE;
 static interface_filter_t	gsr_if_filter[256];
 static int	gifFilterRegistered = 0;
 
+static u_int16_t
+in_update_csum(u_int16_t, u_int16_t, u_int16_t);
 
 struct SRIFEntry {
 	TAILQ_ENTRY(SRIFEntry)	srif_list;
@@ -946,27 +948,48 @@ sr_ipf_output(void *cookie, mbuf_t *data, ipf_pktopts_t options)
 	struct SRSFEntry *srp = NULL, *nsrp = NULL;
 	boolean_t local = FALSE;
 	
-	status = mbuf_tag_find(*data, gsr_idtag, SR_TAG_TYPE, &len, (void**)&tag_ref);
-	if(status == 0){
-		debug_printf("sr_ipf_output: found a tag len %x: %x %x %x : pktlen, %x\n",
-					 len, tag_ref->len, tag_ref->offset, tag_ref->opt_sr.req_data.set, mbuf_pkthdr_len(*data));
-	}
-	
-	opt_sr = ip_sirens_dooptions_d(*data);
-	if(opt_sr == NULL)
-			goto out;
+	iph = (struct ip*) mbuf_data(*data);
 	
 	if(mbuf_pkthdr_rcvif(*data) == NULL
-		|| mbuf_pkthdr_rcvif(*data) == ifunit("lo0")){
+	   || mbuf_pkthdr_rcvif(*data) == ifunit("lo0")){
 		local = TRUE;
 	}
 
-//	debug_printf("ipf_output found SIRENS\n");
-	iph = (struct ip*) mbuf_data(*data);
+	status = mbuf_tag_find(*data, gsr_idtag, SR_TAG_TYPE, &len, (void**)&tag_ref);
+	if(status == KERN_SUCCESS){
+		debug_printf("sr_ipf_output: found a tag len %x: %x %x %x : pktlen = %x, local = %x\n",
+						 len, tag_ref->len, tag_ref->offset, tag_ref->opt_sr.req_data.set, mbuf_pkthdr_len(*data), local);
+	}
+	opt_sr = ip_sirens_dooptions_d(*data, 0);
+#if 1
+	/*
+	 * not a forwarding packet
+	 * Have a tag
+	 * ICMP protocol
+	 * not have SIRENS option
+	 */
+	if(local == TRUE && status == 0 && iph->ip_p == IPPROTO_ICMP && opt_sr == NULL){
+		char buffer[sizeof(struct ip) + MAXIPOPTSIRENSLEN];
+		mbuf_copydata(*data, 0, iph->ip_hl << 2, buffer);
+		if(mbuf_prepend(data, tag_ref->opt_sr.len, MBUF_DONTWAIT) != 0){
+			return EJUSTRETURN;
+		}
+		iph = (struct ip*)buffer;
+		bcopy(&tag_ref->opt_sr, buffer + (iph->ip_hl << 2), tag_ref->opt_sr.len);
+		
+		iph->ip_hl = iph->ip_hl + (tag_ref->opt_sr.len >> 2);
+		iph->ip_len = htons(ntohs(iph->ip_len) + tag_ref->opt_sr.len);
+		if(mbuf_copyback(*data, 0, (iph->ip_hl << 2), buffer, MBUF_DONTWAIT)){
+			return EJUSTRETURN;
+		}
+		return;
+	}
+#endif
+	if(opt_sr == NULL)
+		goto out;
 
 //	debug_printf("ipf_output proto %d\n", iph->ip_p, IPPROTO_UDP);
 	
-
 	switch (iph->ip_p) {
 		case IPPROTO_UDP:
 		{
@@ -1084,10 +1107,6 @@ sr_ipf_output(void *cookie, mbuf_t *data, ipf_pktopts_t options)
 #endif
 			}
 			break;
-		case IPPROTO_ICMP:
-		{
-				
-		}
 		default:
 			break;
 	}
@@ -1190,7 +1209,7 @@ sr_ipf_input(void *cookie, mbuf_t *data, int offset, u_int8_t protocol){
 	}
 
 	iph = (struct ip*) mbuf_data(*data);
-	opt_sr = ip_sirens_dooptions_d(*data);
+	opt_sr = ip_sirens_dooptions_d(*data, 0);
 	if(opt_sr == NULL)
 			goto out;
 
@@ -1200,8 +1219,8 @@ sr_ipf_input(void *cookie, mbuf_t *data, int offset, u_int8_t protocol){
 		goto in;
 	}
 	
-	if(opt_sr->req_mode == SIRENS_TTL
-	   && iph->ip_ttl == opt_sr->req_ttl){
+	if((opt_sr->req_mode == SIRENS_TTL)
+	   && (iph->ip_ttl == opt_sr->req_ttl)){
 		ifnet_t interface;
 		debug_printf("sr_ipf_input: match TTL update hdr data and re-compute IP checksum TTL:%x:%x probe:%x\n",
 					 iph->ip_ttl, opt_sr->req_ttl, opt_sr->req_probe);
@@ -1221,6 +1240,12 @@ sr_ipf_input(void *cookie, mbuf_t *data, int offset, u_int8_t protocol){
 	}
 in:
 	switch (iph->ip_p) {
+		case IPPROTO_ICMP:
+		{
+			debug_printf("sr_ipf_input: ICMP and SIRENS!\n");
+			srp = NULL;
+		}
+			break;
 		case IPPROTO_UDP:
 		{
 			struct ip_moptions      *imo;
@@ -1320,7 +1345,7 @@ skip_res:
 			}
 			break;
 		default:
-			srp = NULL:
+			srp = NULL;
 			break;
 	}
 	if(srp != NULL && srp->sr_nmax > 0 && srp->sre_flag & SRE_FL_ARMED){
@@ -1653,7 +1678,7 @@ sr_iff_in_fn( void *cookie,
 						return;
 					}
 					 */
-					opt_sr = ip_sirens_dooptions_d(*data);
+					opt_sr = ip_sirens_dooptions_d(*data, 0);
 					if(opt_sr == NULL)
 						return;
 					//				debug_printf("%08x %08x %d %d\n", iph, opt_sr, iph->ip_ttl, mbuf_len(*data));					
@@ -1782,8 +1807,29 @@ sr_iff_out_fn (void *cookie,
 //	printf("\n");
 
 	opt_sr = (struct ipopt_sr*)((caddr_t)iph + tag_ref->offset);
-	
-	if(opt_sr->req_data.set == tag_ref->opt_sr.req_data.set){
+#if 1
+	if(iph->ip_p == IPPROTO_ICMP){
+		{
+			int hlen;
+			u_int16_t csum;
+			hlen = iph->ip_hl << 2;
+			iph->ip_sum = 0;
+			mbuf_inet_cksum(*data, 0, pktlen - tag_ref->len, hlen, &csum);
+			iph->ip_sum = csum;
+		}
+		error = mbuf_pullup(data, pktlen - tag_ref->len + sizeof (struct ip) + sizeof(struct ipopt_sr));
+		if(error){
+			debug_printf("iff_out_fn: pullup error %x %x\n", pktlen, tag_ref->len);
+			return error;
+		}		
+		qp = (u_int32_t *)(mbuf_data(*data));
+		iph = (struct ip *)((caddr_t)qp + pktlen - tag_ref->len);
+		opt_sr = (struct ipopt_sr*)((caddr_t)iph + tag_ref->offset);
+	}
+#endif
+//	if(opt_sr->req_data.set == tag_ref->opt_sr.req_data.set){
+	if( (opt_sr->req_mode == SIRENS_TTL)
+	   && (iph->ip_ttl == opt_sr->req_ttl)){
 		debug_printf("sirens output: match TTL update TTL:%x:%x probe:%x from: %x\n",
 					 iph->ip_ttl, opt_sr->req_ttl, opt_sr->req_probe, ntohl(opt_sr->req_data.set));
 		debug_printf("re-compute checksum from %04x\n", ntohs(iph->ip_sum));
@@ -2146,12 +2192,14 @@ static errno_t alloc_locks(void)
 }
 
 struct ipopt_sr *
-ip_sirens_dooptions_d(mbuf_t data)
+ip_sirens_dooptions_d(mbuf_t data, size_t offset)
 {
-	struct ip *ip = (struct ip*) mbuf_data(data);
+	struct ip *ip;
 	u_char *cp;
 	int opt, optlen, cnt, code;
-		
+/* XXX: unsafe, need mbuf_pulup */
+	ip = (struct ip*) (mbuf_data(data) + offset);
+	
 	cp = (u_char *)(ip + 1);
 	cnt = (ip->ip_hl << 2) - sizeof (struct ip);
 	for (; cnt > 0; cnt -= optlen, cp += optlen) {
@@ -2199,6 +2247,13 @@ bad:
 //	ipstat.ips_badoptions++;
 	return (NULL);
 }
+
+#define MAX_IPOPTLEN    40
+struct ipoption {
+	struct  in_addr ipopt_dst;      /* first-hop dst if source routed */
+	char    ipopt_list[MAX_IPOPTLEN];       /* options proper */
+};
+
 
 static void free_locks(void)
 {
