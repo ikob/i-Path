@@ -440,7 +440,12 @@ sr_update_reqdata(struct ipopt_sr *opt_sr, struct net_device *ndev)
 	struct SRIFEntry *srp;
 	struct sr_var *srvar;
 	struct ethtool_cmd ethcmd;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,36)
 	const struct net_device_stats *stats;
+#else
+	struct rtnl_link_stats64 *stats;
+	struct rtnl_link_stats64 temp;
+#endif
 	uint32_t flag;
 	unsigned long flags;
 
@@ -477,8 +482,11 @@ sr_update_reqdata(struct ipopt_sr *opt_sr, struct net_device *ndev)
 			data = ~0;
 		}
 	}
-
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,36)
 	stats = dev_get_stats(ndev);
+#else
+	stats = dev_get_stats(ndev, &temp);
+#endif
 	switch (opt_sr->req_probe & ~SIRENS_DIR_IN) {
 	case SIRENS_LINK:
 		if (dev_ethtool_get_settings(ndev, &ethcmd) < 0) {
