@@ -47,35 +47,36 @@
  * SIRENS data storage
  */
 union u_sr_data {
-	u_int32_t link;
-	u_int32_t queue;
-	u_int32_t loss;
-	u_int32_t mtu;
+	uint32_t link;
+	uint32_t loss;
+	uint32_t queue;
+	uint32_t mtu;
 	struct {
-		u_int16_t lamda;
-		u_int16_t phy;
+		uint16_t lamda;
+		uint16_t phy;
 	} loc;
-	u_int32_t set;
+	uint32_t set;
 };
 
 /*
  * SIRENS IP option header
  */
 struct ipopt_sr {
-	u_char type; /* always 94 */
-	u_char len; /* 12 */
-	u_char res_probe; /* responce data type */
-	u_char res_ttl; /* responce data TTL */
+	uint8_t type; /* always 94 */
+	uint8_t len; /* 12 */
+	uint8_t res_probe; /* responce data type */
+	uint8_t res_ttl; /* responce data TTL */
 	
-	u_char req_mode; /* request mode, {min, max, TTL} =  {1, 2, 3} */
-	u_char req_probe; /* request data type */
-	u_char res_mode; /* responce mode */
-	u_char req_ttl; /* request data TTL */
+	uint8_t req_mode; /* request mode, {min, max, TTL} =  {1, 2, 3} */
+	uint8_t req_probe; /* request data type */
+	uint8_t res_mode; /* responce mode */
+	uint8_t req_ttl; /* request data TTL */
 	union u_sr_data req_data; /* SIRENS request data storage */
 #define SIRENSRESLEN 8
 	/*	res[SIRENSRESLEN]; */
 };
-#ifdef _KERNEL
+#if defined(KERNEL) || defined(__KERNEL__)
+#if defined(__FreeBSD__)
 /*
  * SIRENS packet tag.
  */
@@ -93,7 +94,8 @@ struct sirens_tag {
 	union u_sr_data req_data;
 	union u_sr_data res[SIRENSRESLEN];
 };
-#endif /* KERNEL */
+#endif /* defined(__FreeBSD__) */
+#endif /* defined(KERNEL) || defined(__KERNEL__) */
 /*
  * SIRENS data cached in end systems
  */
@@ -111,14 +113,14 @@ struct sr_hopdata{
 #define SIRENS_SND 0x80
 #define SIRENS_RCV 0x40
 
-#ifndef _KERNEL
+#if !defined(KERNEL) && !defined(__KERNEL__)
 static char *sirens_mode_s[] = {
 	"disable",
 	"minimal",
 	"maximum",
 	"ttl",
 };
-#endif /* _KERNEL */
+#endif /* !defined(KERNEL) && !defined(__KERNEL__) */
 
 enum SIRENS_PROBE {
 	SIRENS_DUMMY,
@@ -129,14 +131,11 @@ enum SIRENS_PROBE {
 	SIRENS_ERRORS,		/* error count */
 	SIRENS_QMAX,		/* maximum used queue length */
 	SIRENS_QLEN,		/* output queue length limit */
-	SIRENS_MTU,			/* MTU size */
-	SIRENS_LOCATON,		/* Geographical location */
-/*
-	SIRENS_PMAX
-*/
+	SIRENS_MTU,		/* MTU size */
+	SIRENS_LOCATION,	/* Geographical location */
+	SIRENS_PMAX = 256,
 };
-#define SIRENS_PMAX 256
-#ifndef KERNEL
+#if !defined(KERNEL) && !defined(__KERNEL__)
 static char *sirens_probe_s[] = {
 	"dummy",
 	"link",
@@ -149,30 +148,34 @@ static char *sirens_probe_s[] = {
 	"mtu",
 	"location",
 };
-#endif /* KERNEL */
+#endif /* !defined(KERNEL) && !defined(__KERNEL__) */
 #define		IPSR_VAR_VALID 0x00000001
 #define		IPSR_VAR_INVAL 0x00000000
 /* SIRENS STORAGE */
 struct sr_var{
-	u_long flag;
-       	u_long data;
+	uint32_t flag;
+       	uint32_t data;
 };
 struct sr_storage {
 	struct sr_var array[SIRENS_PMAX];
 };
 #ifndef WIN32
 struct if_srvarreq {
-	char    ifr_name[IFNAMSIZ];             /* if name, e.g. "en0" */
+#if defined(__linux__)
+	char    ifrname[IFNAMSIZ];		/* if name, e.g. "en0" */
+#else
+	char    ifr_name[IFNAMSIZ];		/* if name, e.g. "en0" */
+#endif
 	int	sr_probe;
 	struct sr_var sr_var;
 };
-#else
+#else /* !WIN32 */
 struct if_srvarreq {
 	int if_index;
 	int	sr_probe;
 	struct sr_var sr_var;
 };
-#endif
+#endif /* !WIN32 */
 
 #define SIRENS_DIR_IN	0x80
 #define SIRENS_DIR_OUT	0x00
@@ -182,16 +185,22 @@ struct if_srvarreq {
 #define MAXIPOPTSIRENSLEN IPOPTSIRENSLEN(SIRENSRESLEN)
 #define IPOPTLENTORESLEN(j) ((j - sizeof (struct ipopt_sr)) / sizeof(union u_sr_data) )
 
-#ifdef KERNEL
+#if defined(KERNEL) || defined(__KERNEL__)
+#if defined(__APPLE__)
 caddr_t ip_getsirensoptions __P((struct mbuf *));
-#ifdef __APPLE__
 int sr_setparam __P((struct ipopt_sr *, ifnet_t, struct sr_storage *));
-#else
+#endif /* defined(__APPLE__) */
+#if defined(__FreeBSD__)
+caddr_t ip_getsirensoptions __P((struct mbuf *));
 int sr_setparam __P((struct ipopt_sr *, struct ifnet *));
-#endif
-#endif /* KERNEL */
+#endif /* defined(__FreeBSD__) */
+#if defined(__linux__)
+#endif /* defined(__linux__) */
+#endif /* defined(KERNEL) || defined(__KERNEL__) */
 
+#if defined(__APPLE__) || defined(__FreeBSD__)
 struct ipopt_sr	*ip_sirens_dooptions(struct mbuf *);
+#endif /* defined(__APPLE__) || defined(__FreeBSD__) */
 
 #define SIRENSCTL_ENABLE	1
 #define SIRENSCTL_INPKTS	2	/* statistics (read-only) */
@@ -202,10 +211,15 @@ struct ipopt_sr	*ip_sirens_dooptions(struct mbuf *);
 #define SIRENSCTL_MAXID		7
 
 /* (sg)etsockopt for SIRENS data storage access */
+#if defined(__linux__)
+#define IPSIRENS_SRVAR		95
+#endif /* defined(__linux__) */
 #define IPSIRENS_SDATAX		96
 #define IPSIRENS_IDX		97
 #define IPSIRENS_SDATA		98
 #define IPSIRENS_ADATA		99
+#define IPSIRENS_STDATA		100
+#define IPSIRENS_STDATAX	101
 #define IPSIRENS_IREQMAX	8
 #define IPSIRENS_DREQMAX	16
 struct sr_ireq{
@@ -234,10 +248,13 @@ struct sr_dreq{
 	union u_sr_data    sr_data[]
 */
 };
+#define IPSIRENS_DTREQSIZE(i) (sizeof(struct sr_dreq) + i * sizeof(struct sr_hopdata))
 #define IPSIRENS_DREQSIZE(i) (sizeof(struct sr_dreq) + i * sizeof(union u_sr_data))
 #define IPSIRENS_DREQCNT(i) ((i - sizeof(struct sr_dreq)) / sizeof(union u_sr_data))
 
+#if defined(__APPLE__) || defined(__FreeBSD__)
 #define SIOCSSRVAR _IOWR('i', 222, struct if_srvarreq)
 #define SIOCGSRVAR _IOWR('i', 223, struct if_srvarreq)
+#endif /* defined(__APPLE__) || defined(__FreeBSD__) */
 
-#endif
+#endif /* _NETINET_SIRENS_H_ */
