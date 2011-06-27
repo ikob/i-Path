@@ -122,6 +122,7 @@ void PrintMSS( ReporterData *stats );
 #ifdef IPSIRENS
 int reqcnt = 0;
 char dreqbuf[2][2][8][IPSIRENS_DREQSIZE(256)]; /* XXX should be maintained for each thread */
+char dtreqbuf[2][2][8][IPSIRENS_DTREQSIZE(256)]; /* XXX should be maintained for each thread */
 char *sr_dreqp = NULL;
 #endif
 
@@ -868,6 +869,10 @@ int reporter_condprintstats( ReporterData *stats, MultiHeader *multireport, int 
 			struct sr_dreq *dres, *pdres;
 			union u_sr_data *sr_dataq, *pr_dataq;
 			union u_sr_data *sr_datas, *pr_datas;
+			struct sr_dreq *dtreq, *pdtreq;
+			struct sr_dreq *dtres, *pdtres;
+			struct sr_hopdata *sr_dataqt, *pr_dataqt;
+			struct sr_hopdata *sr_datast, *pr_datast;
 	
 			dreq = (struct sr_dreq *)dreqbuf[reqcnt % 2][1][j];
 			dres = (struct sr_dreq *)dreqbuf[reqcnt % 2][1][j];
@@ -878,12 +883,28 @@ int reporter_condprintstats( ReporterData *stats, MultiHeader *multireport, int 
 			pr_dataq = (union u_sr_data *)((char *)pdreq + sizeof(struct sr_dreq));
 			pr_datas = (union u_sr_data *)((char *)pdres + sizeof(struct sr_dreq));
 
+			dtreq = (struct sr_dreq *)dtreqbuf[reqcnt % 2][1][j];
+			dtres = (struct sr_dreq *)dtreqbuf[reqcnt % 2][1][j];
+			pdtreq = (struct sr_dreq *)dtreqbuf[(reqcnt+1) % 2][1][j];
+			pdtres = (struct sr_dreq *)dtreqbuf[(reqcnt+1) % 2][1][j];
+			sr_dataqt = (struct sr_hopdata *)((char *)dtreq + sizeof(struct sr_dreq));
+			sr_datast = (struct sr_hopdata *)((char *)dtres + sizeof(struct sr_dreq));
+			pr_dataqt = (struct sr_hopdata *)((char *)pdtreq + sizeof(struct sr_dreq));
+			pr_datast = (struct sr_hopdata *)((char *)pdtres + sizeof(struct sr_dreq));
+
 			dreq->dir = 1;
 			dreq->mode = SIRENS_TTL;
 			dreq->probe = stats->agent->sirens[j];
 			len = IPSIRENS_DREQSIZE(256);
 			rc = getsockopt( stats->agent->mSock, IPPROTO_IP, IPSIRENS_SDATA,
                              (char*) dreq, &len );
+
+			dtreq->dir = 1;
+			dtreq->mode = SIRENS_TTL;
+			dtreq->probe = stats->agent->sirens[j];
+			len = IPSIRENS_DTREQSIZE(256);
+			rc = getsockopt( stats->agent->mSock, IPPROTO_IP, IPSIRENS_STDATA,
+                             (char*) dtreq, &len );
 
 			dres->dir = 2;
 			dres->mode = SIRENS_TTL;
@@ -894,38 +915,70 @@ int reporter_condprintstats( ReporterData *stats, MultiHeader *multireport, int 
 			len = 256 * sizeof (union u_sr_data);
 			rc = getsockopt( stats->agent->mSock, IPPROTO_IP, IPSIRENS_SDATAX,
                              (char*) sr_datas, &len );
+			switch(dtreq->probe){
+			case SIRENS_LINK:
+			default:
+				printf("REQ:%s       value\n", sirens_probe_s[dtreq->probe & ~SIRENS_DIR_IN]);
+				for(i = 0 ; i < 256 ; i++){
+					if(sr_dataqt[i].tv.tv_sec != 0 && sr_dataqt[i].val.set != 0xffffffff)
+						printf(" %3d:    %16u %16u\n", i,  sr_dataqt[i].tv.tv_sec, ntohl(sr_dataqt[i].val.set));
+				}
+	
+				printf("RES:%s       value\n", sirens_probe_s[dtreq->probe & ~SIRENS_DIR_IN]);
+				for(i = 0 ; i < 256 ; i++){
+					if(sr_dataqt[i].tv.tv_sec != 0 && sr_dataqt[i].val.set != 0xffffffff)
+						printf(" %3d:    %16u %16u\n", i,  sr_dataqt[i].tv.tv_sec, ntohl(sr_dataqt[i].val.set));
+				}
+				break;
+			case SIRENS_OBYTES:
+			case SIRENS_IBYTES:
+				if(reqcnt > 0){
+					printf("REQ:%s        value\n", sirens_probe_s[dtreq->probe & ~SIRENS_DIR_IN]);
+					for(i = 0 ; i < 256 ; i++){
+						if(sr_dataqt[i].tv.tv_sec != 0 && sr_dataqt[i].val.set != 0xffffffff)
+							printf(" %3d:    %16u %16u\n", i,  sr_dataqt[i].tv.tv_sec, ntohl(sr_dataqt[i].val.set) - ntohl(pr_dataqt[i].val.set));
+					}
+
+					printf("RES:%s        value\n", sirens_probe_s[dtreq->probe & ~SIRENS_DIR_IN]);
+					for(i = 0 ; i < 256 ; i++){
+						if(sr_dataqt[i].tv.tv_sec != 0 && sr_dataqt[i].val.set != 0xffffffff)
+							printf(" %3d:    %16u %16u\n", i,  sr_dataqt[i].tv.tv_sec, ntohl(sr_dataqt[i].val.set) - ntohl(pr_dataqt[i].val.set));
+					}
+				}
+				break;
+			}
 
 			switch(dreq->probe){
 			case SIRENS_LINK:
 			default:
-			printf("REQ:%s       value\n", sirens_probe_s[dreq->probe & ~SIRENS_DIR_IN]);
-			for(i = 0 ; i < 256 ; i++){
-				if(sr_dataq[i].set != 0xffffffff)
-					printf(" %3d:    %16u\n", i,  ntohl(sr_dataq[i].set));
-			}
-
-			printf("RES:%s       value\n", sirens_probe_s[dreq->probe & ~SIRENS_DIR_IN]);
-			for(i = 0 ; i < 256 ; i++){
-				if(sr_datas[i].set != 0xffffffff)
-					printf(" %3d:    %16u\n", i,  ntohl(sr_datas[i].set));
-			}
-			break;
+				printf("REQ:%s       value\n", sirens_probe_s[dreq->probe & ~SIRENS_DIR_IN]);
+				for(i = 0 ; i < 256 ; i++){
+					if(sr_dataq[i].set != 0xffffffff)
+						printf(" %3d:    %16u\n", i,  ntohl(sr_dataq[i].set));
+				}
+	
+				printf("RES:%s       value\n", sirens_probe_s[dreq->probe & ~SIRENS_DIR_IN]);
+				for(i = 0 ; i < 256 ; i++){
+					if(sr_datas[i].set != 0xffffffff)
+						printf(" %3d:    %16u\n", i,  ntohl(sr_datas[i].set));
+				}
+				break;
 			case SIRENS_OBYTES:
 			case SIRENS_IBYTES:
-			if(reqcnt > 0){
-			printf("REQ:%s        value\n", sirens_probe_s[dreq->probe & ~SIRENS_DIR_IN]);
-			for(i = 0 ; i < 256 ; i++){
-				if(sr_dataq[i].set != 0xffffffff && pr_dataq[i].set != 0xffffffff)
-					printf(" %3d:    %16u\n", i,  ntohl(sr_dataq[i].set) - ntohl(pr_dataq[i].set));
-			}
+				if(reqcnt > 0){
+					printf("REQ:%s        value\n", sirens_probe_s[dreq->probe & ~SIRENS_DIR_IN]);
+					for(i = 0 ; i < 256 ; i++){
+						if(sr_dataq[i].set != 0xffffffff && pr_dataq[i].set != 0xffffffff)
+							printf(" %3d:    %16u\n", i,  ntohl(sr_dataq[i].set) - ntohl(pr_dataq[i].set));
+					}
 
-			printf("RES:%s        value\n", sirens_probe_s[dreq->probe & ~SIRENS_DIR_IN]);
-			for(i = 0 ; i < 256 ; i++){
-				if(sr_datas[i].set != 0xffffffff && pr_datas[i].set != 0xffffffff)
-					printf(" %3d:    %16u\n", i,  ntohl(sr_datas[i].set) - ntohl(pr_datas[i].set));
-			}
-			}
-			break;
+					printf("RES:%s        value\n", sirens_probe_s[dreq->probe & ~SIRENS_DIR_IN]);
+					for(i = 0 ; i < 256 ; i++){
+						if(sr_datas[i].set != 0xffffffff && pr_datas[i].set != 0xffffffff)
+							printf(" %3d:    %16u\n", i,  ntohl(sr_datas[i].set) - ntohl(pr_datas[i].set));
+					}
+				}
+				break;
 			}
 		}
 	reqcnt ++;

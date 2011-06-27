@@ -28,7 +28,7 @@
 #define SIRENS_VERSION		"1.0.0"
 
 #define IPSIRENS_OPTMIN		IPSIRENS_SRVAR
-#define IPSIRENS_OPTMAX		IPSIRENS_ADATA
+#define IPSIRENS_OPTMAX		IPSIRENS_STDATAX
 #define IPSIRENS_HOPNUM		256
 #define IPSIRENS_HOPMAX		(IPSIRENS_HOPNUM - 1)
 #define IPSIRENS_TIMEOUT	100	/* sec */
@@ -988,6 +988,72 @@ sr_getsockopt_sdata0(struct SRSFEntry *srp, struct sr_dreq *dreq,
 }
 
 static int
+sr_getsockopt_stdata0(struct SRSFEntry *srp, struct sr_dreq *dreq,
+	struct sr_hopdata *sr_datat)
+{
+	struct sr_hopdata *hopdata;
+	struct sr_info *inp;
+	int i;
+
+	for (i = 0; i < srp->sr_nmax; i++) {
+		inp = &(srp->inp_sr[i]);
+		if (inp->mode != dreq->mode || inp->probe != dreq->probe)
+			continue;
+
+		switch (dreq->dir) {
+		case 1:
+			hopdata = inp->sr_qdata;	/* use request data */
+			break;
+		case 2:
+		default:
+			hopdata = inp->sr_sdata;	/* use response data */
+			break;
+		}
+		memcpy(sr_datat, hopdata, IPSIRENS_HOPNUM * sizeof(struct sr_hopdata));
+/*
+		for (j = 0; j < IPSIRENS_HOPNUM; j++) {
+			sr_datat[j].val = hopdata[j].val;
+			sr_datat[j].tv = hopdata[j].tv;
+		}
+*/
+		return 0;
+	}
+	return -EINVAL;
+}
+
+static int
+sr_getsockopt_stdatax(struct sock *sk, void __user *user, int *len)
+{
+	struct SRSFEntry *srp;
+	struct sr_hopdata *hopdata;
+	int error;
+	unsigned long flags;
+
+	if (*len != IPSIRENS_HOPNUM * sizeof (struct sr_hopdata))
+		return -EINVAL;
+
+	hopdata = kmalloc(*len, GFP_KERNEL);
+	if (hopdata == NULL)
+		return -ENOMEM;
+
+	spin_lock_irqsave(&sr_lock, flags);
+
+	srp = sock_to_SRSFEntry(sk);
+	if (srp == NULL)
+		error = -EINVAL;
+	else
+		error = sr_getsockopt_stdata0(srp, &(srp->sr_dreq), hopdata);
+
+	spin_unlock_irqrestore(&sr_lock, flags);
+
+	if (error == 0)
+		error = copy_to_user(user, hopdata, (unsigned long)*len);
+
+	kfree(hopdata);
+	return error;
+}
+
+static int
 sr_getsockopt_sdatax(struct sock *sk, void __user *user, int *len)
 {
 	struct SRSFEntry *srp;
@@ -1016,6 +1082,55 @@ sr_getsockopt_sdatax(struct sock *sk, void __user *user, int *len)
 		error = copy_to_user(user, sr_data, (unsigned long)*len);
 
 	kfree(sr_data);
+	return error;
+}
+
+static int
+sr_getsockopt_stdata(struct sock *sk, void __user *user, int *len)
+{
+	struct SRSFEntry *srp;
+	struct sr_dreq *dreqp;
+	struct sr_hopdata *hopdata;
+	int error;
+	unsigned long flags;
+
+	if (*len != IPSIRENS_DTREQSIZE(IPSIRENS_HOPNUM))
+		return -EINVAL;
+
+	dreqp = kmalloc(*len, GFP_KERNEL);
+	if (dreqp == NULL)
+		return -ENOMEM;
+
+	error = copy_from_user(dreqp, user, (unsigned long)*len);
+	if (error)
+		goto end;
+
+	spin_lock_irqsave(&sr_lock, flags);
+
+	srp = sock_to_SRSFEntry(sk);
+	if (srp == NULL) {
+		/*
+		 * this socket seems to be not tracked.
+		 */
+		dreqp->dir = 255;
+		dreqp->mode = 255;
+		dreqp->probe = 255;
+		dreqp->dummy = 0;
+		*len = IPSIRENS_DREQSIZE(0);
+		error = 0;
+	}
+	else {
+		hopdata = (struct sr_hopdata *)(dreqp + 1);
+		error = sr_getsockopt_stdata0(srp, dreqp, hopdata);
+	}
+
+	spin_unlock_irqrestore(&sr_lock, flags);
+
+	if (error == 0)
+		error = copy_to_user(user, dreqp, (unsigned long)*len);
+
+ end:
+	kfree(dreqp);
 	return error;
 }
 
@@ -1383,12 +1498,14 @@ ip_sirens_setsockopt(struct sock *sk, int cmd, void __user *user,
 		ret = sr_setsockopt_srvar(sk, user, len);
 		break;
 	case IPSIRENS_SDATAX:
+	case IPSIRENS_STDATAX:
 		ret = sr_setsockopt_sdatax(sk, user, len);
 		break;
 	case IPSIRENS_IDX:
 		ret = sr_setsockopt_idx(sk, user, len);
 		break;
 	case IPSIRENS_SDATA:
+	case IPSIRENS_STDATA:
 		ret = -EINVAL;
 		break;
 	case IPSIRENS_ADATA:		/* fall down */
@@ -1421,11 +1538,17 @@ ip_sirens_getsockopt(struct sock *sk, int cmd, void __user *user, int *len)
 	case IPSIRENS_SDATAX:
 		ret = sr_getsockopt_sdatax(sk, user, len);
 		break;
+	case IPSIRENS_STDATAX:
+		ret = sr_getsockopt_stdatax(sk, user, len);
+		break;
 	case IPSIRENS_IDX:
 		ret = -EINVAL;
 		break;
 	case IPSIRENS_SDATA:
 		ret = sr_getsockopt_sdata(sk, user, len);
+		break;
+	case IPSIRENS_STDATA:
+		ret = sr_getsockopt_stdata(sk, user, len);
 		break;
 	case IPSIRENS_ADATA:	/* fall down */
 	default:

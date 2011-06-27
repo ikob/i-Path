@@ -218,6 +218,8 @@ struct ipopt_sr	*ip_sirens_dooptions(struct mbuf *);
 #define IPSIRENS_IDX		97
 #define IPSIRENS_SDATA		98
 #define IPSIRENS_ADATA		99
+#define IPSIRENS_STDATA		100
+#define IPSIRENS_STDATAX	101
 #define IPSIRENS_IREQMAX	8
 #define IPSIRENS_DREQMAX	16
 struct sr_ireq{
@@ -246,6 +248,7 @@ struct sr_dreq{
 	union u_sr_data    sr_data[]
 */
 };
+#define IPSIRENS_DTREQSIZE(i) (sizeof(struct sr_dreq) + i * sizeof(struct sr_hopdata))
 #define IPSIRENS_DREQSIZE(i) (sizeof(struct sr_dreq) + i * sizeof(union u_sr_data))
 #define IPSIRENS_DREQCNT(i) ((i - sizeof(struct sr_dreq)) / sizeof(union u_sr_data))
 
