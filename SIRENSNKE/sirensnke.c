@@ -731,10 +731,12 @@ sr_getoption_fn(void *cookie, socket_t so, sockopt_t opt)
 		}
 			break;
 		case IPSIRENS_SDATA:
+		case IPSIRENS_STDATA:
 			/*
 			 * Retrieve dataset specified in given parameters.
 			 * given: opt->val : {sr_dreq}
-			 * retuen: opt->cal : {sr_dreq, u_sr_data[256]}
+			 * return: opt->cal : {sr_dreq, u_sr_data[256]} when SDATA
+			 * return: opt->cal : {sr_dreq, sr_hopdata[256]} when STDATA
 			 */	
 		{
 			struct sr_dreq *dreq;
@@ -742,34 +744,45 @@ sr_getoption_fn(void *cookie, socket_t so, sockopt_t opt)
 			struct timeval tv;
 			struct sr_hopdata *thopdata;
 			union u_sr_data *sr_data;
+			struct sr_hopdata *hopdata;
+			int dreqsize = 0;
 
 			if(IPSIRENS_DREQSIZE(0) > sockopt_valsize(opt)){
 				return(EINVAL);
 			}
-			dreq = (struct sr_dreq *)OSMalloc(IPSIRENS_DREQSIZE(256), gOSMallocTag);
+			switch(sockopt_name(opt)){
+				case IPSIRENS_SDATA:
+					dreqsize = IPSIRENS_DREQSIZE(256);
+					break;
+				case IPSIRENS_STDATA:
+					dreqsize = IPSIRENS_DTREQSIZE(256);
+					break;
+				default:
+					return(EINVAL);
+			}
+
+			dreq = (struct sr_dreq *)OSMalloc(dreqsize, gOSMallocTag);
 			if(dreq == NULL)
 				return(ENOMEM);
 			sr_data = (union u_sr_data*)((char *)dreq + sizeof(struct sr_dreq));
+			hopdata = (struct sr_hopdata*)((char *)dreq + sizeof(struct sr_dreq));
 			if(srp->sr_nmax == 0 || !(srp->sre_flag & SRE_FL_ARMED)){
 				dreq->dir = 255;
 				dreq->mode = 255;
 				dreq->probe = 255;
 				error = sockopt_copyout(opt, dreq, IPSIRENS_DREQSIZE(0));
-				OSFree(dreq, IPSIRENS_DREQSIZE(256), gOSMallocTag);
+				OSFree(dreq, dreqsize, gOSMallocTag);
 				return(error);
 			}
-//			error = sockopt_copyin(opt, dreq, IPSIRENS_DREQSIZE(256));
 			error = sockopt_copyin(opt, dreq, sockopt_valsize(opt));
 			for(i = 0 ; i < srp->sr_nmax ; i++){
 				if(srp->inp_sr[i].mode == dreq->mode
 					&& srp->inp_sr[i].probe == dreq->probe) break;
 			}
 			if( i == srp->sr_nmax){
-				OSFree(dreq, IPSIRENS_DREQSIZE(256), gOSMallocTag);
+				OSFree(dreq, dreqsize, gOSMallocTag);
 				return(EINVAL);
 			}
-			microtime(&tv);
-			tv.tv_sec -= SR_TIMEOUT;
 			switch(dreq->dir){
 				case 1:
 					thopdata = srp->inp_sr[i].sr_qdata;
@@ -779,17 +792,33 @@ sr_getoption_fn(void *cookie, socket_t so, sockopt_t opt)
 					thopdata = srp->inp_sr[i].sr_sdata;
 					break;
 			}
+			switch(sockopt_name(opt)){
+				case IPSIRENS_SDATA:
+					microtime(&tv);
+					tv.tv_sec -= SR_TIMEOUT;
 			/* omit old data */
-			for(j = 0 ; j < 256 ; j++){
-				if(timevalcmp(&tv, &thopdata[j].tv, <)){
-					sr_data[j] = thopdata[j].val;
-				} else {
-					sr_data[j].set = -1; /* invalid */
-				}
+					for(j = 0 ; j < 256 ; j++){
+						if(timevalcmp(&tv, &thopdata[j].tv, <)){
+							sr_data[j] = thopdata[j].val;
+						} else {
+							sr_data[j].set = -1; /* invalid */
+						}
+					}
+					break;
+				case IPSIRENS_STDATA:
+					memcpy(hopdata, thopdata, sizeof(struct sr_hopdata) * 256);
+//					for(j = 0 ; j < 256 ; j++){
+//						hopdata[j].val = thopdata[j].val;
+//						hopdata[j].tv = thopdata[j].tv;
+//					}
+					break;
+				default:
+					OSFree(dreq, dreqsize, gOSMallocTag);
+					return(EINVAL);
+					break;
 			}
-//			error = sockopt_copyout(opt, dreq, IPSIRENS_DREQSIZE(256));
 			error = sockopt_copyout(opt, dreq, sockopt_valsize(opt));
-			OSFree(dreq, IPSIRENS_DREQSIZE(256), gOSMallocTag);
+			OSFree(dreq, dreqsize, gOSMallocTag);
 			if (error)
 				return(error);
 			error = EJUSTRETURN;
@@ -798,7 +827,6 @@ sr_getoption_fn(void *cookie, socket_t so, sockopt_t opt)
 		default:
 			break;
 	}
-			
 	return error;
 }
 
