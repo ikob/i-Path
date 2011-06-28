@@ -919,9 +919,12 @@ int reporter_condprintstats( ReporterData *stats, MultiHeader *multireport, int 
 			dtres->dir = 2;
 			dtres->mode = SIRENS_TTL;
 			dtres->probe = stats->agent->sirens[j];
-			len = IPSIRENS_DTREQSIZE(256);
-			rc = getsockopt( stats->agent->mSock, IPPROTO_IP, IPSIRENS_STDATA,
-                             (char*) dtres, &len );
+			len = IPSIRENS_DTREQSIZE(0);
+			rc = setsockopt( stats->agent->mSock, IPPROTO_IP, IPSIRENS_STDATAX,
+                             (char*) dtres, len );
+			len = 256 * sizeof (struct sr_hopdata);
+			rc = getsockopt( stats->agent->mSock, IPPROTO_IP, IPSIRENS_STDATAX,
+                             (char*) sr_datast, &len );
 
 			switch(dtreq->probe){
 			case SIRENS_LINK:

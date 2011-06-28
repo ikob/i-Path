@@ -224,6 +224,8 @@ struct ipopt_sr	*ip_sirens_dooptions(struct mbuf *);
 #define SIRENSCTL_MAXID		7
 
 /* (sg)etsockopt for SIRENS data storage access */
+#define IPSIRENS_STDATA		93
+#define IPSIRENS_STDATAX	94
 #if defined(__linux__)
 #define IPSIRENS_SRVAR		95
 #endif /* defined(__linux__) */
@@ -231,8 +233,6 @@ struct ipopt_sr	*ip_sirens_dooptions(struct mbuf *);
 #define IPSIRENS_IDX		97
 #define IPSIRENS_SDATA		98
 #define IPSIRENS_ADATA		99
-#define IPSIRENS_STDATA		100
-#define IPSIRENS_STDATAX	101
 #define IPSIRENS_IREQMAX	8
 #define IPSIRENS_DREQMAX	16
 struct sr_ireq{
