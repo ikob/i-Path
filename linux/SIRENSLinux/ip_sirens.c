@@ -572,7 +572,8 @@ sr_gather_data(struct ipopt_sr *opt_sr, struct SRSFEntry *srp)
 			continue;
 
 		hopdata = &(inp->sr_qdata[opt_sr->req_ttl]);
-		hopdata->tv = now;
+		hopdata->tv.tv_sec = now.tv_sec;
+		hopdata->tv.tv_usec = now.tv_usec;
 		hopdata->val = opt_sr->req_data;
 #ifdef SR_DEBUG
 		if (hopdata->val.set == -1)
@@ -598,7 +599,8 @@ sr_gather_data(struct ipopt_sr *opt_sr, struct SRSFEntry *srp)
 				break;
 
 			hopdata = &(inp->sr_sdata[opt_sr->res_ttl + i]);
-			hopdata->tv = now;
+			hopdata->tv.tv_sec = now.tv_sec;
+			hopdata->tv.tv_usec = now.tv_usec;
 			hopdata->val = resdata[i];
 #ifdef SR_DEBUG
 			if (hopdata->val.set == -1)
@@ -650,7 +652,8 @@ sr_update_resdata(struct ipopt_sr *opt_sr, struct SRSFEntry *srp)
 	struct sr_info *inp;
 	struct sr_hopdata *hopdata;
 	union u_sr_data *resdata = (union u_sr_data *)(opt_sr + 1);
-	struct timeval expire;
+	struct timeval now; 
+	struct sr_timeval expire;
 	u_int sttl;
 	int i, reslen;
 
@@ -672,8 +675,9 @@ sr_update_resdata(struct ipopt_sr *opt_sr, struct SRSFEntry *srp)
 	opt_sr->res_probe = inp->probe;
 	opt_sr->res_ttl = sttl;
 
-	do_gettimeofday(&expire);
-	expire.tv_sec -= IPSIRENS_TIMEOUT;
+	do_gettimeofday(&now);
+	expire.tv_sec = now.tv_sec - IPSIRENS_TIMEOUT;
+	expire.tv_usec = now.tv_usec;
 
 	/* stack onto responce data */
 	hopdata = &(inp->sr_qdata[sttl]);
@@ -682,7 +686,7 @@ sr_update_resdata(struct ipopt_sr *opt_sr, struct SRSFEntry *srp)
 		if (i + sttl > inp->smax_ttl || i + sttl > IPSIRENS_HOPMAX) {
 			resdata[i].set = -1;
 		}
-		else if (timeval_compare(&expire,  &(hopdata[i].tv)) < 0)
+		else if (sr_timeval_compare(&expire,  &(hopdata[i].tv)) < 0)
 			resdata[i] = hopdata[i].val;
 		else
 			resdata[i].set = -1;	/* invalid */
@@ -955,7 +959,8 @@ sr_getsockopt_sdata0(struct SRSFEntry *srp, struct sr_dreq *dreq,
 {
 	struct sr_hopdata *hopdata;
 	struct sr_info *inp;
-	struct timeval expire;
+	struct timeval now;
+	struct sr_timeval expire;
 	int i, j;
 
 	for (i = 0; i < srp->sr_nmax; i++) {
@@ -963,8 +968,9 @@ sr_getsockopt_sdata0(struct SRSFEntry *srp, struct sr_dreq *dreq,
 		if (inp->mode != dreq->mode || inp->probe != dreq->probe)
 			continue;
 
-		do_gettimeofday(&expire);
-		expire.tv_sec -= IPSIRENS_TIMEOUT;
+		do_gettimeofday(&now);
+		expire.tv_sec = now.tv_sec - IPSIRENS_TIMEOUT;
+		expire.tv_usec = now.tv_usec;
 
 		switch (dreq->dir) {
 		case 1:
@@ -976,7 +982,7 @@ sr_getsockopt_sdata0(struct SRSFEntry *srp, struct sr_dreq *dreq,
 			break;
 		}
 		for (j = 0; j < IPSIRENS_HOPNUM; j++) {
-			if (timeval_compare(&expire, &(hopdata[j].tv)) < 0)
+			if (sr_timeval_compare(&expire, &(hopdata[j].tv)) < 0)
 				sr_data[j] = hopdata[j].val;
 			else
 				sr_data[j].set = -1;	/* invalid */

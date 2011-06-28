@@ -97,13 +97,26 @@ struct sirens_tag {
 #endif /* defined(__FreeBSD__) */
 #endif /* defined(KERNEL) || defined(__KERNEL__) */
 /*
+ * Improve compatibility between 32, 64bits 
+ */
+struct sr_timeval{
+	uint32_t tv_sec;
+	uint32_t tv_usec;
+};
+/*
  * SIRENS data cached in end systems
  */
 struct sr_hopdata{
-	struct timeval tv;
+	struct sr_timeval tv;
 	union u_sr_data val;
 };
-
+static inline int sr_timeval_compare(const struct sr_timeval *lhs, const struct sr_timeval *rhs) {
+	if (lhs->tv_sec < rhs->tv_sec)
+		return -1;
+	if (lhs->tv_sec > rhs->tv_sec)
+		return 1;
+	return lhs->tv_usec - rhs->tv_usec;
+};
 #define SIRENS_DISABLE 0x00
 #define SIRENS_MIN 0x01
 #define SIRENS_MAX 0x02
