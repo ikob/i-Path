@@ -31,9 +31,10 @@ JNISRCS = SIRENSSocket.java SIRENSServerSocket.java
 
 JSRCS = jperf.java jperfServer.java jperfClient.java SIRENSReqIndex.java jperfParam.java $(JNISRCS)
 
-JAR = SIRENSSocket-0.0.2-macos10.6.1.jar
+JAR = SIRENSSocket-0.0.3-macos10.6.1.jar
 
-HDRS = -I/System/Library/Frameworks/JavaVM.framework/Headers -I../SIRENSNKE
+#HDRS = -I/System/Library/Frameworks/JavaVM.framework/Headers -I../SIRENSNKE
+HDRS = -I/Developer/SDKs/MacOSX10.6.sdk/System/Library/Frameworks/JavaVM.framework/Headers/ -I../SIRENSNKE
 
 all: $(JCLASSES) $(JNILIB) $(JAR)
 
@@ -51,5 +52,5 @@ $(JNIHDRS): $(JNICLASSES)
 $(JNILIB): $(JNISRC) $(JNICSRC) $(JNIHDRS)
 	@$(CC) $(CFLAGS) $(HDRS) $(JNICSRC) -o $(JNILIB)
 
-$(JAR): $(JNICLASSES) $(JNILIB)
-	@$(JARC) cvf $(JAR) $(JNICLASSES) $(JNILIB)
+$(JAR): $(JCLASSES) $(JNICLASSES) $(JNILIB)
+	@$(JARC) cvf $(JAR) $(JNICLASSES) $(JNILIB) $(JSRCS)
