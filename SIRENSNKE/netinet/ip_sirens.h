@@ -97,13 +97,26 @@ struct sirens_tag {
 #endif /* defined(__FreeBSD__) */
 #endif /* defined(KERNEL) || defined(__KERNEL__) */
 /*
+ * Improve compatibility between 32, 64bits 
+ */
+struct sr_timeval{
+	uint32_t tv_sec;
+	uint32_t tv_usec;
+};
+/*
  * SIRENS data cached in end systems
  */
 struct sr_hopdata{
-	struct timeval tv;
+	struct sr_timeval tv;
 	union u_sr_data val;
 };
-
+static inline int sr_timeval_compare(const struct sr_timeval *lhs, const struct sr_timeval *rhs) {
+	if (lhs->tv_sec < rhs->tv_sec)
+		return -1;
+	if (lhs->tv_sec > rhs->tv_sec)
+		return 1;
+	return lhs->tv_usec - rhs->tv_usec;
+};
 #define SIRENS_DISABLE 0x00
 #define SIRENS_MIN 0x01
 #define SIRENS_MAX 0x02
@@ -211,6 +224,8 @@ struct ipopt_sr	*ip_sirens_dooptions(struct mbuf *);
 #define SIRENSCTL_MAXID		7
 
 /* (sg)etsockopt for SIRENS data storage access */
+#define IPSIRENS_STDATA		93
+#define IPSIRENS_STDATAX	94
 #if defined(__linux__)
 #define IPSIRENS_SRVAR		95
 #endif /* defined(__linux__) */
@@ -218,8 +233,6 @@ struct ipopt_sr	*ip_sirens_dooptions(struct mbuf *);
 #define IPSIRENS_IDX		97
 #define IPSIRENS_SDATA		98
 #define IPSIRENS_ADATA		99
-#define IPSIRENS_STDATA		100
-#define IPSIRENS_STDATAX	101
 #define IPSIRENS_IREQMAX	8
 #define IPSIRENS_DREQMAX	16
 struct sr_ireq{

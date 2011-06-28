@@ -627,6 +627,7 @@ sr_setoption_fn(void *cookie, socket_t so, sockopt_t opt)
 			}
 			break;
 		case IPSIRENS_SDATAX:
+		case IPSIRENS_STDATAX:
 			/*
 			 * Specify dataset to retrieve next getsockopt(s, IPSIRENS_SDATAX) call.
 			 * Python's getsockopt()  does not allows to give a paremater set, unlike UNIX.
@@ -677,23 +678,42 @@ sr_getoption_fn(void *cookie, socket_t so, sockopt_t opt)
 			error = EINVAL;
 			break;
 		case IPSIRENS_SDATAX:
+		case IPSIRENS_STDATAX:
 			/*
 			 * Retrieve dataset specified previous setsockopt(s, IPSIRENS_SDATAX) call.
 			 * opt->val : {u_sr_dreq[256]}
+			 * opt->val : {sr_hopdata[256]}
 			 */
 		{
+			char *dreq;
 			int i, j;        
-			struct timeval tv;
+			struct timeval now;
+			struct sr_timeval expire;
 			struct sr_hopdata *thopdata;
 			union u_sr_data *sr_data;
+			struct sr_hopdata *hopdata;
+			int dreqsize;
 
-			if(256 * sizeof(union u_sr_data) != sockopt_valsize(opt)){
+			switch(sockopt_name(opt)){
+				case IPSIRENS_SDATAX:
+					dreqsize = 256 * sizeof(union u_sr_data);
+					break;
+				case IPSIRENS_STDATAX:
+					dreqsize = 256 * sizeof(struct sr_hopdata);
+					break;
+				default:
+					return(EINVAL);
+			}
+			
+			if(dreqsize != sockopt_valsize(opt)){
 				return(EINVAL);
 			}
 			if(srp->sr_nmax == 0 || !(srp->sre_flag & SRE_FL_ARMED)){
 				return(EINVAL);
 			}
-			sr_data = (union u_sr_data*) OSMalloc(256 * sizeof(union u_sr_data), gOSMallocTag);			
+			dreq = (char *)OSMalloc(dreqsize, gOSMallocTag);
+			sr_data = (union u_sr_data*)dreq;
+			hopdata = (struct sr_hopdata*)dreq;
 			if(sr_data == NULL)
 				return(ENOMEM);
 			for(i = 0 ; i < srp->sr_nmax ; i++){
@@ -701,11 +721,9 @@ sr_getoption_fn(void *cookie, socket_t so, sockopt_t opt)
 				   && srp->inp_sr[i].probe == srp->sr_dreq.probe) break;
 			}
 			if( i == srp->sr_nmax){
-				OSFree(sr_data, 256 * sizeof(union u_sr_data), gOSMallocTag);
+				OSFree(dreq, dreqsize, gOSMallocTag);
 				return(EINVAL);
 			}
-			microtime(&tv);
-			tv.tv_sec -= SR_TIMEOUT;
 			switch(srp->sr_dreq.dir){
 				case 1:
 					thopdata = srp->inp_sr[i].sr_qdata;
@@ -714,17 +732,31 @@ sr_getoption_fn(void *cookie, socket_t so, sockopt_t opt)
 				default:
 					thopdata = srp->inp_sr[i].sr_sdata;
 					break;
-			}
+			}			
+			switch(sockopt_name(opt)){
+				case IPSIRENS_SDATAX:
+					microtime(&now);
+					expire.tv_sec = now.tv_sec - SR_TIMEOUT;
+					expire.tv_usec = now.tv_usec;
 			/* omit old data */
-			for(j = 0 ; j < 256 ; j++){
-				if(timevalcmp(&tv, &thopdata[j].tv, <)){
-					sr_data[j] = thopdata[j].val;
-				} else {
-					sr_data[j].set = -1;
-				}
+					for(j = 0 ; j < 256 ; j++){
+						if(sr_timeval_compare(&expire, &thopdata[j].tv) < 0){
+							sr_data[j] = thopdata[j].val;
+						} else {
+							sr_data[j].set = -1;
+						}
+					}
+					break;
+				case IPSIRENS_STDATAX:
+					memcpy(hopdata, thopdata, sizeof(struct sr_hopdata) * 256);
+					break;
+				default:
+					OSFree(dreq, dreqsize, gOSMallocTag);
+					return(EINVAL);
+					break;
 			}
-			error = sockopt_copyout(opt, sr_data, 256 * sizeof(union u_sr_data));
-			OSFree(sr_data, 256 * sizeof(union u_sr_data), gOSMallocTag);
+			error = sockopt_copyout(opt, sr_data, dreqsize);
+			OSFree(dreq, dreqsize, gOSMallocTag);
 			if (error)
 				return(error);
 			error = EJUSTRETURN;
@@ -741,7 +773,8 @@ sr_getoption_fn(void *cookie, socket_t so, sockopt_t opt)
 		{
 			struct sr_dreq *dreq;
 			int i, j;
-			struct timeval tv;
+			struct timeval now;
+			struct sr_timeval expire;
 			struct sr_hopdata *thopdata;
 			union u_sr_data *sr_data;
 			struct sr_hopdata *hopdata;
@@ -794,11 +827,12 @@ sr_getoption_fn(void *cookie, socket_t so, sockopt_t opt)
 			}
 			switch(sockopt_name(opt)){
 				case IPSIRENS_SDATA:
-					microtime(&tv);
-					tv.tv_sec -= SR_TIMEOUT;
+					microtime(&now);
+					expire.tv_sec = now.tv_sec - SR_TIMEOUT;
+					expire.tv_usec = now.tv_usec;
 			/* omit old data */
 					for(j = 0 ; j < 256 ; j++){
-						if(timevalcmp(&tv, &thopdata[j].tv, <)){
+						if(sr_timeval_compare(&expire, &thopdata[j].tv) < 0){
 							sr_data[j] = thopdata[j].val;
 						} else {
 							sr_data[j].set = -1; /* invalid */
@@ -1070,69 +1104,6 @@ sr_ipf_output(void *cookie, mbuf_t *data, ipf_pktopts_t options)
 					   && (inp->inp_fport == tp->th_dport))
 						break;
 				}
-#if 0
-				if(srp == NULL)
-					break;
-//			debug_printf("found outgoing flow so:0x%08x %d %d\n", srp->sre_so, srp->sr_nmax, srp->sre_flag);
-			
-				if(srp->sr_nmax > 0 && srp->sre_flag & SRE_FL_ARMED){
-					int reslen, j;
-					union u_sr_data *resdata;
-					u_int qttl, sttl;
-					srp->sr_qnext %= srp->sr_nmax;
-					qttl = srp->sr_qttl;
-					qttl++;
-					if(qttl > (u_int)srp->inp_sr[srp->sr_qnext].qmax_ttl || qttl > 255){
-						srp->sr_qnext++;
-						srp->sr_qnext %= srp->sr_nmax;
-						qttl = srp->inp_sr[srp->sr_qnext].qmin_ttl;
-					}
-					if(qttl < (u_int)srp->inp_sr[srp->sr_qnext].qmin_ttl) {
-						qttl = srp->inp_sr[srp->sr_qnext].qmin_ttl;
-					}
-					srp->sr_qttl = qttl;
-					opt_sr->req_mode = srp->inp_sr[srp->sr_qnext].mode;
-					opt_sr->req_probe = srp->inp_sr[srp->sr_qnext].probe;
-					opt_sr->req_ttl = qttl;
-					opt_sr->req_data.set = -1;
-					
-					reslen = IPOPTLENTORESLEN(opt_sr->len);
-					
-					srp->sr_snext %= srp->sr_nmax;
-					sttl = srp->sr_sttl;
-					if(sttl > srp->inp_sr[srp->sr_snext].smax_ttl || sttl > 255){
-						srp->sr_snext++;
-						srp->sr_snext %= srp->sr_nmax;
-						sttl = srp->inp_sr[srp->sr_snext].smin_ttl;
-					}
-					if(sttl < srp->inp_sr[srp->sr_snext].smin_ttl) {
-						sttl = srp->inp_sr[srp->sr_snext].smin_ttl;
-					}
-					opt_sr->res_mode = srp->inp_sr[srp->sr_snext].mode;
-					opt_sr->res_probe = srp->inp_sr[srp->sr_snext].probe;
-					opt_sr->res_ttl = sttl;
-					resdata = (union u_sr_data *)(opt_sr + 1);
-
-//				debug_printf("output: start lock\n");
-
-					lck_mtx_lock(gmutex); 
-					for(j = 0 ; j < reslen ; j++){
-						struct timeval tv;
-					/* stack onto responce data */
-						microtime(&tv);
-						timevalsub(&tv, &srp->inp_sr[srp->sr_snext].sr_qdata[sttl + j].tv);
-						if(tv.tv_sec < SR_TIMEOUT &&
-							j + sttl <= srp->inp_sr[srp->sr_snext].smax_ttl &&
-							(sttl + j) < 255){
-							resdata[j] = srp->inp_sr[srp->sr_snext].sr_qdata[sttl + j].val;
-						}else{
-							resdata[j].set = -1;
-						}
-					}
-					lck_mtx_unlock(gmutex);
-					srp->sr_sttl = sttl + j;
-				}
-#endif
 			}
 			break;
 		default:
@@ -1185,11 +1156,13 @@ sr_ipf_output(void *cookie, mbuf_t *data, ipf_pktopts_t options)
 		
 		lck_mtx_lock(gmutex); 
 		for(j = 0 ; j < reslen ; j++){
-			struct timeval tv;
+			struct timeval now;
+			struct sr_timeval expire;
 			/* stack onto responce data */
-			microtime(&tv);
-			timevalsub(&tv, &srp->inp_sr[srp->sr_snext].sr_qdata[sttl + j].tv);
-			if(tv.tv_sec < SR_TIMEOUT &&
+			microtime(&now);
+			expire.tv_sec = now.tv_sec - SR_TIMEOUT;
+			expire.tv_usec = now.tv_usec;
+			if( sr_timeval_compare(&expire, &srp->inp_sr[srp->sr_snext].sr_qdata[sttl + j].tv) < 0 &&
 			   j + sttl <= srp->inp_sr[srp->sr_snext].smax_ttl &&
 			   (sttl + j) < 255){
 				resdata[j] = srp->inp_sr[srp->sr_snext].sr_qdata[sttl + j].val;
@@ -1333,43 +1306,6 @@ in:
 					   && (inp->inp_fport == tp->th_sport))
 						break;
 				}
-#if 0
-				if(srp == NULL)
-					break;
-				if(srp->sr_nmax > 0 && srp->sre_flag & SRE_FL_ARMED){
-					int j, i, n;
-					struct timeval tv;
-					union u_sr_data *sr_data;
-				
-					getmicrotime(&tv);
-					for( j = 0 ; j < srp->sr_nmax ; j++){
-						if(srp->inp_sr[j].mode == opt_sr->req_mode
-						   && srp->inp_sr[j].probe == opt_sr->req_probe)
-							break;
-					}
-					lck_mtx_lock(gmutex);
-					if( j == srp->sr_nmax ) goto skip_req;
-					srp->inp_sr[j].sr_qdata[opt_sr->req_ttl].tv = tv;
-					srp->inp_sr[j].sr_qdata[opt_sr->req_ttl].val = opt_sr->req_data;
-skip_req:
-					if((n = IPOPTLENTORESLEN(opt_sr->len)) == 0 )
-						goto skip_res;
-					for( j = 0 ; j < srp->sr_nmax ; j++){
-						if(srp->inp_sr[j].mode == opt_sr->res_mode
-						   && srp->inp_sr[j].probe == opt_sr->res_probe)
-							break;
-					}
-					if( j == srp->sr_nmax ) goto skip_res;
-					sr_data = (union u_sr_data *)(opt_sr + 1);
-					for( i = 0 ; i < n ; i++){
-						if(opt_sr->res_ttl + i > 255) break;
-						srp->inp_sr[j].sr_sdata[opt_sr->res_ttl + i].tv = tv;
-						srp->inp_sr[j].sr_sdata[opt_sr->res_ttl + i].val = sr_data[i];
-					}
-skip_res:
-					lck_mtx_unlock(gmutex);
-				}
-#endif
 			}
 			break;
 		default:
@@ -1378,10 +1314,10 @@ skip_res:
 	}
 	if(srp != NULL && srp->sr_nmax > 0 && srp->sre_flag & SRE_FL_ARMED){
 		int j, i, n;
-		struct timeval tv;
+		struct timeval now;
 		union u_sr_data *sr_data;
 		
-		getmicrotime(&tv);
+		getmicrotime(&now);
 		for( j = 0 ; j < srp->sr_nmax ; j++){
 			debug_printf("ipf_input %08x:%08x %08x:%08x\n", srp->inp_sr[j].mode, opt_sr->req_mode, srp->inp_sr[j].probe, opt_sr->req_probe);
 			if(srp->inp_sr[j].mode == opt_sr->req_mode
@@ -1390,7 +1326,8 @@ skip_res:
 		}
 		lck_mtx_lock(gmutex);
 		if( j == srp->sr_nmax ) goto skip_req;
-		srp->inp_sr[j].sr_qdata[opt_sr->req_ttl].tv = tv;
+		srp->inp_sr[j].sr_qdata[opt_sr->req_ttl].tv.tv_sec = now.tv_sec;
+		srp->inp_sr[j].sr_qdata[opt_sr->req_ttl].tv.tv_usec = now.tv_usec;
 		srp->inp_sr[j].sr_qdata[opt_sr->req_ttl].val = opt_sr->req_data;
 skip_req:
 		if((n = IPOPTLENTORESLEN(opt_sr->len)) == 0 )
@@ -1404,7 +1341,8 @@ skip_req:
 		sr_data = (union u_sr_data *)(opt_sr + 1);
 		for( i = 0 ; i < n ; i++){
 			if(opt_sr->res_ttl + i > 255) break;
-			srp->inp_sr[j].sr_sdata[opt_sr->res_ttl + i].tv = tv;
+			srp->inp_sr[j].sr_sdata[opt_sr->res_ttl + i].tv.tv_sec = now.tv_sec;
+			srp->inp_sr[j].sr_sdata[opt_sr->res_ttl + i].tv.tv_usec = now.tv_usec;
 			srp->inp_sr[j].sr_sdata[opt_sr->res_ttl + i].val = sr_data[i];
 		}
 skip_res:
