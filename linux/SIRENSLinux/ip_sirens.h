@@ -75,7 +75,7 @@ struct ipopt_sr {
 #define SIRENSRESLEN 8
 	/*	res[SIRENSRESLEN]; */
 };
-#if defined(KERNEL) || defined(__KERNEL__)
+#if defined(KERNEL) || defined(__KERNEL__) || defined(_KERNEL)
 #if defined(__FreeBSD__)
 /*
  * SIRENS packet tag.
@@ -95,7 +95,7 @@ struct sirens_tag {
 	union u_sr_data res[SIRENSRESLEN];
 };
 #endif /* defined(__FreeBSD__) */
-#endif /* defined(KERNEL) || defined(__KERNEL__) */
+#endif /* defined(KERNEL) || defined(__KERNEL__) || defined(_KERNEL) */
 /*
  * Improve compatibility between 32, 64bits 
  */
@@ -126,14 +126,14 @@ static inline int sr_timeval_compare(const struct sr_timeval *lhs, const struct 
 #define SIRENS_SND 0x80
 #define SIRENS_RCV 0x40
 
-#if !defined(KERNEL) && !defined(__KERNEL__)
+#if !defined(KERNEL) && !defined(__KERNEL__) && !defined(_KERNEL)
 static char *sirens_mode_s[] = {
 	"disable",
 	"minimal",
 	"maximum",
 	"ttl",
 };
-#endif /* !defined(KERNEL) && !defined(__KERNEL__) */
+#endif /* !defined(KERNEL) && !defined(__KERNEL__) && !defined(_KERNEL) */
 
 enum SIRENS_PROBE {
 	SIRENS_DUMMY,
@@ -148,7 +148,7 @@ enum SIRENS_PROBE {
 	SIRENS_LOCATION,	/* Geographical location */
 	SIRENS_PMAX = 256,
 };
-#if !defined(KERNEL) && !defined(__KERNEL__)
+#if !defined(KERNEL) && !defined(__KERNEL__) && !defined(_KERNEL)
 static char *sirens_probe_s[] = {
 	"dummy",
 	"link",
@@ -161,7 +161,7 @@ static char *sirens_probe_s[] = {
 	"mtu",
 	"location",
 };
-#endif /* !defined(KERNEL) && !defined(__KERNEL__) */
+#endif /* !defined(KERNEL) && !defined(__KERNEL__) && !defined(_KERNEL) */
 #define		IPSR_VAR_VALID 0x00000001
 #define		IPSR_VAR_INVAL 0x00000000
 /* SIRENS STORAGE */
@@ -198,7 +198,7 @@ struct if_srvarreq {
 #define MAXIPOPTSIRENSLEN IPOPTSIRENSLEN(SIRENSRESLEN)
 #define IPOPTLENTORESLEN(j) ((j - sizeof (struct ipopt_sr)) / sizeof(union u_sr_data) )
 
-#if defined(KERNEL) || defined(__KERNEL__)
+#if defined(KERNEL) || defined(__KERNEL__) || defined(_KERNEL)
 #if defined(__APPLE__)
 caddr_t ip_getsirensoptions __P((struct mbuf *));
 int sr_setparam __P((struct ipopt_sr *, ifnet_t, struct sr_storage *));
