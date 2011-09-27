@@ -1,4 +1,6 @@
 /*
+ * ip_sirens.c - SIRENS/i-Path cross-layer module.
+ *
  * Copyright (c) 2010
  * National Institute of Advanced Industrial Science and Technology (AIST).
  * All rights reserved.
