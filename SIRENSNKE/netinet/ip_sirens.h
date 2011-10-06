@@ -1,8 +1,9 @@
 /*
- * Copyright (c) 2009, 2010
- * National Institute of Advanced Industrial Science and Technology (AIST).
- * All rights reserved.
- *
+ * Copyright (c) 2009, 2010 National Institute of Advanced Industrial
+ * Science and Technology (AIST).
+ * Copyright (c) 2011 RIKEN.
+ * 
+ * All rights reserved. *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
