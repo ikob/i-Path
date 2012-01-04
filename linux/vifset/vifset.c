@@ -189,14 +189,14 @@ int qtbl_init(char *file, struct qtbl_t *qtbl)
 
 /* checking actual i/f or not */
 		bzero(&ifsrr, sizeof(struct if_srvarreq));
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__APPLE__)
 		strncpy(ifsrr.ifr_name, qtbl[nif].ifname, IFNAMSIZ);
 		if(ioctl(fd, SIOCGSRVAR, &ifsrr) < 0){
 			printf("failed in %s\n", qtbl[nif].ifname);
 			continue;
 		};
-#endif /* defined(__FreeBSD__) || defined(__APPLE__) */
-#if defined(__linux__)
+#endif /* defined(__APPLE__) */
+#if defined(__linux__) || defined(__FreeBSD__)
 		strncpy(ifsrr.ifrname, qtbl[nif].ifname, IFNAMSIZ);
 	{
 		socklen_t slen = sizeof(ifsrr);
@@ -206,7 +206,7 @@ int qtbl_init(char *file, struct qtbl_t *qtbl)
 			continue;
 		};
 	}
-#endif /* defined(__linux__) */
+#endif /* defined(__linux__) || defined (__FreeBSD__)*/
 		if(qtbl_if_set(tcfsp, &(qtbl[nif]), gsnmpoid, glocation) == 0)
 			continue;
 		nif++;
@@ -357,10 +357,10 @@ int vid_if_static(struct qtbl_e *qe, char *ifname, int sindex)
 {
 	struct if_srvarreq ifsrr;
 	bzero(&ifsrr, sizeof(struct if_srvarreq));
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__APPLE__)
 	strncpy(ifsrr.ifr_name, ifname, IFNAMSIZ);
 #endif
-#if defined(__linux__)
+#if defined(__linux__) || defined(__FreeBSD__)
 	strncpy(ifsrr.ifrname, ifname, IFNAMSIZ);
 #endif
 	ifsrr.sr_probe = sindex; 
@@ -368,40 +368,40 @@ int vid_if_static(struct qtbl_e *qe, char *ifname, int sindex)
 	ifsrr.sr_var.data = qe->data.val;
 	if(vifsetdebug)
 		printf("request in : P:%d V:%d D:%d\n", ifsrr.sr_probe, ifsrr.sr_var.flag, ifsrr.sr_var.data);
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__APPLE__)
 	if(ioctl(fd, SIOCSSRVAR, &ifsrr) < 0){
 		printf("failed in %s\n", ifname);
 	}
-#endif /* defined(__FreeBSD__) || defined(__APPLE__) */
-#if defined(__linux__)
+#endif /* defined(__APPLE__) */
+#if defined(__linux__) || defined(__FreeBSD__)
 {
-	socklen_t slen = sizeof(ifsrr);
+	socklen_t slen = sizeof(struct if_srvarreq);
 	if(setsockopt(fd, IPPROTO_IP, IPSIRENS_SRVAR, &ifsrr, slen) < 0){
 		printf("failed in %s\n", ifname);
 	}
 }
-#endif /* defined(__linux__) */
+#endif /* defined(__linux__) || defined(_FreeBSD__) */
 	bzero(&ifsrr, sizeof(struct if_srvarreq));
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__APPLE__)
 	strncpy(ifsrr.ifr_name, ifname, IFNAMSIZ);
 #endif
-#if defined(__linux__)
+#if defined(__linux__) || defined(__FreeBSD__)
 	strncpy(ifsrr.ifrname, ifname, IFNAMSIZ);
 #endif
 	ifsrr.sr_probe = sindex;
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__APPLE__)
 	if(ioctl(fd, SIOCGSRVAR, &ifsrr) < 0){
 		printf("failed in %s\n", ifname);
 	}
-#endif /* defined(__FreeBSD__) || defined(__APPLE__) */
-#if defined(__linux__)
+#endif /* defined(__APPLE__) */
+#if defined(__linux__)  || defined(__FreeBSD__)
 {
 	socklen_t slen = sizeof(ifsrr);
 	if(getsockopt(fd, IPPROTO_IP, IPSIRENS_SRVAR, &ifsrr, &slen) < 0){
 		printf("failed in %s\n", ifname);
 	}
 }
-#endif /* defined(__linux__) */
+#endif /* defined(__linux__)  || defined(__FreeBSD__) */
 	if(vifsetdebug)
 		printf("result in : P:%d V:%d D:%d\n", ifsrr.sr_probe, ifsrr.sr_var.flag, ifsrr.sr_var.data);
 	return 0;
@@ -435,10 +435,10 @@ int vid_if_snmpoid(struct qtbl_e *qe, char *ifname, int sindex)
 	if(vifsetdebug)
 		printf("SNMP val = %08x\n", val);
 	bzero(&ifsrr, sizeof(struct if_srvarreq));
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__APPLE__)
 	strncpy(ifsrr.ifr_name, ifname, IFNAMSIZ);
 #endif
-#if defined(__linux__)
+#if defined(__linux__) || defined(__FreeBSD__)
 	strncpy(ifsrr.ifrname, ifname, IFNAMSIZ);
 #endif
 	ifsrr.sr_probe = sindex; 
@@ -446,40 +446,40 @@ int vid_if_snmpoid(struct qtbl_e *qe, char *ifname, int sindex)
 	ifsrr.sr_var.data = val;
 	if(vifsetdebug)
 		printf("request in : P:%d V:%d D:%d\n", ifsrr.sr_probe, ifsrr.sr_var.flag, ifsrr.sr_var.data);
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__APPLE__)
 	if(ioctl(fd, SIOCSSRVAR, &ifsrr) < 0){
 		printf("failed in %s\n", ifname);
 	}
-#endif /* defined(__FreeBSD__) || defined(__APPLE__) */
-#if defined(__linux__)
+#endif /* defined(__APPLE__) */
+#if defined(__linux__) || defined(__FreeBSD__)
 {
 	socklen_t slen = sizeof(ifsrr);
 	if(setsockopt(fd, IPPROTO_IP, IPSIRENS_SRVAR, &ifsrr, slen) < 0){
 		printf("failed in %s\n", ifname);
 	}
 }
-#endif /* defined(__linux__) */
+#endif /* defined(__linux__) || defined(__FreeBSD__) */
 	bzero(&ifsrr, sizeof(struct if_srvarreq));
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__APPLE__)
 	strncpy(ifsrr.ifr_name, ifname, IFNAMSIZ);
 #endif
-#if defined(__linux__)
+#if defined(__linux__) || defined(__FreeBSD__)
 	strncpy(ifsrr.ifrname, ifname, IFNAMSIZ);
 #endif
 	ifsrr.sr_probe = sindex;
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__APPLE__)
 	if(ioctl(fd, SIOCGSRVAR, &ifsrr) < 0){
 		printf("failed in %s\n", ifname);
 	}
-#endif /* defined(__FreeBSD__) || defined(__APPLE__) */
-#if defined(__linux__)
+#endif /* defined(__APPLE__) */
+#if defined(__linux__) || defined(__FreeBSD__)
 {
 	socklen_t slen = sizeof(ifsrr);
 	if(getsockopt(fd, IPPROTO_IP, IPSIRENS_SRVAR, &ifsrr, &slen) < 0){
 		printf("failed in %s\n", ifname);
 	}
 }
-#endif /* defined(__linux__) */
+#endif /* defined(__linux__) || defined(__FreeBSD__) */
 	if(vifsetdebug)
 		printf("result in : P:%d V:%d D:%d\n", ifsrr.sr_probe, ifsrr.sr_var.flag, ifsrr.sr_var.data);
 	snmp_close(sp);
