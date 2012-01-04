@@ -162,8 +162,8 @@ static char *sirens_probe_s[] = {
 	"location",
 };
 #endif /* !defined(KERNEL) && !defined(__KERNEL__) && !defined(_KERNEL) */
-#define		IPSR_VAR_VALID 0x00000001
-#define		IPSR_VAR_INVAL 0x00000000
+#define		IPSR_VAR_VALID 1
+#define		IPSR_VAR_INVAL 0
 /* SIRENS STORAGE */
 struct sr_var{
 	uint32_t flag;
@@ -177,9 +177,9 @@ struct if_srvarreq {
 #if defined(__linux__)
 	char    ifrname[IFNAMSIZ];		/* if name, e.g. "en0" */
 #else
-	char    ifr_name[IFNAMSIZ];		/* if name, e.g. "en0" */
+	char    ifrname[IFNAMSIZ];		/* if name, e.g. "en0" */
 #endif
-	int	sr_probe;
+	uint32_t sr_probe;
 	struct sr_var sr_var;
 };
 #else /* !WIN32 */
@@ -226,9 +226,7 @@ struct ipopt_sr	*ip_sirens_dooptions(struct mbuf *);
 /* (sg)etsockopt for SIRENS data storage access */
 #define IPSIRENS_STDATA		93
 #define IPSIRENS_STDATAX	94
-#if defined(__linux__)
 #define IPSIRENS_SRVAR		95
-#endif /* defined(__linux__) */
 #define IPSIRENS_SDATAX		96
 #define IPSIRENS_IDX		97
 #define IPSIRENS_SDATA		98

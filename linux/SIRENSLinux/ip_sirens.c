@@ -4,6 +4,9 @@
  * Copyright (c) 2010 National Institute of Advanced Industrial Science
  * and Technology (AIST).
  *
+ * Copyright (c) 2011, 2021 RIKEN, Advanced Institute for Computational
+ * Science (AICS).
+ *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
  * Software Foundation; either version 2 of the License, or (at your option)
@@ -19,6 +22,7 @@
  * Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
+#if defined(__linux__)
 #include <linux/module.h>
 #include <linux/version.h>
 #include <linux/netdevice.h>
@@ -36,6 +40,36 @@
 #include <net/net_namespace.h>		/* init_net */
 #include <net/inet_hashtables.h>
 #include <net/transp_v6.h>		/* LOOPBACK4_IPV6 */
+#endif /* defined(__linux__) */
+
+#if defined(__FreeBSD__)
+#include <sys/param.h>
+#include <sys/module.h>
+#include <sys/kernel.h>
+#include <sys/lock.h>
+#include <sys/mutex.h>
+#include <sys/systm.h>
+#include <sys/queue.h>
+#include <sys/protosw.h>
+#include <sys/socket.h>
+#include <sys/socketvar.h>
+#include <sys/sockopt.h>
+#include <sys/mbuf.h>
+#include <sys/sysctl.h>
+
+#include <net/if.h>
+#include <net/pfil.h>
+
+#include <netinet/in.h>
+#include <netinet/in_pcb.h>
+#include <netinet/ip.h>
+#include <netinet/ip_var.h>
+#include <netinet/ip_options.h>
+#include <netinet/tcp_var.h>
+#include <netinet/tcp_fsm.h>
+#include <netinet/udp.h>
+#include <netinet/udp_var.h>
+#endif /* defined(__FreeBSD__) */
 
 #include "ip_sirens.h"
 
@@ -55,7 +89,15 @@
 #define IPSIRENS_MAX_ICMP	50
 #endif
 
+#if defined(__linux__)
+#define DPRINT(x...) printk(KERN_DEBUG x )
+#define SOCKETP struct sock*
+#elif defined(__FreeBSD__)
+#define DPRINT(x...) printf(x)
+#define SOCKETP struct socket*
+#endif /* defined(__linux__), elif defined(__FreeBSD__) */
 
+#if defined(__linux__)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,31)
 #include <linux/ethtool.h>
 static inline int dev_ethtool_get_settings(struct net_device *dev,
@@ -66,20 +108,37 @@ static inline int dev_ethtool_get_settings(struct net_device *dev,
 	return dev->ethtool_ops->get_settings(dev, cmd);
 }
 #endif /* LINUX_VERSION_CODE < KERNEL_VERSION(2,6,31) */
-
+#endif /* defined(__linux__) */
 
 struct SRIFEntry {
+#if defined(__linux__)
 	struct list_head list;
 	struct net_device *dev;		/* pointer to the interface */
 
 	struct list_head icmp;		/* pushed ICMP echo request */
+#elif defined(__FreeBSD__)
+	LIST_ENTRY(SRIFEntry)  list;
+	struct ifnet       *ifp;
+#endif /* defined(__linux__) defined(__FreeBSD__) */
 	struct sr_storage storage;	/* external data of the interface */
 };
 
 struct SRSFEntry {
+#if defined(__linux__)
 	struct list_head list;
 	struct sock *sk;			/* pointer to the socket */
 	void (*sk_destruct)(struct sock *);	/* socket destructor hook */
+#elif defined(__FreeBSD__) || defined(__APPLE__)
+        LIST_ENTRY(SRSFEntry) list;
+        uint32_t flag;
+#if defined (__APPLE__)
+        socket_t sk;         /* Pointer to owning socket */
+        uint32_t magic;          /* magic value to ensure that system is passing me my buffer */
+#elif defined(__FreeBSD__)
+        SOCKETP sk;
+/*        struct socket *sk;        */ /* Pointer to owning socket */
+#endif /* defined(__FreeBSD__) defined(__APPLE__) */
+#endif /* defined(__linux__) defined(__FreeBSD__) defined(__APPLE__) */
 
 	u_char sr_qnext;		/* next candidate of req */
 	u_char sr_snext;		/* next candidate of res */
@@ -100,6 +159,7 @@ struct SRSFEntry {
 	} inp_sr[IPSIRENS_IREQMAX];		/* probe information */
 };
 
+#if defined(__linux__)
 struct ICMPEntry {
 	struct list_head list;
 
@@ -107,11 +167,22 @@ struct ICMPEntry {
 	int reslen;
 	char buf[IPOPTSIRENSLEN(1)];	/* SIRENS header cache */
 };
+#endif /* defined(__linux__) */
 
 
 /* global lock */
+#if defined(__linux__)
 static DEFINE_SPINLOCK(sr_lock);
+#define LOCK(lp, f) spin_lock_irqsave(lp, f)
+#define UNLOCK(lp, f) spin_unlock_irqrestore(lp, f)
+#elif defined(__FreeBSD__)
+static struct mtx sr_lock;
+#define LOCK(lp, f) flags = 0; mtx_lock_flags(lp, flags)
+#define UNLOCK(lp, f) flags = 0; mtx_unlock_flags(lp, flags)
+#endif /* defined(__linux__) defined(__FreeBSD__) */
 
+/* LISTS */
+#if defined(__linux__)
 /* per network device information */
 LIST_HEAD(sr_iflist);
 
@@ -126,47 +197,92 @@ static int sr_max_icmp = IPSIRENS_MAX_ICMP;
 
 /* ICMP SIRENS res control */
 static int sr_icmp_sirens_res = 1;	/* default enable */
+#elif defined(__FreeBSD__)
+static struct sr_iflist sr_iflist;
+static struct sr_sflist sr_sactive;
+static struct sr_sflist sr_spool;
 
+LIST_HEAD(sr_iflist, SRIFEntry);
+LIST_HEAD(sr_sflist, SRSFEntry);
+static int sr_max_so = IPSIRENS_MAX_SK;
+#endif /* defined(__linux__) defined(__FreeBSD__) */
+
+#if defined(__FreeBSD__)
+#define list_empty(h) LIST_EMPTY(h)
+#define list_first_entry(p, t, field) ((t)LIST_NEXT(p, field))
+#endif /* defined(__FreeBSD__) */
 
 static inline struct SRIFEntry *
+#if defined(__linux__)
 netdev_to_SRIFEntry(struct net_device *ndev)
+#elif defined(__FreeBSD__)
+ifnet_to_SRIFEntry(struct ifnet *ifp)
+#endif /* defined(__linux__) defined(__FreeBSD__) */
 {
-	struct SRIFEntry *srp;
+	struct SRIFEntry *srip;
 
-	list_for_each_entry(srp, &sr_iflist, list) {
-		if (srp->dev == ndev)
-			return srp;
+#if defined (__linux__)
+	list_for_each_entry(srip, &sr_iflist, list) {
+		if (srip->dev == ndev)
+			return srip;
 	}
-
+#elif defined (__FreeBSD__)
+	LIST_FOREACH(srip, &sr_iflist, list){
+		if (srip->ifp == ifp)
+			return srip;
+	}
+#endif /* defined(__linux__), defined(__FreBSD__) */
 	return NULL;
 }
 
 static inline struct SRIFEntry *
 name_to_SRIFEntry(const char *name)
 {
-	struct SRIFEntry *srp;
+	struct SRIFEntry *srip;
 
-	list_for_each_entry(srp, &sr_iflist, list) {
-		if (strncmp(srp->dev->name, name, IFNAMSIZ) == 0)
-			return srp;
+#if defined( __linux__)
+	list_for_each_entry(srip, &sr_iflist, list) {
+		if (strncmp( srip->dev->name, name, IFNAMSIZ) == 0)
+			return srip;
 	}
-
+#elif defined (__FreeBSD__)
+	LIST_FOREACH(srip, &sr_iflist, list){
+		if (strncmp( if_name(srip->ifp), name, IFNAMSIZ) == 0)
+			return srip;
+	}
+	
+#endif /* defined(__linux__) defined(__FreBSD__) */
 	return NULL;
 }
 
 static inline struct SRSFEntry *
-sock_to_SRSFEntry(struct sock *sk)
+sock_to_SRSFEntry(
+#if defined (__linux__)
+    struct sock *sk
+#elif defined (__APPLE__)
+    socket_t    sk
+#elif defined (__FreeBSD__)
+    struct socket *so
+#endif
+)
 {
 	struct SRSFEntry *srp;
 
+#if defined( __linux__)
 	list_for_each_entry(srp, &sr_sactive, list) {
 		if (srp->sk == sk)
 			return srp;
 	}
-
+#elif defined (__FreeBSD__)
+	LIST_FOREACH(srp, &sr_sactive, list){
+		if (srp->sk == so)
+			return srp;
+	}
+#endif /* defined(__linux__) defined(__FreBSD__) */
 	return NULL;
 }
 
+#if defined (__linux__)
 static inline struct ICMPEntry *
 addr_to_ICMPEntry(struct SRIFEntry *srp, uint32_t addr)
 {
@@ -179,8 +295,11 @@ addr_to_ICMPEntry(struct SRIFEntry *srp, uint32_t addr)
 
 	return NULL;
 }
+#elif defined (__FreeBSD__)
+/* XXX: ICMP reply action shoule be implemented with packet tag ? */
+#endif
 
-
+#if defined (__linux__)
 void
 sr_sk_destruct_hook(struct sock *sk)
 {
@@ -212,15 +331,27 @@ sr_sk_destruct_hook(struct sock *sk)
 	if (sk->sk_destruct && sk->sk_destruct != &sr_sk_destruct_hook)
 		(sk->sk_destruct)(sk);
 }
+#endif /* __linux__ */
 
 static struct ipopt_sr *
-sr_find_sirens(struct sk_buff *skb)
+sr_find_sirens(
+#if defined(__linux__)
+	struct sk_buff *skb
+#elif defined(__FreeBSD__)
+	struct mbuf *m
+#endif /* defined(__linux__) defined(__FreeBSD__) */
+	)
 {
+#if defined(__linux__)
 	struct iphdr *iph = ip_hdr(skb);
+#elif defined(__FreeBSD__)
+	struct ip *iph = mtod(m, struct ip *);
+#endif /* __linux__, __FreeBSD__ */
 	struct ipopt_sr *opt_sr;
 	u_char *cp;
 	int opt, optlen, cnt, code;
 
+#if defined(__linux__)
 	if (! pskb_may_pull(skb, ip_hdrlen(skb))) {
 #ifdef SR_DEBUG
 		printk(KERN_DEBUG "%s: pskb_may_pull() failed\n",
@@ -228,14 +359,27 @@ sr_find_sirens(struct sk_buff *skb)
 #endif /* SR_DEBUG */
 		return NULL;
 	}
+#endif /* defined(__linux__) */
 
 	cp = (u_char *)(iph + 1);
+#if defined(__linux__)
 	cnt = (iph->ihl << 2) - sizeof (struct iphdr);
+#elif defined(__FreeBSD__)
+	cnt = (iph->ip_hl << 2) - sizeof (struct ip);
+#endif /* defined(__linux__) defined(__FreeBSD__) */
 	for (; cnt > 0; cnt -= optlen, cp += optlen) {
 		opt = cp[IPOPT_OPTVAL];
+#if defined(__linux__)
 		if (opt == IPOPT_END)
+#elif defined(__FreeBSD__)
+		if (opt == IPOPT_EOL)
+#endif /* defined(__linux__) defined(__FreeBSD__) */
 			break;
+#if defined(__linux__)
 		if (opt == IPOPT_NOOP)
+#elif defined(__FreeBSD__)
+		if (opt == IPOPT_NOP)
+#endif /* defined(__linux__) defined(__FreeBSD__) */
 			optlen = 1;
 		else {
 			if (cnt < IPOPT_OLEN + sizeof(*cp)) {
@@ -279,6 +423,7 @@ sr_find_sirens(struct sk_buff *skb)
 	return NULL;
 }
 
+#if defined(__linux__)
 static struct ipopt_sr *
 sr_insert_sirens(struct sk_buff *skb, u_char reslen)
 {
@@ -446,36 +591,54 @@ sr_pop_sirens(struct iphdr *iph, struct sk_buff *skb, struct net_device *ndev)
 
 	return opt_sr;
 }
-
+#endif /* defined(__linux__) */
 static void
-sr_update_reqdata(struct ipopt_sr *opt_sr, struct net_device *ndev)
+sr_update_reqdata(struct ipopt_sr *opt_sr,
+#if defined (__linux__)
+	struct net_device *ndev
+#elif defined (__FreeBSD__)
+	struct ifnet *ifp
+#endif /* defined(__linux__) defined(__FreeBSD__) */
+)
 {
 	uint32_t data = ~0;
-	struct SRIFEntry *srp;
+	struct SRIFEntry *srip;
 	struct sr_var *srvar;
+#if defined(__linux__)
 	struct ethtool_cmd ethcmd;
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,36)
 	const struct net_device_stats *stats;
 #else
 	struct rtnl_link_stats64 *stats;
 	struct rtnl_link_stats64 temp;
-#endif
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(2,6,36) */
+#elif defined (__FreeBSD__)
+#endif /* defined(__linux__) defined(__FreeBSD__) */
 	uint32_t flag;
 	unsigned long flags;
 
 	/* getting interface information */
+#if defined(__linux__)
 	if (ndev == NULL)
 		goto update;
+#elif defined (__FreeBSD__)
+	if (ifp == NULL)
+		goto update;
+#endif /* defined(__linux__) defined(__FreeBSD__) */
 
-	srp = netdev_to_SRIFEntry(ndev);
-	if (srp) {
-		spin_lock_irqsave(&sr_lock, flags);
+#if defined(__linux__)
+	srip = netdev_to_SRIFEntry(ndev);
+#elif defined (__FreeBSD__)
+	srip = ifnet_to_SRIFEntry(ifp);
+#endif /* defined(__linux__) defined(__FreeBSD__) */
+	if (srip) {
+		LOCK(&sr_lock, flags);
 
-		srvar = &(srp->storage.array[opt_sr->req_probe]);
+		srvar = &(srip->storage.array[opt_sr->req_probe]);
 		flag = srvar->flag;
 		data = (uint32_t) srvar->data;
 
-		spin_unlock_irqrestore(&sr_lock, flags);
+		UNLOCK(&sr_lock, flags);
 
 		if (flag == IPSR_VAR_VALID) {
 			/*
@@ -496,12 +659,18 @@ sr_update_reqdata(struct ipopt_sr *opt_sr, struct net_device *ndev)
 			data = ~0;
 		}
 	}
+#if defined(__linux__)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,36)
 	stats = dev_get_stats(ndev);
 #else
 	stats = dev_get_stats(ndev, &temp);
 #endif
+#endif /* defined(__linux__) */
+#if defined(__FreeBSD__)
+	IF_AFDATA_LOCK(ifp);
+#endif
 	switch (opt_sr->req_probe & ~SIRENS_DIR_IN) {
+#if defined(__linux__)
 	case SIRENS_LINK:
 		if (dev_ethtool_get_settings(ndev, &ethcmd) < 0) {
 			printk("%s: dev_ethtool_get_settings failed: "
@@ -528,11 +697,40 @@ sr_update_reqdata(struct ipopt_sr *opt_sr, struct net_device *ndev)
 		break;
 	case SIRENS_QMAX:	/* fall down */
 	case SIRENS_QLEN:	/* fall down */
+#elif defined(__FreeBSD__)
+	case SIRENS_LINK:
+		data = (uint32_t)(ifp->if_baudrate / 1000000);
+		break;
+	case SIRENS_OBYTES:
+		data = (uint32_t)ifp->if_obytes;
+		break;
+	case SIRENS_IBYTES:
+		data = (uint32_t)ifp->if_ibytes;
+		break;
+	case SIRENS_DROPS:
+		data = (uint32_t)ifp->if_snd.ifq_drops;
+		break;
+	case SIRENS_ERRORS:
+		data = (uint32_t)ifp->if_oerrors;
+		break;
+	case SIRENS_MTU:
+		data = (uint32_t) ifp->if_mtu;
+		break;
+	case SIRENS_QMAX:
+		data = (uint32_t) ifp->if_snd.ifq_maxlen;
+		break;
+	case SIRENS_QLEN:
+		data = (uint32_t) ifp->if_snd.ifq_len;
+		break;
+#endif /* defined(__linux__) defined(__FreeBSD__) */
 	default:
 		break;
 	}
+#if defined(__FreeBSD__)
+	IF_AFDATA_UNLOCK(ifp);
+#endif
 #ifdef SR_DEBUG
-	printk(KERN_DEBUG "%s: internal data: dev=[%.*s] probe=0x%x data=%u "
+	DPRINT("%s: internal data: dev=[%.*s] probe=0x%x data=%u "
 		"ttl=%d\n", __FUNCTION__, IFNAMSIZ, ndev->name,
 		opt_sr->req_probe, data, opt_sr->req_ttl);
 #endif /* SR_DEBUG */
@@ -571,21 +769,25 @@ static void
 sr_gather_data(struct ipopt_sr *opt_sr, struct SRSFEntry *srp)
 {
 	struct sr_hopdata *hopdata;
-	struct sr_info *inp;
+	struct sr_info *sr_info;
 	union u_sr_data *resdata = (union u_sr_data *)(opt_sr + 1);
 	u_int reslen = IPOPTLENTORESLEN(opt_sr->len);
 	struct timeval now;
 	int i, j;
 
+#if defined(__linux__)
 	do_gettimeofday(&now);
+#elif defined (__FreeBSD__)
+	microtime(&now);
+#endif /* defined(__linux__) defined(__FreeBSD__) */
 
 	for (i = 0; i < srp->sr_nmax; i++) {
-		inp = &(srp->inp_sr[i]);
-		if (inp->mode != opt_sr->req_mode ||
-				inp->probe != opt_sr->req_probe)
+		sr_info = &(srp->inp_sr[i]);
+		if (sr_info->mode != opt_sr->req_mode ||
+				sr_info->probe != opt_sr->req_probe)
 			continue;
 
-		hopdata = &(inp->sr_qdata[opt_sr->req_ttl]);
+		hopdata = &(sr_info->sr_qdata[opt_sr->req_ttl]);
 		hopdata->tv.tv_sec = now.tv_sec;
 		hopdata->tv.tv_usec = now.tv_usec;
 		hopdata->val = opt_sr->req_data;
@@ -603,16 +805,16 @@ sr_gather_data(struct ipopt_sr *opt_sr, struct SRSFEntry *srp)
 		return;
 
 	for (j = 0; j < srp->sr_nmax; j++) {
-		inp = &(srp->inp_sr[j]);
-		if (inp->mode != opt_sr->res_mode ||
-				inp->probe != opt_sr->res_probe)
+		sr_info = &(srp->inp_sr[j]);
+		if (sr_info->mode != opt_sr->res_mode ||
+				sr_info->probe != opt_sr->res_probe)
 			continue;
 
 		for (i = 0; i < reslen; i++) {
 			if (opt_sr->res_ttl + i > IPSIRENS_HOPMAX)
 				break;
 
-			hopdata = &(inp->sr_sdata[opt_sr->res_ttl + i]);
+			hopdata = &(sr_info->sr_sdata[opt_sr->res_ttl + i]);
 			hopdata->tv.tv_sec = now.tv_sec;
 			hopdata->tv.tv_usec = now.tv_usec;
 			hopdata->val = resdata[i];
@@ -620,8 +822,8 @@ sr_gather_data(struct ipopt_sr *opt_sr, struct SRSFEntry *srp)
 			if (hopdata->val.set == -1)
 				continue;
 			printk(KERN_DEBUG "%s: sdata: mode=%d probe=0x%x "
-				"ttl=%d val=%u\n", __FUNCTION__, inp->mode,
-				inp->probe, opt_sr->res_ttl+i,
+				"ttl=%d val=%u\n", __FUNCTION__, sr_info->mode,
+				sr_info->probe, opt_sr->res_ttl+i,
 				ntohl(hopdata->val.set));
 #endif /* SR_DEBUG */
 		}
@@ -689,7 +891,11 @@ sr_update_resdata(struct ipopt_sr *opt_sr, struct SRSFEntry *srp)
 	opt_sr->res_probe = inp->probe;
 	opt_sr->res_ttl = sttl;
 
+#if defined(__linux__)
 	do_gettimeofday(&now);
+#elif defined (__FreeBSD__)
+	microtime(&now);
+#endif /* defined(__linux__) defined(__FreeBSD__) */
 	expire.tv_sec = now.tv_sec - IPSIRENS_TIMEOUT;
 	expire.tv_usec = now.tv_usec;
 
@@ -710,24 +916,38 @@ sr_update_resdata(struct ipopt_sr *opt_sr, struct SRSFEntry *srp)
 }
 
 static int
-sr_setsockopt_srvar(struct sock *sk, void __user *user, unsigned int len)
-{
+sr_setsockopt_srvar(
+#if defined(__linux__)
+	struct sock *sk, void __user *user, unsigned int len
+#elif defined(__FreeBSD__)
+	struct socket *so, struct sockopt *sopt
+#endif /* defined(__linux__) desined(__FreeBSD__) */
+	) {
 	struct if_srvarreq srreq;
 	struct SRIFEntry *srp;
 	struct sr_var *srvar;
 	int idx, error;
 	unsigned long flags;
+#if defined(__FreeBSD__)
+	int len = sopt->sopt_valsize;
+#endif
 
 	if (len != sizeof(srreq))
 		return -EINVAL;
+#if defined(__linux__)
 	if (copy_from_user(&srreq, user, (unsigned long)len))
 		return -EFAULT;
+#elif defined(__FreeBSD__)
+	error = sooptcopyin(sopt, &srreq, len, len);
+	if(error)
+		return error;
+#endif /* __linux__, __FreeBSD__ */
 
 	srp = name_to_SRIFEntry(srreq.ifrname);
 	if (srp == NULL)
 		return -EINVAL;
 
-	spin_lock_irqsave(&sr_lock, flags);
+	LOCK(&sr_lock, flags);
 
 	idx = srreq.sr_probe & 0xFF;
 	srvar = &(srp->storage.array[idx]);
@@ -739,7 +959,7 @@ sr_setsockopt_srvar(struct sock *sk, void __user *user, unsigned int len)
 		srvar->data = srreq.sr_var.data;
 		srvar->flag = IPSR_VAR_VALID;
 #ifdef SR_DEBUG
-		printk(KERN_DEBUG "%s: dev=[%s] array_idx=%d (probe=0x%x) "
+		DPRINT("%s: dev=[%s] arrayidx=%d (probe=0x%x) "
 			"flag=%u data=%u\n", __FUNCTION__, srp->dev->name,
 			idx, idx, srvar->flag, srvar->data);
 #endif /* SR_DEBUG */
@@ -756,27 +976,46 @@ sr_setsockopt_srvar(struct sock *sk, void __user *user, unsigned int len)
 		break;
 	}
 
-	spin_unlock_irqrestore(&sr_lock, flags);
+	UNLOCK(&sr_lock, flags);
 
 	return error;
 }
 
 static int
-sr_setsockopt_sdatax(struct sock *sk, void __user *user, unsigned int len)
+sr_setsockopt_sdatax(
+#if defined(__linux__)
+	struct sock *sk, void __user *user, unsigned int len
+#elif defined(__FreeBSD__)
+	struct socket *so, struct sockopt *sopt
+#endif /* defined(__linux__) desined(__FreeBSD__) */
+)
 {
 	struct SRSFEntry *srp;
 	struct sr_dreq dreq;
 	int error;
 	unsigned long flags;
+#if defined(__FreeBSD__)
+	int len = sopt->sopt_valsize;
+#endif
 
 	if (IPSIRENS_DREQSIZE(0) != len)
 		return -EINVAL;
+#if defined(__linux__)
 	if (copy_from_user(&dreq, user, (unsigned long)len))
 		return -EFAULT;
+#elif defined(__FreeBSD__)
+	error = sooptcopyin(sopt, &dreq, len, len);
+	if(error)
+		return error;
+#endif /* __linux__, __FreeBSD__ */
 
-	spin_lock_irqsave(&sr_lock, flags);
+	LOCK(&sr_lock, flags);
 
+#if defined(__linux__)
 	srp = sock_to_SRSFEntry(sk);
+#elif defined(__FreeBSD__)
+	srp = sock_to_SRSFEntry(so);
+#endif
 	if (srp == NULL || srp->sr_nmax == 0)
 		error = -EINVAL;
 	else {
@@ -788,11 +1027,12 @@ sr_setsockopt_sdatax(struct sock *sk, void __user *user, unsigned int len)
 		error = 0;
 	}
 
-	spin_unlock_irqrestore(&sr_lock, flags);
+	UNLOCK(&sr_lock, flags);
 
 	return error;
 }
 
+#if defined(__linux__)
 /*
  * this function is deliverd from Linux kernel source.
  * see: net/ipv4/ip_sockglue.c:do_ip_setsockopt()
@@ -827,29 +1067,51 @@ sr_set_ipoption(struct sock *sk, struct ip_options *opt)
 	opt = xchg(&inet->opt, opt);
 	kfree(opt);
 }
-
+#endif /* defined(__linux__) */
 static int
-sr_setsockopt_idx(struct sock *sk, void __user *user, unsigned int len)
+sr_setsockopt_idx(
+#if defined(__linux__)
+struct sock *sk, void __user *user, unsigned int len
+#elif defined(__FreeBSD__)
+struct socket *so, struct sockopt *sopt
+#endif /* defined(__linux__), defined(__FreeBSD__) */
+)
 {
 	struct SRSFEntry *srp;
 	struct sr_ireq *srireq;
 	struct srreq_index *sri;
-	struct sr_info *inp;
-	struct ip_options *opt;
+	struct sr_info *sr_info;
 	struct ipopt_sr *opt_sr;
 	int i, optlen, alloc, error;
 	unsigned long flags;
+#if defined(__linux__)
+	struct ip_options *opt;
+#elif defined(__FreeBSD__)
+	struct  inpcb *inp = sotoinpcb(so);
+	struct mbuf *m;
+	int len = sopt->sopt_valsize;
+#endif
 
 	if (len > IPSIRENS_IREQSIZE(IPSIRENS_IREQMAX))
 		return -EINVAL;
-	
+
+#if defined(__linux__)
 	srireq = kmalloc(len, GFP_KERNEL);
+#elif defined(__FreeBSD__)
+	srireq = malloc(sizeof(struct sr_ireq), M_TEMP,M_NOWAIT);
+#endif
 	if (srireq == NULL)
 		return -ENOMEM;
 
+#if defined(__linux__)
 	error = copy_from_user(srireq, user, (unsigned long)len);
 	if (error)
 		goto end;
+#elif defined(__FreeBSD__)
+	error = sooptcopyin(sopt, srireq, len, len);
+	if(error)
+		goto end;
+#endif /* __linux__, __FreeBSD__ */
 
 	if (len != IPSIRENS_IREQSIZE(srireq->sr_nindex) ||
 			srireq->sr_nindex > IPSIRENS_IREQMAX || 
@@ -868,7 +1130,9 @@ sr_setsockopt_idx(struct sock *sk, void __user *user, unsigned int len)
 	}
 
 	optlen = IPOPTSIRENSLEN(srireq->sr_smax);
+#if defined(__linux__)
 	opt = kzalloc(sizeof(struct ip_options) + optlen, GFP_ATOMIC);
+
 	if (opt == NULL) {
 		error = -ENOMEM;
 		goto end;
@@ -876,13 +1140,29 @@ sr_setsockopt_idx(struct sock *sk, void __user *user, unsigned int len)
 
 	opt->optlen = optlen;
 	opt_sr = (struct ipopt_sr *) opt->__data;
+#elif defined(__FreeBSD__)
+	if(IPOPTSIRENSLEN(srireq->sr_smax) > MLEN){
+		return(EINVAL);
+        }
+        MGET(m, sopt->sopt_td ? M_TRYWAIT : M_DONTWAIT, MT_DATA);
+
+	if(m == NULL){
+		return(ENOMEM);
+	}
+	m->m_len = IPOPTSIRENSLEN(srireq->sr_smax);
+	opt_sr = mtod(m, struct ipopt_sr *);
+#endif
 	opt_sr->type = IPOPT_SIRENS;
 	opt_sr->len = optlen;
 
-	spin_lock_irqsave(&sr_lock, flags);
+	LOCK(&sr_lock, flags);
 
 	alloc = 0;
+#if defined(__linux__)
 	srp = sock_to_SRSFEntry(sk);
+#elif defined(__FreeBSD__)
+	srp = sock_to_SRSFEntry(so);
+#endif
 	if (srp == NULL) {
 		if (list_empty(&sr_spool)) {
 #ifdef SR_DEBUG
@@ -890,11 +1170,20 @@ sr_setsockopt_idx(struct sock *sk, void __user *user, unsigned int len)
 				__FUNCTION__);
 #endif /* SR_DEBUG */
 			error = -ENOMEM;
+#if defined(__linux__)
 			kfree(opt);
+#elif defined(__FreeBSD__)
+			m_free(m);
+#endif
 			goto unlock;
 		}
+#if defined(__linux__)
 		srp = list_first_entry(&sr_spool, struct SRSFEntry, list);
 		list_del(&(srp->list));
+#elif defined(__FreeBSD__)
+		srp = LIST_FIRST(&sr_spool);
+		LIST_REMOVE(srp, list);
+#endif
 		alloc = 1;
 	}
 
@@ -905,55 +1194,87 @@ sr_setsockopt_idx(struct sock *sk, void __user *user, unsigned int len)
 	srp->sr_qttl = 0;
 	srp->sr_sttl = 0;
 	for (i = 0; i < srireq->sr_nindex; i++) {
-		inp = &(srp->inp_sr[i]);
-		inp->mode = sri[i].mode;
-		inp->probe = sri[i].probe;
-		inp->qmin_ttl = sri[i].qttl_min;
-		inp->qmax_ttl = sri[i].qttl_max;
-		inp->smin_ttl = sri[i].sttl_min;
-		inp->smax_ttl = sri[i].sttl_max;
+		sr_info = &(srp->inp_sr[i]);
+		sr_info->mode = sri[i].mode;
+		sr_info->probe = sri[i].probe;
+		sr_info->qmin_ttl = sri[i].qttl_min;
+		sr_info->qmax_ttl = sri[i].qttl_max;
+		sr_info->smin_ttl = sri[i].sttl_min;
+		sr_info->smax_ttl = sri[i].sttl_max;
 	}
 
 	if (alloc) {
+#if defined(__linux__)
 		srp->sk = sk;
 		srp->sk_destruct = sk->sk_destruct;
 		sk->sk_destruct = &sr_sk_destruct_hook;
+#elif defined(__FreeBSD__)
+		srp->sk = so;
+#endif
+#if defined(__linux__)
 		list_add(&(srp->list), &sr_sactive);
+#elif defined(__FreeBSD__)
+		LIST_INSERT_HEAD(&sr_sactive, srp, list);
+#endif
 	}
 
 	/*
 	 * set SIRENS header template to socket object.
 	 */
+#if defined(__linux__)
 	sr_set_ipoption(sk, opt);
 	error = 0;
+#elif defined(__FreeBSD__)
+	INP_WLOCK(inp);
+	error = ip_pcbopts(inp, sopt->sopt_name, m);
+        INP_WUNLOCK(inp);
+#endif
 
- unlock:
-	spin_unlock_irqrestore(&sr_lock, flags);
+unlock:
+	UNLOCK(&sr_lock, flags);
 
  end:
+#if defined(__linux__)
 	kfree(srireq);
+#elif defined(__FreeBSD__)
+	free(srireq, M_TEMP);
+#endif
 	return error;
 }
-
 static int
-sr_getsockopt_srvar(struct sock *sk, void __user *user, int *len)
+sr_getsockopt_srvar(
+#if defined(__linux__)
+	struct sock *sk, void __user *user, int *len
+#elif defined(__FreeBSD__)
+	struct socket *so, struct sockopt *sopt
+#endif /* defined(__linux__) defined(__FreeBSD__) */
+)
 {
 	struct SRIFEntry *srp;
 	struct if_srvarreq srreq;
 	struct sr_var *srvar;
 	unsigned long flags;
+#if defined(__FreeBSD__)
+	int *len, solen;
+	len = &solen;
+	solen = sopt->sopt_valsize;
+#endif /* defined(__FreeBSD__) */
 
 	if (*len != sizeof(srreq))
 		return -EINVAL;
-
+#if defined (__linux__)
 	if (copy_from_user(&srreq, user, (unsigned long)*len))
 		return -EFAULT;
+#elif defined (__FreeBSD__)
+	if(sooptcopyin(sopt, &srreq, (unsigned long)*len, (unsigned long)*len))
+		return -EFAULT;
+#endif /* defined(__linux__) defined(__FreeBSD__) */
 
 	srp = name_to_SRIFEntry(srreq.ifrname);
 	if (srp == NULL)
 		return -EINVAL;
 
-	spin_lock_irqsave(&sr_lock, flags);
+	LOCK(&sr_lock, flags);
 
 	/*
 	 * load value from interface storage.
@@ -962,9 +1283,12 @@ sr_getsockopt_srvar(struct sock *sk, void __user *user, int *len)
 	srreq.sr_var.data = srvar->data;
 	srreq.sr_var.flag = srvar->flag;
 
-	spin_unlock_irqrestore(&sr_lock, flags);
-
+	UNLOCK(&sr_lock, flags);
+#if defined (__linux__)
 	return copy_to_user(user, &srreq, (unsigned long)*len);
+#elif defined (__FreeBSD__)
+	return sooptcopyout(sopt, &srreq, (unsigned long)*len);
+#endif /* defined(__linux__) defined(__FreeBSD__) */
 }
 
 static int
@@ -972,27 +1296,30 @@ sr_getsockopt_sdata0(struct SRSFEntry *srp, struct sr_dreq *dreq,
 	union u_sr_data *sr_data)
 {
 	struct sr_hopdata *hopdata;
-	struct sr_info *inp;
+	struct sr_info *sr_info;
 	struct timeval now;
 	struct sr_timeval expire;
 	int i, j;
 
 	for (i = 0; i < srp->sr_nmax; i++) {
-		inp = &(srp->inp_sr[i]);
-		if (inp->mode != dreq->mode || inp->probe != dreq->probe)
+		sr_info = &(srp->inp_sr[i]);
+		if (sr_info->mode != dreq->mode || sr_info->probe != dreq->probe)
 			continue;
-
+#if defined(__linux__)
 		do_gettimeofday(&now);
+#elif defined (__FreeBSD__)
+		microtime(&now);
+#endif /* defined(__linux__) defined(__FreeBSD__) */
 		expire.tv_sec = now.tv_sec - IPSIRENS_TIMEOUT;
 		expire.tv_usec = now.tv_usec;
 
 		switch (dreq->dir) {
 		case 1:
-			hopdata = inp->sr_qdata;	/* use request data */
+			hopdata = sr_info->sr_qdata;	/* use request data */
 			break;
 		case 2:
 		default:
-			hopdata = inp->sr_sdata;	/* use response data */
+			hopdata = sr_info->sr_sdata;	/* use response data */
 			break;
 		}
 		for (j = 0; j < IPSIRENS_HOPNUM; j++) {
@@ -1012,21 +1339,21 @@ sr_getsockopt_stdata0(struct SRSFEntry *srp, struct sr_dreq *dreq,
 	struct sr_hopdata *sr_datat)
 {
 	struct sr_hopdata *hopdata;
-	struct sr_info *inp;
+	struct sr_info *sr_info;
 	int i;
 
 	for (i = 0; i < srp->sr_nmax; i++) {
-		inp = &(srp->inp_sr[i]);
-		if (inp->mode != dreq->mode || inp->probe != dreq->probe)
+		sr_info = &(srp->inp_sr[i]);
+		if (sr_info->mode != dreq->mode || sr_info->probe != dreq->probe)
 			continue;
 
 		switch (dreq->dir) {
 		case 1:
-			hopdata = inp->sr_qdata;	/* use request data */
+			hopdata = sr_info->sr_qdata;	/* use request data */
 			break;
 		case 2:
 		default:
-			hopdata = inp->sr_sdata;	/* use response data */
+			hopdata = sr_info->sr_sdata;	/* use response data */
 			break;
 		}
 		memcpy(sr_datat, hopdata, IPSIRENS_HOPNUM * sizeof(struct sr_hopdata));
@@ -1042,92 +1369,168 @@ sr_getsockopt_stdata0(struct SRSFEntry *srp, struct sr_dreq *dreq,
 }
 
 static int
-sr_getsockopt_stdatax(struct sock *sk, void __user *user, int *len)
+sr_getsockopt_stdatax(
+#if defined(__linux__)
+	struct sock *sk, void __user *user, int *len
+#elif defined (__FreeBSD__)
+	struct socket *so, struct sockopt *sopt
+#endif /* defined(__linux__) defined(__FreeBSD__) */
+)
 {
 	struct SRSFEntry *srp;
 	struct sr_hopdata *hopdata;
 	int error;
 	unsigned long flags;
+#if defined(__FreeBSD__)
+	int *len, lenc = sopt->sopt_valsize;
+	len = &lenc;
+#endif
 
 	if (*len != IPSIRENS_HOPNUM * sizeof (struct sr_hopdata))
 		return -EINVAL;
 
+#if defined(__linux__)
 	hopdata = kmalloc(*len, GFP_KERNEL);
+#elif defined(__FreeBSD__)
+	hopdata = malloc(*len, M_TEMP,M_NOWAIT);
+#endif
 	if (hopdata == NULL)
 		return -ENOMEM;
 
-	spin_lock_irqsave(&sr_lock, flags);
+	LOCK(&sr_lock, flags);
 
+#if defined(__linux__)
 	srp = sock_to_SRSFEntry(sk);
+#elif defined(__FreeBSD__)
+	srp = sock_to_SRSFEntry(so);
+#endif
 	if (srp == NULL)
 		error = -EINVAL;
 	else
 		error = sr_getsockopt_stdata0(srp, &(srp->sr_dreq), hopdata);
 
-	spin_unlock_irqrestore(&sr_lock, flags);
+	UNLOCK(&sr_lock, flags);
 
 	if (error == 0)
+#if defined (__linux__)
 		error = copy_to_user(user, hopdata, (unsigned long)*len);
+#elif defined (__FreeBSD__)
+		error = sooptcopyout(sopt, hopdata, *len);
+#endif /* defined(__linux__) defined(__FreeBSD__) */
 
+#if defined(__linux__)
 	kfree(hopdata);
+#elif defined(__FreeBSD__)
+	free(hopdata, M_TEMP);
+#endif
 	return error;
 }
 
 static int
-sr_getsockopt_sdatax(struct sock *sk, void __user *user, int *len)
+sr_getsockopt_sdatax(
+#if defined(__linux__)
+	struct sock *sk, void __user *user, int *len
+#elif defined (__FreeBSD__)
+	struct socket *so, struct sockopt *sopt
+#endif /* defined(__linux__) defined(__FreeBSD__) */
+)
 {
 	struct SRSFEntry *srp;
 	union u_sr_data *sr_data;
 	int error;
 	unsigned long flags;
+#if defined(__FreeBSD__)
+	int *len, lenc = sopt->sopt_valsize;
+	len = &lenc;
+#endif
 
 	if (*len != IPSIRENS_HOPNUM * sizeof (union u_sr_data))
 		return -EINVAL;
 
+#if defined(__linux__)
 	sr_data = kmalloc(*len, GFP_KERNEL);
+#elif defined(__FreeBSD__)
+	sr_data = malloc(*len, M_TEMP,M_NOWAIT);
+#endif
+
 	if (sr_data == NULL)
 		return -ENOMEM;
 
-	spin_lock_irqsave(&sr_lock, flags);
+	LOCK(&sr_lock, flags);
 
+#if defined(__linux__)
 	srp = sock_to_SRSFEntry(sk);
+#elif defined(__FreeBSD__)
+	srp = sock_to_SRSFEntry(so);
+#endif
+
 	if (srp == NULL)
 		error = -EINVAL;
 	else
 		error = sr_getsockopt_sdata0(srp, &(srp->sr_dreq), sr_data);
 
-	spin_unlock_irqrestore(&sr_lock, flags);
+	UNLOCK(&sr_lock, flags);
 
 	if (error == 0)
+#if defined (__linux__)
 		error = copy_to_user(user, sr_data, (unsigned long)*len);
+#elif defined (__FreeBSD__)
+		error = sooptcopyout(sopt, sr_data, *len);
+#endif /* defined(__linux__) defined(__FreeBSD__) */
 
+#if defined(__linux__)
 	kfree(sr_data);
+#elif defined(__FreeBSD__)
+	free(sr_data, M_TEMP);
+#endif
 	return error;
 }
 
 static int
-sr_getsockopt_stdata(struct sock *sk, void __user *user, int *len)
+sr_getsockopt_stdata(
+#if defined(__linux__)
+	struct sock *sk, void __user *user, int *len
+#elif defined (__FreeBSD__)
+	struct socket *so, struct sockopt *sopt
+#endif /* defined(__linux__) defined(__FreeBSD__) */
+)
 {
 	struct SRSFEntry *srp;
 	struct sr_dreq *dreqp;
 	struct sr_hopdata *hopdata;
 	int error;
 	unsigned long flags;
+#if defined(__FreeBSD__)
+	int *len, lenc = sopt->sopt_valsize;
+	len = &lenc;
+#endif
 
 	if (*len != IPSIRENS_DTREQSIZE(IPSIRENS_HOPNUM))
 		return -EINVAL;
 
+#if defined(__linux__)
 	dreqp = kmalloc(*len, GFP_KERNEL);
+#elif defined(__FreeBSD__)
+	dreqp = malloc(*len, M_TEMP,M_NOWAIT);
+#endif
 	if (dreqp == NULL)
 		return -ENOMEM;
 
+#if defined(__linux__)
 	error = copy_from_user(dreqp, user, (unsigned long)*len);
+#elif defined(__FreeBSD__)
+	error = sooptcopyin(sopt, dreqp, *len, *len);
+#endif /* __linux__, __FreeBSD__ */
 	if (error)
 		goto end;
 
-	spin_lock_irqsave(&sr_lock, flags);
+	LOCK(&sr_lock, flags);
 
+#if defined(__linux__)
 	srp = sock_to_SRSFEntry(sk);
+#elif defined(__FreeBSD__)
+	srp = sock_to_SRSFEntry(so);
+#endif
 	if (srp == NULL) {
 		/*
 		 * this socket seems to be not tracked.
@@ -1144,39 +1547,69 @@ sr_getsockopt_stdata(struct sock *sk, void __user *user, int *len)
 		error = sr_getsockopt_stdata0(srp, dreqp, hopdata);
 	}
 
-	spin_unlock_irqrestore(&sr_lock, flags);
+	UNLOCK(&sr_lock, flags);
 
 	if (error == 0)
+#if defined (__linux__)
 		error = copy_to_user(user, dreqp, (unsigned long)*len);
+#elif defined (__FreeBSD__)
+		error = sooptcopyout(sopt, dreqp, *len);
+#endif /* defined(__linux__) defined(__FreeBSD__) */
 
  end:
+#if defined(__linux__)
 	kfree(dreqp);
+#elif defined(__FreeBSD__)
+	free(dreqp, M_TEMP);
+#endif
 	return error;
 }
 
 static int
-sr_getsockopt_sdata(struct sock *sk, void __user *user, int *len)
+sr_getsockopt_sdata(
+#if defined(__linux__)
+	struct sock *sk, void __user *user, int *len
+#elif defined (__FreeBSD__)
+	struct socket *so, struct sockopt *sopt
+#endif /* defined(__linux__) defined(__FreeBSD__) */
+)
 {
 	struct SRSFEntry *srp;
 	struct sr_dreq *dreqp;
 	union u_sr_data *sr_data;
 	int error;
 	unsigned long flags;
+#if defined(__FreeBSD__)
+	int *len, lenc = sopt->sopt_valsize;
+	len = &lenc;
+#endif
 
 	if (*len != IPSIRENS_DREQSIZE(IPSIRENS_HOPNUM))
 		return -EINVAL;
 
+#if defined(__linux__)
 	dreqp = kmalloc(*len, GFP_KERNEL);
+#elif defined(__FreeBSD__)
+	dreqp = malloc(*len, M_TEMP,M_NOWAIT);
+#endif
 	if (dreqp == NULL)
 		return -ENOMEM;
 
+#if defined(__linux__)
 	error = copy_from_user(dreqp, user, (unsigned long)*len);
+#elif defined(__FreeBSD__)
+	error = sooptcopyin(sopt, dreqp, *len, *len);
+#endif /* __linux__, __FreeBSD__ */
 	if (error)
 		goto end;
 
-	spin_lock_irqsave(&sr_lock, flags);
+	LOCK(&sr_lock, flags);
 
+#if defined(__linux__)
 	srp = sock_to_SRSFEntry(sk);
+#elif defined(__FreeBSD__)
+	srp = sock_to_SRSFEntry(so);
+#endif
 	if (srp == NULL) {
 		/*
 		 * this socket seems to be not tracked.
@@ -1193,16 +1626,25 @@ sr_getsockopt_sdata(struct sock *sk, void __user *user, int *len)
 		error = sr_getsockopt_sdata0(srp, dreqp, sr_data);
 	}
 
-	spin_unlock_irqrestore(&sr_lock, flags);
+	UNLOCK(&sr_lock, flags);
 
 	if (error == 0)
+#if defined (__linux__)
 		error = copy_to_user(user, dreqp, (unsigned long)*len);
+#elif defined (__FreeBSD__)
+		error = sooptcopyout(sopt, dreqp, *len);
+#endif /* defined(__linux__) defined(__FreeBSD__) */
 
  end:
+#if defined(__linux__)
 	kfree(dreqp);
+#elif defined(__FreeBSD__)
+	free(dreqp, M_TEMP);
+#endif
 	return error;
 }
 
+#if defined(__linux__)
 static unsigned int
 ip_sirens_pre_routing(unsigned int hooknum, struct sk_buff *skb,
 		const struct net_device *in, const struct net_device *out,
@@ -1247,40 +1689,81 @@ ip_sirens_pre_routing(unsigned int hooknum, struct sk_buff *skb,
 
 	return NF_ACCEPT;
 }
+#endif /* defined(__linux__) */
+#if defined(__FreeBSD__)
+#define NF_ACCEPT 0
+#endif
 
 static unsigned int
-ip_sirens_local_in(unsigned int hooknum, struct sk_buff *skb,
+ip_sirens_local_in(
+#if defined(__linux__)
+	unsigned int hooknum, struct sk_buff *skb,
 		const struct net_device *in, const struct net_device *out,
-		int (*okfn)(struct sk_buff *))
+		int (*okfn)(struct sk_buff *)
+#elif defined(__FreeBSD__)
+	void *arg, struct mbuf **m, struct ifnet *ifp, int dir, struct inpcb *inp
+#endif
+)
 {
-	struct SRSFEntry *srp, *lsrp;
-	struct sr_info *inp, *linp;
-	struct iphdr *iph = ip_hdr(skb);
+#if defined(__linux__)
+	struct iphdr *iph;
+	struct sock *sk, *lsk;
 	struct ip_options *opt;
+	int i;
+	struct SRSFEntry *lsrp;
+	struct SRSFEntry *srp = NULL;
+	struct sr_info *sr_info, *lsr_info;
+	unsigned long flags;
+#elif defined(__FreeBSD__)
+	struct ip *ip;
+	struct socket *sk, *lsk;
+	struct tcpcb *tp;
+	struct inpcb *sinp;
+#endif
 	struct ipopt_sr *opt_sr;
 	struct tcphdr *th;
-	struct sock *sk, *lsk;
-	int len, i;
-	unsigned long flags;
+	int len;
 
+#if defined(__linux__)
+	iph = ip_hdr(skb);
 	if (ip_hdrlen(skb) == sizeof (struct iphdr))
 		return NF_ACCEPT;
 	if (iph->protocol != IPPROTO_TCP)
 		return NF_ACCEPT;
 
 	opt_sr = sr_find_sirens(skb);
+#elif defined(__FreeBSD__)
+	ip = mtod(*m, struct ip*);
+	if(ip->ip_hl == sizeof(struct ip))
+		return NF_ACCEPT;
+	if (ip->ip_p != IPPROTO_TCP)
+		return NF_ACCEPT;
+
+	opt_sr = sr_find_sirens(*m);
+#endif
 	if (opt_sr == NULL)
 		return NF_ACCEPT;
 
+#if defined(__linux__)
 	len = ip_hdrlen(skb) + sizeof (struct tcphdr);
 	if (! pskb_may_pull(skb, len))
 		return NF_ACCEPT;
+#elif defined(__FreeBSD__)
+	len = ip->ip_hl * 4 + sizeof (struct tcphdr);
+	*m = m_pullup(*m, len);
+	ip = mtod(*m, struct ip*);
+#endif
 
 	sk = lsk = NULL;
 	/*
 	 * lookup socket object from TCP source and destination port.
 	 */
+#if defined(__linux__)
 	th = (struct tcphdr *)(skb_network_header(skb) + ip_hdrlen(skb));
+#elif defined(__FreeBSD__)
+	th = (struct tcphdr *)((caddr_t)ip + ip->ip_hl * 4);
+#endif
+#if defined(__linux__)
 	sk = inet_lookup(dev_net(in), &tcp_hashinfo, iph->saddr,
 			th->source, iph->daddr, th->dest, inet_iif(skb));
 	if (sk == NULL) {
@@ -1291,27 +1774,55 @@ ip_sirens_local_in(unsigned int hooknum, struct sk_buff *skb,
 	}
 	if (sk->sk_state != TCP_ESTABLISHED)
 		goto end;
+#elif defined(__FreeBSD__)
+#if 0
+	{
+		struct inpcbhead *head;
+		register struct inpcb *inp;
+		head = &(&V_tcbinfo)->ipi_hashbase[INP_PCBHASH(ip->ip_src.s_addr, th->th_dport, th->th_sport, (&V_tcbinfo)->ipi_hashmask)];
+		LIST_FOREACH(inp, head, inp_hash) {
+DPRINT("%08x %08x %08x %08x: ", ntohl(ip->ip_src.s_addr), ntohl(ip->ip_dst.s_addr), ntohl(inp->inp_faddr.s_addr), ntohl(inp->inp_laddr.s_addr));
+DPRINT("%d %d %d %d\n", ntohs(th->th_sport), ntohs(th->th_dport), ntohs(inp->inp_fport), ntohs(inp->inp_lport));
+		}
+	}
+#endif
+        sinp = in_pcblookup_hash(&V_tcbinfo,
+                        ip->ip_src, th->th_sport,
+                        ip->ip_dst, th->th_dport,
+                        0,
+                        NULL);
+	if(sinp != NULL){
+		tp = intotcpcb(sinp);
+		sk = sinp->inp_socket;
+	}
+#endif
 
 	/*
 	 * lookup server socket object from TCP destination port.
 	 */
+#if defined(__linux__)
 	local_bh_disable();
 	lsk = inet_lookup_listener(dev_net(in), &tcp_hashinfo, iph->daddr,
 			th->dest, inet_iif(skb));
 	local_bh_enable();
 
-	spin_lock_irqsave(&sr_lock, flags);
+	LOCK(&sr_lock, flags);
+#endif
 
 	/*
 	 * if we have tracking data refer to this connection,
 	 * gather SIRENS data.
 	 */
-	srp = sock_to_SRSFEntry(sk);
-	if (srp) {
-		if (srp->sr_nmax > 0)
-			sr_gather_data(opt_sr, srp);
-		goto unlock;
+	if(sk){
+		srp = sock_to_SRSFEntry(sk);
+		if (srp) {
+			if (srp->sr_nmax > 0)
+				sr_gather_data(opt_sr, srp);
+			goto unlock;
+		}
 	}
+
+#if defined(__linux__)
 	/*
 	 * else this seems to be newly established connection,
 	 * prepare tracking data for this connection.
@@ -1331,6 +1842,8 @@ ip_sirens_local_in(unsigned int hooknum, struct sk_buff *skb,
 
 	len = IPOPTSIRENSLEN(lsrp->sr_smax);
 	opt = kzalloc(sizeof(struct ip_options) + len, GFP_ATOMIC);
+	opt->optlen = len;
+	opt_sr = (struct ipopt_sr *) opt->__data;
 	if (opt == NULL) {
 #ifdef SR_DEBUG
 		printk(KERN_DEBUG "%s: no memory for connected socket\n",
@@ -1339,8 +1852,6 @@ ip_sirens_local_in(unsigned int hooknum, struct sk_buff *skb,
 		goto unlock;
 	}
 
-	opt->optlen = len;
-	opt_sr = (struct ipopt_sr *) opt->__data;
 	opt_sr->type = IPOPT_SIRENS;
 	opt_sr->len = len;
 
@@ -1361,14 +1872,14 @@ ip_sirens_local_in(unsigned int hooknum, struct sk_buff *skb,
 	srp->sr_snext = 0;
 	srp->sr_qttl = 0;
 	for (i = 0 ; i < srp->sr_nmax ; i++) {
-		inp = &(srp->inp_sr[i]);
-		linp = &(lsrp->inp_sr[i]);
-		inp->mode = linp->mode;
-		inp->probe = linp->probe;
-		inp->qmin_ttl = linp->qmin_ttl;
-		inp->qmax_ttl = linp->qmax_ttl;
-		inp->smin_ttl = linp->smin_ttl;
-		inp->smax_ttl = linp->smax_ttl;
+		sr_info = &(srp->inp_sr[i]);
+		lsr_info = &(lsrp->inp_sr[i]);
+		sr_info->mode = lsr_info->mode;
+		sr_info->probe = lsr_info->probe;
+		sr_info->qmin_ttl = lsr_info->qmin_ttl;
+		sr_info->qmax_ttl = lsr_info->qmax_ttl;
+		sr_info->smin_ttl = lsr_info->smin_ttl;
+		sr_info->smax_ttl = lsr_info->smax_ttl;
 	}
 
 	/*
@@ -1388,18 +1899,22 @@ ip_sirens_local_in(unsigned int hooknum, struct sk_buff *skb,
 	 * set SIRENS header template to socket object.
 	 */
 	sr_set_ipoption(sk, opt);
-
+#endif /* defined(__linux__) */
  unlock:
-	spin_unlock_irqrestore(&sr_lock, flags);
+#if defined(__linux__)
+	UNLOCK(&sr_lock, flags);
 	if (lsk)
 		__sock_put(lsk);
+#endif
 
+#if defined(__linux__)
  end:
 	__sock_put(sk);
-
+#endif
 	return NF_ACCEPT;
 }
 
+#if defined(__linux__)
 static unsigned int
 ip_sirens_local_out(unsigned int hooknum, struct sk_buff *skb,
 		const struct net_device *in, const struct net_device *out,
@@ -1501,12 +2016,21 @@ ip_sirens_post_routing(unsigned int hooknum, struct sk_buff *skb,
 
 	return NF_ACCEPT;
 }
+#endif /* defined(__linux__) */
 
 static int
-ip_sirens_setsockopt(struct sock *sk, int cmd, void __user *user,
-		unsigned int len)
+ip_sirens_setsockopt(
+#if defined(__linux__)
+struct sock *sk, int cmd, void __user *user, unsigned int len
+#elif defined(__FreeBSD__)
+struct socket *so, struct sockopt *sopt
+#endif
+)
 {
 	int ret;
+#if defined(__FreeBSD__)
+	int cmd = sopt->sopt_name;
+#endif
 
 #if 0		/* FIX ME: do we need capability check ? */
 	if (! capable(CAP_NET_ADMIN))
@@ -1515,14 +2039,26 @@ ip_sirens_setsockopt(struct sock *sk, int cmd, void __user *user,
 
 	switch (cmd) {
 	case IPSIRENS_SRVAR:
+#if defined(__linux__)
 		ret = sr_setsockopt_srvar(sk, user, len);
+#elif defined(__FreeBSD__)
+		ret = sr_setsockopt_srvar(so, sopt);
+#endif
 		break;
 	case IPSIRENS_SDATAX:
 	case IPSIRENS_STDATAX:
+#if defined(__linux__)
 		ret = sr_setsockopt_sdatax(sk, user, len);
+#elif defined(__FreeBSD__)
+		ret = sr_setsockopt_sdatax(so, sopt);
+#endif
 		break;
 	case IPSIRENS_IDX:
+#if defined(__linux__)
 		ret = sr_setsockopt_idx(sk, user, len);
+#elif defined(__FreeBSD__)
+		ret = sr_setsockopt_idx(so, sopt);
+#endif
 		break;
 	case IPSIRENS_SDATA:
 	case IPSIRENS_STDATA:
@@ -1537,14 +2073,22 @@ ip_sirens_setsockopt(struct sock *sk, int cmd, void __user *user,
 		ret = -EINVAL;
 		break;
 	}
-
 	return ret;
 }
 
 static int
-ip_sirens_getsockopt(struct sock *sk, int cmd, void __user *user, int *len)
+ip_sirens_getsockopt(
+#if defined(__linux__)
+struct sock *sk, int cmd, void __user *user, int *len
+#elif defined(__FreeBSD__)
+struct socket *so, struct sockopt *sopt
+#endif
+)
 {
 	int ret;
+#if defined(__FreeBSD__)
+	int cmd = sopt->sopt_name;
+#endif
 
 #if 0		/* FIX ME: do we need capability check ? */
 	if (! capable(CAP_NET_ADMIN))
@@ -1553,22 +2097,42 @@ ip_sirens_getsockopt(struct sock *sk, int cmd, void __user *user, int *len)
 
 	switch (cmd) {
 	case IPSIRENS_SRVAR:
+#if defined(__linux__)
 		ret = sr_getsockopt_srvar(sk, user, len);
+#elif defined(__FreeBSD__)
+		ret = sr_getsockopt_srvar(so, sopt);
+#endif
 		break;
 	case IPSIRENS_SDATAX:
+#if defined(__linux__)
 		ret = sr_getsockopt_sdatax(sk, user, len);
+#elif defined(__FreeBSD__)
+		ret = sr_getsockopt_sdatax(so, sopt);
+#endif
 		break;
 	case IPSIRENS_STDATAX:
+#if defined(__linux__)
 		ret = sr_getsockopt_stdatax(sk, user, len);
+#elif defined(__FreeBSD__)
+		ret = sr_getsockopt_stdatax(so, sopt);
+#endif
 		break;
 	case IPSIRENS_IDX:
 		ret = -EINVAL;
 		break;
 	case IPSIRENS_SDATA:
+#if defined(__linux__)
 		ret = sr_getsockopt_sdata(sk, user, len);
+#elif defined(__FreeBSD__)
+		ret = sr_getsockopt_sdata(so, sopt);
+#endif
 		break;
 	case IPSIRENS_STDATA:
+#if defined(__linux__)
 		ret = sr_getsockopt_stdata(sk, user, len);
+#elif defined(__FreeBSD__)
+		ret = sr_getsockopt_stdata(so, sopt);
+#endif
 		break;
 	case IPSIRENS_ADATA:	/* fall down */
 	default:
@@ -1582,6 +2146,7 @@ ip_sirens_getsockopt(struct sock *sk, int cmd, void __user *user, int *len)
 
 	return ret;
 }
+#if defined(__linux__)
 
 static struct nf_hook_ops ip_sirens_hooks[] __read_mostly = {
 	{
@@ -1773,3 +2338,494 @@ MODULE_PARM_DESC(sr_icmp_sirens_res, "Enable SIRENS backword probe on ICMP");
 
 module_init(ip_sirens_init);
 module_exit(ip_sirens_exit);
+#endif /* defined(__linux__) */
+
+#if defined(__FreeBSD__)
+
+static volatile int ip_sirens_hooked = 0;
+
+extern  struct protosw inetsw[];
+static struct protosw ip_sw[IPPROTO_MAX];
+
+static struct pr_usrreqs o_tcp_usrreqs[IPPROTO_MAX];
+
+static int ip_sirens_init(void *);
+static int ip_sirens_deinit(void *);
+
+static int rip_ctlout_hook(struct socket *, struct sockopt *);
+static int tcp_ctlout_hook(struct socket *, struct sockopt *);
+static int udp_ctlout_hook(struct socket *, struct sockopt *);
+static void tcp_usr_detach_hook(struct socket *);
+static int tcp_usr_connect_hook(struct socket *, struct sockaddr *, struct thread *);
+static int tcp_usr_accept_hook(struct socket *, struct sockaddr **);
+static int tcp_usr_listen_hook(struct socket *, int, struct thread *);
+
+static int pf_sirens_input(void *, struct mbuf **, struct ifnet *, int, struct inpcb *);
+static int pf_sirens_output(void *, struct mbuf **, struct ifnet *, int, struct inpcb *);
+
+#define EPFDROP 1
+
+static int pf_sirens_input(void *arg, struct mbuf **m, struct ifnet *ifp, int dir, struct inpcb *inp)
+{
+	struct ip *ip;
+	struct ipopt_sr *opt_sr = NULL;
+
+	M_ASSERTVALID(*m);
+	M_ASSERTPKTHDR(*m);
+
+	if((*m)->m_pkthdr.len < sizeof(struct ip))
+		return 0;
+
+	if((*m)->m_len < sizeof(struct ip) &&
+	   (*m = m_pullup(*m, sizeof(struct ip) + sizeof(struct ipopt_sr))) == NULL)
+		return 0;
+
+	ip = mtod(*m, struct ip *);
+
+/* find SIRENS option. */
+	if((opt_sr = sr_find_sirens( *m)) == NULL)
+		return 0;
+
+/* Update SIRENS option, if needed */
+	if (opt_sr->req_mode == SIRENS_TTL && ip->ip_ttl == opt_sr->req_ttl &&
+		(opt_sr->req_probe & SIRENS_DIR_IN) != 0) {
+		sr_update_reqdata(opt_sr, ifp);
+	}
+
+/* check local destination. */
+	if (in_localip(ip->ip_dst)) {
+	ip_sirens_local_in(arg, m, ifp, dir, inp);
+	}
+	return 0;
+}
+static int pf_sirens_output(void *arg, struct mbuf **m, struct ifnet *ifp, int dir, struct inpcb *inp)
+{
+	struct ip *iph;
+	struct ipopt_sr *opt_sr = NULL;
+	struct SRSFEntry *srp = NULL;
+
+	M_ASSERTVALID(*m);
+	M_ASSERTPKTHDR(*m);
+
+	if((*m)->m_pkthdr.len < sizeof(struct ip))
+		return 0;
+
+	if((*m)->m_len < sizeof(struct ip) &&
+	   (*m = m_pullup(*m, sizeof(struct ip) + sizeof(struct ipopt_sr))) == NULL){
+		return 0;
+	}
+	iph = mtod(*m, struct ip *);
+
+	if((opt_sr = sr_find_sirens( *m)) == NULL)
+		return 0;
+
+/* Update SIRENS option, if needed */
+	if(inp){
+		srp = sock_to_SRSFEntry(inp->inp_socket);
+	}
+
+	if(srp){
+		sr_init_reqdata(opt_sr, srp);
+		sr_update_resdata(opt_sr, srp);
+	}
+
+	if (opt_sr->req_mode == SIRENS_TTL && iph->ip_ttl == opt_sr->req_ttl &&
+		(opt_sr->req_probe & SIRENS_DIR_IN) == 0) {
+		sr_update_reqdata(opt_sr, ifp);
+	}
+	return 0;
+}
+
+static int ip_sirens_handler(struct module *module, int event, void *arg) {
+	int error = 0; /* Error, 0 for normal return status */
+	switch (event) {
+	case MOD_LOAD:
+		error = ip_sirens_init( arg);
+		break;
+	case MOD_UNLOAD:
+		error = ip_sirens_deinit( arg);
+		break;
+	default:
+		error = EOPNOTSUPP; /* Error, Operation Not Supported */
+		break;
+	}
+	return error;
+}
+
+int rip_ctlout_hook(struct socket *so, struct sockopt *sopt)
+{
+	int error = 0;
+	DPRINT(" rip_ctlout_hook");
+	switch(sopt->sopt_name){
+	case IPSIRENS_SRVAR:
+	case IPSIRENS_SDATAX:
+	case IPSIRENS_STDATAX:
+	case IPSIRENS_IDX:
+	case IPSIRENS_SDATA:
+	case IPSIRENS_STDATA:
+	case IPSIRENS_ADATA:
+		switch (sopt->sopt_dir) {
+		case SOPT_SET:
+//			DPRINT(" SET %d\n", sopt->sopt_name);
+			error = ip_sirens_setsockopt(so, sopt);
+			return error;
+		case SOPT_GET:
+//			DPRINT(" GET %d\n", sopt->sopt_name);
+			error = ip_sirens_getsockopt(so, sopt);
+			return error;
+		default:
+			return EOPNOTSUPP;
+		}
+	default:
+		break;
+	}
+	error = rip_ctloutput(so, sopt);
+	return error;
+}
+
+int tcp_ctlout_hook(struct socket *so, struct sockopt *sopt)
+{
+	int error = 0;
+//	DPRINT(" tcp_ctlout_hook");
+	switch(sopt->sopt_name){
+	case IPSIRENS_SRVAR:
+	case IPSIRENS_SDATAX:
+	case IPSIRENS_STDATAX:
+	case IPSIRENS_IDX:
+	case IPSIRENS_SDATA:
+	case IPSIRENS_STDATA:
+	case IPSIRENS_ADATA:
+		switch (sopt->sopt_dir) {
+		case SOPT_SET:
+//			DPRINT(" SET %d\n", sopt->sopt_name);
+			error = ip_sirens_setsockopt(so, sopt);
+			return error;
+		case SOPT_GET:
+ //		   	DPRINT(" GET %d\n", sopt->sopt_name);
+			error = ip_sirens_getsockopt(so, sopt);
+			return error;
+		default:
+			return EOPNOTSUPP;
+		}
+	default:
+		break;
+	}
+	error = tcp_ctloutput(so, sopt);
+	return error;
+}
+
+int udp_ctlout_hook(struct socket *so, struct sockopt *sopt)
+{
+	int error = 0;
+	printf(" udp_ctlout_hook");
+	switch(sopt->sopt_name){
+	case IPSIRENS_SRVAR:
+	case IPSIRENS_SDATAX:
+	case IPSIRENS_STDATAX:
+	case IPSIRENS_IDX:
+	case IPSIRENS_SDATA:
+	case IPSIRENS_STDATA:
+	case IPSIRENS_ADATA:
+		switch (sopt->sopt_dir) {
+		case SOPT_SET:
+//			DPRINT(" SET %d\n", sopt->sopt_name);
+			error = ip_sirens_setsockopt(so, sopt);
+			return error;
+		case SOPT_GET:
+//			DPRINT(" GET %d\n", sopt->sopt_name);
+			error = ip_sirens_getsockopt(so, sopt);
+			return error;
+		default:
+			return EOPNOTSUPP;
+		}
+	default:
+		break;
+	}
+	error = udp_ctloutput(so, sopt);
+	return error;
+}
+
+static void tcp_usr_detach_hook(struct socket *so)
+{
+//		DPRINT("SIRENS TCP detach hook\n");
+	o_tcp_usrreqs->pru_detach(so);
+}
+
+static int tcp_usr_connect_hook(struct socket *so, struct sockaddr *nam, struct thread *td)
+{
+	int error = 0;
+//		DPRINT("SIRENS TCP connect hook\n");
+	error = o_tcp_usrreqs->pru_connect(so, nam, td);
+	return error;
+}
+
+static int tcp_usr_accept_hook(struct socket *so, struct sockaddr **nam)
+{
+	int error = 0;
+	struct  inpcb *inp = sotoinpcb(so);
+	struct  inpcb *linp = NULL;
+	struct SRSFEntry *srp = NULL;
+	struct SRSFEntry *lsrp = NULL;
+	struct mbuf *m = NULL;
+	struct ipopt_sr *opt_sr;
+	struct sr_info *sr_info;
+	unsigned long flags;
+	int i;
+
+ //	   DPRINT("SIRENS TCP accept hook inp %08x\n", (uint32_t)inp);
+	error = o_tcp_usrreqs->pru_accept(so, nam);
+/* to find listen socket */
+		linp = in_pcblookup_hash(&V_tcbinfo,
+			inp->inp_faddr, 0,
+			inp->inp_laddr, inp->inp_lport,
+			INPLOOKUP_WILDCARD,
+			NULL);
+	if(linp){
+			DPRINT("lookup with wild card %08x\n", (uint32_t)linp);
+		lsrp = sock_to_SRSFEntry(linp->inp_socket);
+	}
+	if(!lsrp)
+		goto end;
+
+	if(IPOPTSIRENSLEN(lsrp->sr_smax) > MLEN){
+		return 0;
+		}
+		MGET(m, M_DONTWAIT, MT_DATA);
+
+	if(m == NULL){
+		return 0;
+	}
+	m->m_len = IPOPTSIRENSLEN(lsrp->sr_smax);
+	opt_sr = mtod(m, struct ipopt_sr *);
+	opt_sr->type = IPOPT_SIRENS;
+	opt_sr->len = IPOPTSIRENSLEN(lsrp->sr_smax);
+
+	LOCK(&sr_lock, flags);
+	if(LIST_EMPTY(&sr_spool)){
+		m_free(m);
+		m = NULL;
+		goto unlock;
+	}
+
+	srp = LIST_FIRST(&sr_spool);
+	LIST_REMOVE(srp, list);
+	if(srp == NULL){
+		m_free(m);
+		m = NULL;
+		goto unlock;
+	}
+
+	srp->sk = so;
+	srp->sr_nmax = lsrp->sr_nmax;
+	srp->sr_smax = lsrp->sr_smax;
+	srp->sr_qnext = 0;
+	srp->sr_snext = 0;
+	srp->sr_qttl = 0;
+	srp->sr_sttl = 0;
+	for (i = 0; i < lsrp->sr_nmax; i++) {
+		sr_info = &(srp->inp_sr[i]);
+		sr_info->mode = lsrp->inp_sr[i].mode;
+		sr_info->probe = lsrp->inp_sr[i].probe;
+		sr_info->qmin_ttl = lsrp->inp_sr[i].qmin_ttl;
+		sr_info->qmax_ttl = lsrp->inp_sr[i].qmax_ttl;
+		sr_info->smin_ttl = lsrp->inp_sr[i].smin_ttl;
+		sr_info->smax_ttl = lsrp->inp_sr[i].smax_ttl;
+	}
+	LIST_INSERT_HEAD(&sr_sactive, srp, list);
+
+unlock:
+	UNLOCK(&sr_lock, flags);
+	if(m){
+		INP_WLOCK(inp);
+		error = ip_pcbopts(inp, 0, m);
+		INP_WUNLOCK(inp);
+	}
+end:
+	return error;
+}
+static int tcp_usr_listen_hook(struct socket *so, int backlog, struct thread *td)
+{
+	int error = 0;
+//		DPRINT("SIRENS TCP listen hook %08x %08x\n", (uint32_t)so, (uint32_t)sotoinpcb(so));
+	error = o_tcp_usrreqs->pru_listen(so, backlog, td);
+	return error;
+}
+
+static int ip_sirens_init(void *arg)
+{
+	int error = 0;
+	int i, flags;
+	struct pfil_head *pfh_inet = NULL;
+	struct ifnet *ifp;
+	struct SRSFEntry *srp;
+	struct SRIFEntry *srip;
+
+	uprintf("sirens_init\n");
+
+	mtx_init(&sr_lock, "ip_sirens ", NULL, MTX_DEF);
+
+	LIST_INIT(&sr_iflist);
+	LIST_INIT(&sr_sactive);
+	LIST_INIT(&sr_spool);
+
+/* allocate network interface tracking storage */
+	IFNET_WLOCK();
+	for(ifp = TAILQ_FIRST(&V_ifnet); ifp != NULL ; ifp = TAILQ_NEXT(ifp, if_link)){
+	srip = malloc(sizeof(struct SRIFEntry), M_TEMP,M_NOWAIT);
+//		DPRINT("%s attached \n", if_name(ifp));
+		if(srip == NULL){
+			IFNET_WUNLOCK();
+			error = ENOMEM;
+			goto err0;
+		}
+		bzero(srip, sizeof(struct SRIFEntry));
+		srip->ifp = ifp;
+		LIST_INSERT_HEAD(&sr_iflist, srip, list);
+	}
+	IFNET_WUNLOCK();
+
+	LOCK(&sr_lock, flags);
+	for( i = 0 ; i < sr_max_so ; i++){
+	srp = malloc(sizeof(struct SRSFEntry), M_TEMP,M_NOWAIT);
+		if(srp == NULL){
+			UNLOCK(&sr_lock, flags);
+			error = ENOMEM;
+			goto err0;
+		}
+		bzero(srp, sizeof(struct SRSFEntry));
+		LIST_INSERT_HEAD(&sr_spool, srp, list);
+	}
+	UNLOCK(&sr_lock, flags);
+
+/* Hook protocol swtch */
+	bcopy(inetsw, ip_sw, sizeof(struct protosw) * IPPROTO_MAX);
+
+/* RAW IP */
+	for( i = 0 ; i < IPPROTO_MAX ; i++ ){
+		if(inetsw[i].pr_protocol == IPPROTO_RAW &&
+		   inetsw[i].pr_type == SOCK_RAW) break;
+	}
+	if( i == IPPROTO_MAX) goto err;
+	inetsw[i].pr_ctloutput = rip_ctlout_hook;
+
+/* TCP */
+	for( i = 0 ; i < IPPROTO_MAX ; i++ ){
+		if(inetsw[i].pr_protocol == IPPROTO_TCP &&
+		   inetsw[i].pr_type == SOCK_STREAM) break;
+	}
+	if( i == IPPROTO_MAX) goto err;
+	inetsw[i].pr_ctloutput = tcp_ctlout_hook;
+	bcopy(inetsw[i].pr_usrreqs, o_tcp_usrreqs, sizeof(struct pr_usrreqs));
+	INP_INFO_WLOCK(&V_tcbinfo);
+	inetsw[i].pr_usrreqs->pru_detach = tcp_usr_detach_hook;
+	inetsw[i].pr_usrreqs->pru_connect = tcp_usr_connect_hook;
+	inetsw[i].pr_usrreqs->pru_accept = tcp_usr_accept_hook;
+	inetsw[i].pr_usrreqs->pru_listen = tcp_usr_listen_hook;
+	INP_INFO_WUNLOCK(&V_tcbinfo);
+
+/* UDP */
+	for( i = 0 ; i < IPPROTO_MAX ; i++ ){
+		if(inetsw[i].pr_protocol == IPPROTO_UDP &&
+		   inetsw[i].pr_type == SOCK_DGRAM) break;
+	}
+	if( i == IPPROTO_MAX) goto err;
+	inetsw[i].pr_ctloutput = udp_ctlout_hook;
+
+/* attach filter */
+	pfh_inet = pfil_head_get(PFIL_TYPE_AF, AF_INET);
+	if(pfh_inet == NULL) {
+		goto err;
+		error = EOPNOTSUPP;
+	}
+	pfil_add_hook(pf_sirens_input, NULL, PFIL_IN | PFIL_WAITOK, pfh_inet);
+	pfil_add_hook(pf_sirens_output, NULL, PFIL_OUT | PFIL_WAITOK, pfh_inet);
+
+	ip_sirens_hooked = 1;
+
+	return error;
+
+err:
+	ip_sirens_hooked = 0;
+	if(pfh_inet != NULL){
+		pfil_remove_hook(pf_sirens_input, NULL, PFIL_IN | PFIL_WAITOK, pfh_inet);
+		pfil_remove_hook(pf_sirens_output, NULL, PFIL_OUT | PFIL_WAITOK, pfh_inet);
+	}
+	bcopy(ip_sw, inetsw, sizeof(struct protosw) * IPPROTO_MAX);
+err0:
+	while(!LIST_EMPTY(&sr_iflist)){
+		srip = LIST_FIRST(&sr_iflist);
+		LIST_REMOVE(srip, list);
+		free(srip, M_TEMP);
+	}
+	while(!LIST_EMPTY(&sr_spool)){
+		srp = LIST_FIRST(&sr_spool);
+		LIST_REMOVE(srp, list);
+		free(srp, M_TEMP);
+	}
+	return error;
+}
+
+static int ip_sirens_deinit(void *arg)
+{
+	int error = 0;
+	int flags;
+	int i;
+	struct pfil_head *pfh_inet = NULL;
+	struct SRIFEntry *srip;
+	struct SRSFEntry *srp;
+
+	if(!ip_sirens_hooked) return error;
+
+/* detach filter */
+	pfh_inet = pfil_head_get(PFIL_TYPE_AF, AF_INET);
+	if(pfh_inet != NULL){
+		pfil_remove_hook(pf_sirens_input, NULL, PFIL_IN | PFIL_WAITOK, pfh_inet);
+		pfil_remove_hook(pf_sirens_output, NULL, PFIL_OUT | PFIL_WAITOK, pfh_inet);
+	}
+/* XXX: Lock to avoid interfere with packet processing  ? */
+	bcopy(ip_sw, inetsw, sizeof(struct protosw) * IPPROTO_MAX);
+
+/* TCP */
+	for( i = 0 ; i < IPPROTO_MAX ; i++ ){
+		if(inetsw[i].pr_protocol == IPPROTO_TCP &&
+		   inetsw[i].pr_type == SOCK_STREAM) break;
+	}
+	if( i != IPPROTO_MAX){
+		INP_INFO_WLOCK(&V_tcbinfo);
+		bcopy(o_tcp_usrreqs, inetsw[i].pr_usrreqs, sizeof(struct pr_usrreqs));
+		INP_INFO_WUNLOCK(&V_tcbinfo);
+	}
+
+/* deallocate network interface tracking storage */
+	IFNET_WLOCK();
+	while(!LIST_EMPTY(&sr_iflist)){
+		srip = LIST_FIRST(&sr_iflist);
+		LIST_REMOVE(srip, list);
+		free(srip, M_TEMP);
+	}
+	IFNET_WUNLOCK();
+	LOCK(&sr_lock, flags);
+	while(!LIST_EMPTY(&sr_spool)){
+		srp = LIST_FIRST(&sr_spool);
+		LIST_REMOVE(srp, list);
+		free(srp, M_TEMP);
+	}
+	while(!LIST_EMPTY(&sr_sactive)){
+		srp = LIST_FIRST(&sr_sactive);
+		LIST_REMOVE(srp, list);
+		free(srp, M_TEMP);
+	}
+	UNLOCK(&sr_lock, flags);
+	uprintf("deinit module !\n");
+	ip_sirens_hooked = 0;
+	return error;
+}
+
+/* The second argument of DECLARE_MODULE.*/
+static moduledata_t ip_sirens_conf = {
+	"ip_sirens",	/* module name */
+	ip_sirens_handler,  /* event handler */
+	NULL			/* extra data */
+};
+DECLARE_MODULE(ip_sirens, ip_sirens_conf, SI_SUB_DRIVERS, SI_ORDER_MIDDLE);
+#endif /* defined(__FreeBSD__) */
