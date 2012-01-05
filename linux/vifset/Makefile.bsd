@@ -1,4 +1,4 @@
-CFLAGS	      = -g -I../../sys -I/usr/local/include
+CFLAGS	      = -g -I. -I../../sys -I/usr/local/include
 
 DEST	      = .
 

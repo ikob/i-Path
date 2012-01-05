@@ -69,6 +69,12 @@
 #include <netinet/tcp_fsm.h>
 #include <netinet/udp.h>
 #include <netinet/udp_var.h>
+
+#include <machine/in_cksum.h>
+
+#define MTAG_SIRENS	1325724131 /* date -u +'%s' */
+#define MTAG_SIRENS_OPTION	(1 | MTAG_PERSISTENT) 
+
 #endif /* defined(__FreeBSD__) */
 
 #include "ip_sirens.h"
@@ -1711,7 +1717,6 @@ ip_sirens_local_in(
 	struct ip_options *opt;
 	int i;
 	struct SRSFEntry *lsrp;
-	struct SRSFEntry *srp = NULL;
 	struct sr_info *sr_info, *lsr_info;
 	unsigned long flags;
 #elif defined(__FreeBSD__)
@@ -1719,7 +1724,11 @@ ip_sirens_local_in(
 	struct socket *sk, *lsk;
 	struct tcpcb *tp;
 	struct inpcb *sinp;
+	int icmp = 0;
+	struct m_tag *mtag;
+	struct ipopt_sr *tag_sr;
 #endif
+	struct SRSFEntry *srp = NULL;
 	struct ipopt_sr *opt_sr;
 	struct tcphdr *th;
 	int len;
@@ -1736,8 +1745,16 @@ ip_sirens_local_in(
 	ip = mtod(*m, struct ip*);
 	if(ip->ip_hl == sizeof(struct ip))
 		return NF_ACCEPT;
-	if (ip->ip_p != IPPROTO_TCP)
+
+	switch(ip->ip_p) {
+	case IPPROTO_ICMP:
+		icmp = 1;
+		break;
+	case IPPROTO_TCP:
+		break;
+	default:
 		return NF_ACCEPT;
+	}
 
 	opt_sr = sr_find_sirens(*m);
 #endif
@@ -1752,6 +1769,32 @@ ip_sirens_local_in(
 	len = ip->ip_hl * 4 + sizeof (struct tcphdr);
 	*m = m_pullup(*m, len);
 	ip = mtod(*m, struct ip*);
+#endif
+
+#if defined(__FreeBSD__)
+	if(icmp){
+		union u_sr_data *res_data;
+		mtag = m_tag_locate(*m, MTAG_SIRENS, MTAG_SIRENS_OPTION, NULL);
+		if(mtag != NULL)
+			return NF_ACCEPT;
+		mtag = m_tag_alloc(MTAG_SIRENS, MTAG_SIRENS_OPTION, opt_sr->len, M_NOWAIT);
+		if(mtag == NULL)
+			return NF_ACCEPT;
+		tag_sr = (struct ipopt_sr *)(mtag + 1);
+		res_data = (union u_sr_data *)(tag_sr + 1);
+
+		bcopy(opt_sr, tag_sr, opt_sr->len);
+
+		tag_sr->len = IPOPTSIRENSLEN(1);
+		tag_sr->res_ttl = tag_sr->req_ttl;
+		tag_sr->res_probe = tag_sr->req_probe;
+		tag_sr->res_mode = tag_sr->req_mode;
+		res_data->set = tag_sr->req_data.set;
+		tag_sr->req_data.set = 0xffffffff;
+
+		m_tag_prepend(*m, mtag);
+		return NF_ACCEPT;
+	}
 #endif
 
 	sk = lsk = NULL;
@@ -2394,7 +2437,7 @@ static int pf_sirens_input(void *arg, struct mbuf **m, struct ifnet *ifp, int di
 
 /* check local destination. */
 	if (in_localip(ip->ip_dst)) {
-	ip_sirens_local_in(arg, m, ifp, dir, inp);
+		ip_sirens_local_in(arg, m, ifp, dir, inp);
 	}
 	return 0;
 }
@@ -2402,7 +2445,9 @@ static int pf_sirens_output(void *arg, struct mbuf **m, struct ifnet *ifp, int d
 {
 	struct ip *iph;
 	struct ipopt_sr *opt_sr = NULL;
+	struct ipopt_sr *tag_sr = NULL;
 	struct SRSFEntry *srp = NULL;
+	struct m_tag *mtag = NULL;
 
 	M_ASSERTVALID(*m);
 	M_ASSERTPKTHDR(*m);
@@ -2415,9 +2460,65 @@ static int pf_sirens_output(void *arg, struct mbuf **m, struct ifnet *ifp, int d
 		return 0;
 	}
 	iph = mtod(*m, struct ip *);
+	if(iph->ip_p == IPPROTO_ICMP)
+		mtag = m_tag_locate(*m, MTAG_SIRENS, MTAG_SIRENS_OPTION, NULL);
 
-	if((opt_sr = sr_find_sirens( *m)) == NULL)
+	if((opt_sr = sr_find_sirens( *m)) == NULL
+		&& mtag == NULL)
 		return 0;
+
+	if(mtag && opt_sr == NULL && (iph->ip_hl << 2) == sizeof(struct ip)){
+		char buffer [sizeof(struct ip) + MAXIPOPTSIRENSLEN];
+		m_tag_unlink(*m, mtag);
+		tag_sr = (struct ipopt_sr *)(mtag + 1);
+		m_copydata(*m, 0, iph->ip_hl << 2, buffer);
+		iph = (struct ip*)buffer;
+		bcopy(tag_sr, buffer + (iph->ip_hl << 2), tag_sr->len);
+
+		M_PREPEND(*m, tag_sr->len, M_DONTWAIT);
+		if(*m == NULL){
+			m_tag_free(mtag);
+			return ENOMEM;
+		}
+/* fail-safe */
+	   	if((*m = m_pullup(*m, sizeof(struct ip) + tag_sr->len)) == NULL){
+			m_tag_free(mtag);
+			return ENOMEM;
+		}
+
+		m_copyback(*m, 0, (iph->ip_hl << 2) + tag_sr->len, buffer);
+
+		iph = mtod(*m, struct ip *);
+		iph->ip_sum = 0;
+#if 0
+		{
+			int i;
+			uint16_t *sd;
+			sd = mtod(*m, uint16_t*);
+			for(i = 0 ; i < 32 ; i++){
+				printf("%04x ", ntohs(sd[i]));
+				if( i %8 == 7) printf("\n");
+			}
+			printf("\n");
+		}
+#endif
+
+		iph->ip_hl = iph->ip_hl + (tag_sr->len >> 2);
+		iph->ip_len = iph->ip_len + tag_sr->len;
+
+		iph->ip_len = htons(iph->ip_len);
+	        iph->ip_off = htons(iph->ip_off);
+
+		iph->ip_sum = in_cksum(*m, iph->ip_hl << 2);
+
+		iph->ip_len = ntohs(iph->ip_len);
+	        iph->ip_off = ntohs(iph->ip_off);
+
+		m_tag_free(mtag);
+		opt_sr = sr_find_sirens( *m);
+		if(opt_sr == NULL)
+			return EINVAL;
+	}
 
 /* Update SIRENS option, if needed */
 	if(inp){

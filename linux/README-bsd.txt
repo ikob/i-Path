@@ -34,7 +34,23 @@ SIRENS for Linux package.
 2.2 ping (SIRENS version)
 
     Follow instructions below. this installs /usr/local/bin/srping.
-    Note: not working yet.
+    Note:  requires ip_output.c modification, add 1-line.
+
+*** sys/netinet/ip_output.c.org	Thu Jan  5 16:57:41 2012
+--- sys/netinet/ip_output.c	Thu Jan  5 19:31:08 2012
+***************
+*** 513,518 ****
+--- 513,521 ----
+  		goto done;
+  
+  	ip = mtod(m, struct ip *);
++ #if 1
++ 	hlen = ip->ip_hl << 2;
++ #endif
+  
+  	/* See if destination IP address was changed by packet filter. */
+  	if (odst.s_addr != ip->ip_dst.s_addr) {
+
 
     $ cd trunk/ping
     $ make
