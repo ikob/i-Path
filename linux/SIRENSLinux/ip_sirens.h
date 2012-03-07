@@ -56,6 +56,7 @@ union u_sr_data {
 		uint16_t phy;
 	} loc;
 	uint32_t set;
+	struct in_addr sin_addr;
 };
 
 /*
@@ -121,18 +122,23 @@ static inline int sr_timeval_compare(const struct sr_timeval *lhs, const struct 
 #define SIRENS_MIN 0x01
 #define SIRENS_MAX 0x02
 #define SIRENS_TTL 0x03
+#define SIRENS_LE 0x05
+#define SIRENS_GE 0x06
+#define SIRENS_EQ 0x07
 
 #define SIRENS_BID 0xC0
 #define SIRENS_SND 0x80
 #define SIRENS_RCV 0x40
 
 #if !defined(KERNEL) && !defined(__KERNEL__) && !defined(_KERNEL)
+#if 0
 static char *sirens_mode_s[] = {
 	"disable",
 	"minimal",
 	"maximum",
 	"ttl",
 };
+#endif
 #endif /* !defined(KERNEL) && !defined(__KERNEL__) && !defined(_KERNEL) */
 
 enum SIRENS_PROBE {
@@ -209,11 +215,11 @@ int sr_setparam __P((struct ipopt_sr *, struct ifnet *));
 #endif /* defined(__FreeBSD__) */
 #if defined(__linux__)
 #endif /* defined(__linux__) */
-#endif /* defined(KERNEL) || defined(__KERNEL__) */
 
 #if defined(__APPLE__) || defined(__FreeBSD__)
 struct ipopt_sr	*ip_sirens_dooptions(struct mbuf *);
 #endif /* defined(__APPLE__) || defined(__FreeBSD__) */
+#endif /* defined(KERNEL) || defined(__KERNEL__) */
 
 #define SIRENSCTL_ENABLE	1
 #define SIRENSCTL_INPKTS	2	/* statistics (read-only) */

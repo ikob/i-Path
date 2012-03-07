@@ -61,6 +61,7 @@
 #include <net/pfil.h>
 
 #include <netinet/in.h>
+#include <netinet/in_var.h>
 #include <netinet/in_pcb.h>
 #include <netinet/ip.h>
 #include <netinet/ip_var.h>
@@ -545,8 +546,17 @@ sr_push_sirens(struct iphdr *iph, struct ipopt_sr *opt_sr,
 
 		opt_sr = (struct ipopt_sr *) icmp->buf;
 		opt_sr->len = IPOPTSIRENSLEN(icmp->reslen);
-		opt_sr->res_probe = opt_sr->req_probe;
-		opt_sr->res_ttl = opt_sr->req_ttl;
+		switch(opt_sr->req_mode){
+/* flip req and res */
+			case SIRENS_TTL:
+			case SIRENS_MAX:
+			case SIRENS_MIN:
+				opt_sr->res_probe = opt_sr->req_probe;
+				opt_sr->res_ttl = opt_sr->req_ttl;
+				break;
+			default:
+				break;
+		}
 		if (sr_icmp_sirens_res == 0) {
 			opt_sr->req_mode = SIRENS_DISABLE;
 			opt_sr->req_ttl = 0;
@@ -622,6 +632,7 @@ sr_update_reqdata(struct ipopt_sr *opt_sr,
 #endif /* defined(__linux__) defined(__FreeBSD__) */
 	uint32_t flag;
 	unsigned long flags;
+DPRINT("update data\n");
 
 	/* getting interface information */
 #if defined(__linux__)
@@ -766,6 +777,33 @@ sr_update_reqdata(struct ipopt_sr *opt_sr,
 		if (data > ntohl(opt_sr->req_data.set))
 			opt_sr->req_data.set = htonl(data);
 		break;
+	case SIRENS_EQ:
+DPRINT("match eq: %08x %08xn", data, ntohl(opt_sr->req_data.set));
+		if(opt_sr->req_data.set != htonl(data)) break;
+	case SIRENS_GE:
+		if(opt_sr->req_data.set > htonl(data)) break;
+	case SIRENS_LE:
+		if(opt_sr->req_data.set < htonl(data)) break;
+#if defined(__FreeBSD__)
+		if(opt_sr->len != IPOPTSIRENSLEN(1)) break;
+		if(ifp == NULL) break;
+		IF_ADDR_LOCK(ifp);
+		{
+			struct ifaddr *ifa;
+			struct in_ifaddr *iap;
+			union u_sr_data *res;
+			TAILQ_FOREACH(ifa, &ifp->if_addrhead, ifa_link){
+				iap = ifatoia(ifa);
+				if(iap->ia_addr.sin_family == AF_INET){
+/* check multiple FIB ? */
+					res = (union u_sr_data *)(opt_sr + 1);
+					res->sin_addr = iap->ia_addr.sin_addr;
+					break;
+				}
+			}
+		}
+		IF_ADDR_UNLOCK(ifp);
+#endif
 	default:
 		break;
 	}
@@ -1675,14 +1713,21 @@ ip_sirens_pre_routing(unsigned int hooknum, struct sk_buff *skb,
 			save_header = 1;
 	}
 
-	if (opt_sr->req_mode == SIRENS_TTL && iph->ttl == opt_sr->req_ttl &&
-			(opt_sr->req_probe & SIRENS_DIR_IN) != 0) {
-		/*
-		 * updata request data in in-coming packet.
-		 */
-		sr_update_reqdata(opt_sr, (struct net_device *)in);
-		iph->check = 0;
-		iph->check = ip_fast_csum(iph, iph->ihl);
+	if((opt_sr->req_probe & SIRENS_DIR_IN) != 0){
+		switch(opt_sr->req_mode){
+			case SIRENS_TTL:
+				if(ip->ip_ttl != opt_sr->req_ttl) break;
+			case SIRENS_MAX:
+			case SIRENS_MIN:
+			case SIRENS_LE:
+			case SIRENS_EQ:
+			case SIRENS_GE:
+			default:
+				sr_update_reqdata(opt_sr, (struct net_device *)in);
+				iph->check = 0;
+				iph->check = ip_fast_csum(iph, iph->ihl);
+				break;
+		}
 	}
 
 	if (save_header) {
@@ -1786,11 +1831,19 @@ ip_sirens_local_in(
 		bcopy(opt_sr, tag_sr, opt_sr->len);
 
 		tag_sr->len = IPOPTSIRENSLEN(1);
-		tag_sr->res_ttl = tag_sr->req_ttl;
-		tag_sr->res_probe = tag_sr->req_probe;
-		tag_sr->res_mode = tag_sr->req_mode;
-		res_data->set = tag_sr->req_data.set;
-		tag_sr->req_data.set = 0xffffffff;
+		switch(tag_sr->req_mode){
+			case SIRENS_TTL:
+			case SIRENS_MAX:
+			case SIRENS_MIN:
+				tag_sr->res_ttl = tag_sr->req_ttl;
+				tag_sr->res_probe = tag_sr->req_probe;
+				tag_sr->res_mode = tag_sr->req_mode;
+				res_data->set = tag_sr->req_data.set;
+				tag_sr->req_data.set = 0xffffffff;
+				break;
+			default:
+				break;
+		}
 
 		m_tag_prepend(*m, mtag);
 		return NF_ACCEPT;
@@ -2047,14 +2100,21 @@ ip_sirens_post_routing(unsigned int hooknum, struct sk_buff *skb,
 	}
 	/* opt_sr != NULL */
 
-	if (opt_sr->req_mode == SIRENS_TTL && iph->ttl == opt_sr->req_ttl &&
-			(opt_sr->req_probe & SIRENS_DIR_IN) == 0) {
-		/*
-		 * updata request data in out-going packet.
-		 */
-		sr_update_reqdata(opt_sr, (struct net_device *)out);
-		iph->check = 0;
-		iph->check = ip_fast_csum(iph, iph->ihl);
+	if((opt_sr->req_probe & SIRENS_DIR_IN) == 0){
+		switch(opt_sr->req_mode){
+			case SIRENS_TTL:
+				if(ip->ip_ttl != opt_sr->req_ttl) break;
+			case SIRENS_MAX:
+			case SIRENS_MIN:
+			case SIRENS_LE:
+			case SIRENS_EQ:
+			case SIRENS_GE:
+			default:
+				sr_update_reqdata(opt_sr, (struct net_device *)out);
+				iph->check = 0;
+				iph->check = ip_fast_csum(iph, iph->ihl);
+				break;
+		}
 	}
 
 	return NF_ACCEPT;
@@ -2430,9 +2490,19 @@ static int pf_sirens_input(void *arg, struct mbuf **m, struct ifnet *ifp, int di
 		return 0;
 
 /* Update SIRENS option, if needed */
-	if (opt_sr->req_mode == SIRENS_TTL && ip->ip_ttl == opt_sr->req_ttl &&
-		(opt_sr->req_probe & SIRENS_DIR_IN) != 0) {
-		sr_update_reqdata(opt_sr, ifp);
+	if((opt_sr->req_probe & SIRENS_DIR_IN) != 0){
+		switch(opt_sr->req_mode){
+			case SIRENS_TTL:
+				if(ip->ip_ttl != opt_sr->req_ttl) break;
+			case SIRENS_MAX:
+			case SIRENS_MIN:
+			case SIRENS_LE:
+			case SIRENS_EQ:
+			case SIRENS_GE:
+			default:
+				sr_update_reqdata(opt_sr, ifp);
+				break;
+		}
 	}
 
 /* check local destination. */
@@ -2530,9 +2600,20 @@ static int pf_sirens_output(void *arg, struct mbuf **m, struct ifnet *ifp, int d
 		sr_update_resdata(opt_sr, srp);
 	}
 
-	if (opt_sr->req_mode == SIRENS_TTL && iph->ip_ttl == opt_sr->req_ttl &&
-		(opt_sr->req_probe & SIRENS_DIR_IN) == 0) {
-		sr_update_reqdata(opt_sr, ifp);
+/* Update SIRENS option, if needed */
+	if((opt_sr->req_probe & SIRENS_DIR_IN) == 0){
+		switch(opt_sr->req_mode){
+			case SIRENS_TTL:
+				if(iph->ip_ttl != opt_sr->req_ttl) break;
+			case SIRENS_MAX:
+			case SIRENS_MIN:
+			case SIRENS_LE:
+			case SIRENS_EQ:
+			case SIRENS_GE:
+			default:
+				sr_update_reqdata(opt_sr, ifp);
+				break;
+		}
 	}
 	return 0;
 }
