@@ -632,7 +632,6 @@ sr_update_reqdata(struct ipopt_sr *opt_sr,
 #endif /* defined(__linux__) defined(__FreeBSD__) */
 	uint32_t flag;
 	unsigned long flags;
-DPRINT("update data\n");
 
 	/* getting interface information */
 #if defined(__linux__)
@@ -778,7 +777,6 @@ DPRINT("update data\n");
 			opt_sr->req_data.set = htonl(data);
 		break;
 	case SIRENS_EQ:
-DPRINT("match eq: %08x %08xn", data, ntohl(opt_sr->req_data.set));
 		if(opt_sr->req_data.set != htonl(data)) break;
 	case SIRENS_GE:
 		if(opt_sr->req_data.set > htonl(data)) break;
