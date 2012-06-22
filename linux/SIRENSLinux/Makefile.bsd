@@ -1,0 +1,5 @@
+KMOD = ip_sirens
+
+SRCS = ip_sirens.c
+
+.include <bsd.kmod.mk>
