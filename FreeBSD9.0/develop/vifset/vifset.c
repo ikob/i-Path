@@ -51,6 +51,7 @@
 
 #include <net/if.h>
 
+#include <machine/param.h>
 #include <netinet/in_pcb.h>
 #include <netinet/ip_sirens.h>
 
@@ -138,7 +139,7 @@ main(int argc, char *argv[])
 int qtbl_init(char *file, struct qtbl_t *qtbl)
 {
 	int i, j;
-	long t_long;
+	int t_int;
 	char *t_str;
 	int iif, nif = 0;
 	config_t cf;
@@ -176,16 +177,16 @@ int qtbl_init(char *file, struct qtbl_t *qtbl)
 
 /* Check global parameters, query interval ... */
 
-	if(config_lookup_int(&cf, "default.polling", &t_long) == CONFIG_TRUE){
-		interval = t_long;
+	if(config_lookup_int(&cf, "default.polling", &t_int) == CONFIG_TRUE){
+		interval = t_int;
 	}
-	if(t_long < 0 ){
-		printf("config error : invalid update interval %d\n", t_long);
+	if(t_int < 0 ){
+		printf("config error : invalid update interval %d\n", t_int);
 		return(1);
 	}
 
 /* Check default parameters, query interval ... */
-	if(config_lookup_string(&cf, "default.community", &t_str) == CONFIG_TRUE){
+	if(config_lookup_string(&cf, "default.community", (const char **)&t_str) == CONFIG_TRUE){
 		if(t_str != NULL){
 			strcpy(gsnmpoid.data.snmp.community, t_str);
 		}
@@ -193,7 +194,7 @@ int qtbl_init(char *file, struct qtbl_t *qtbl)
 	if(vifsetdebug)
 		printf("vifset default community: %s\n", gsnmpoid.data.snmp.community);
 
-	if(config_lookup_string(&cf, "default.host", &t_str) == CONFIG_TRUE){
+	if(config_lookup_string(&cf, "default.host", (const char **)&t_str) == CONFIG_TRUE){
 		if(t_str != NULL){
 			strcpy(gsnmpoid.data.snmp.host, t_str);
 		}
@@ -226,7 +227,11 @@ int qtbl_init(char *file, struct qtbl_t *qtbl)
 
 /* checking actual i/f or not */
 		bzero(&ifsrr, sizeof(struct if_srvarreq));
+#if defined (__linux__)
 		strncpy(ifsrr.ifr_name, qtbl[nif].ifname, IFNAMSIZ);
+#else /* BSD */
+		strncpy(ifsrr.ifrname, qtbl[nif].ifname, IFNAMSIZ);
+#endif
 		if(ioctl(fd, SIOCGSRVAR, &ifsrr) < 0){
 			printf("failed in %s\n", qtbl[nif].ifname);
 			continue;
@@ -380,7 +385,11 @@ int vid_if_static(struct qtbl_e *qe, char *ifname, int sindex)
 {
 	struct if_srvarreq ifsrr;
 	bzero(&ifsrr, sizeof(struct if_srvarreq));
+#if defined (__linux__)
 	strncpy(ifsrr.ifr_name, ifname, IFNAMSIZ);
+#else
+	strncpy(ifsrr.ifrname, ifname, IFNAMSIZ);
+#endif
 	ifsrr.sr_probe = sindex; 
 	ifsrr.sr_var.flag = 1;
 	ifsrr.sr_var.data = qe->data.val;
@@ -390,7 +399,11 @@ int vid_if_static(struct qtbl_e *qe, char *ifname, int sindex)
 		printf("failed in %s\n", ifname);
 	}
 	bzero(&ifsrr, sizeof(struct if_srvarreq));
+#if defined (__linux__)
 	strncpy(ifsrr.ifr_name, ifname, IFNAMSIZ);
+#else
+	strncpy(ifsrr.ifrname, ifname, IFNAMSIZ);
+#endif
 	ifsrr.sr_probe = sindex;
 	if(ioctl(fd, SIOCGSRVAR, &ifsrr) < 0){
 		printf("failed in %s\n", ifname);
@@ -427,7 +440,11 @@ int vid_if_snmpoid(struct qtbl_e *qe, char *ifname, int sindex)
 	if(vifsetdebug)
 		printf("SNMP val = %08x\n", val);
 	bzero(&ifsrr, sizeof(struct if_srvarreq));
+#if defined(__linux__)
 	strncpy(ifsrr.ifr_name, ifname, IFNAMSIZ);
+#else
+	strncpy(ifsrr.ifrname, ifname, IFNAMSIZ);
+#endif
 	ifsrr.sr_probe = sindex; 
 	ifsrr.sr_var.flag = 1;
 	ifsrr.sr_var.data = val;
@@ -437,7 +454,11 @@ int vid_if_snmpoid(struct qtbl_e *qe, char *ifname, int sindex)
 		printf("failed in %s\n", ifname);
 	}
 	bzero(&ifsrr, sizeof(struct if_srvarreq));
+#if defined(__linux__)
 	strncpy(ifsrr.ifr_name, ifname, IFNAMSIZ);
+#else
+	strncpy(ifsrr.ifrname, ifname, IFNAMSIZ);
+#endif
 	ifsrr.sr_probe = sindex;
 	if(ioctl(fd, SIOCGSRVAR, &ifsrr) < 0){
 		printf("failed in %s\n", ifname);
