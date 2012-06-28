@@ -1,3 +1,5 @@
+CFLAGS += -DVIMAGE
+
 KMOD = ip_sirens
 
 SRCS = ip_sirens.c

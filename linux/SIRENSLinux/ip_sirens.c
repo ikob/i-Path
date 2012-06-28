@@ -1869,7 +1869,7 @@ ip_sirens_local_in(
 	if (sk->sk_state != TCP_ESTABLISHED)
 		goto end;
 #elif defined(__FreeBSD__)
-#if 0
+#if 1
 	{
 		struct inpcbhead *head;
 		register struct inpcb *inp;
@@ -1880,16 +1880,24 @@ DPRINT("%d %d %d %d\n", ntohs(th->th_sport), ntohs(th->th_dport), ntohs(inp->inp
 		}
 	}
 #endif
+#if __FreeBSD_version < 900000
         sinp = in_pcblookup_hash(&V_tcbinfo,
                         ip->ip_src, th->th_sport,
                         ip->ip_dst, th->th_dport,
                         0,
                         NULL);
+#else
+        sinp = in_pcblookup(&V_tcbinfo,
+                        ip->ip_src, th->th_sport,
+                        ip->ip_dst, th->th_dport,
+                        INPLOOKUP_RLOCKPCB,
+                        NULL);
+#endif
 	if(sinp != NULL){
 		tp = intotcpcb(sinp);
 		sk = sinp->inp_socket;
 	}
-#endif
+#endif /* __FreeBSD__ */
 
 	/*
 	 * lookup server socket object from TCP destination port.
@@ -2666,7 +2674,7 @@ int rip_ctlout_hook(struct socket *so, struct sockopt *sopt)
 int tcp_ctlout_hook(struct socket *so, struct sockopt *sopt)
 {
 	int error = 0;
-//	DPRINT(" tcp_ctlout_hook");
+	DPRINT(" tcp_ctlout_hook %d\n", sopt->sopt_name);
 	switch(sopt->sopt_name){
 	case IPSIRENS_SRVAR:
 	case IPSIRENS_SDATAX:
@@ -2677,11 +2685,11 @@ int tcp_ctlout_hook(struct socket *so, struct sockopt *sopt)
 	case IPSIRENS_ADATA:
 		switch (sopt->sopt_dir) {
 		case SOPT_SET:
-//			DPRINT(" SET %d\n", sopt->sopt_name);
+			DPRINT(" SET %d\n", sopt->sopt_name);
 			error = ip_sirens_setsockopt(so, sopt);
 			return error;
 		case SOPT_GET:
- //		   	DPRINT(" GET %d\n", sopt->sopt_name);
+		   	DPRINT(" GET %d\n", sopt->sopt_name);
 			error = ip_sirens_getsockopt(so, sopt);
 			return error;
 		default:
@@ -2708,11 +2716,11 @@ int udp_ctlout_hook(struct socket *so, struct sockopt *sopt)
 	case IPSIRENS_ADATA:
 		switch (sopt->sopt_dir) {
 		case SOPT_SET:
-//			DPRINT(" SET %d\n", sopt->sopt_name);
+			DPRINT(" SET %d\n", sopt->sopt_name);
 			error = ip_sirens_setsockopt(so, sopt);
 			return error;
 		case SOPT_GET:
-//			DPRINT(" GET %d\n", sopt->sopt_name);
+			DPRINT(" GET %d\n", sopt->sopt_name);
 			error = ip_sirens_getsockopt(so, sopt);
 			return error;
 		default:
@@ -2727,14 +2735,14 @@ int udp_ctlout_hook(struct socket *so, struct sockopt *sopt)
 
 static void tcp_usr_detach_hook(struct socket *so)
 {
-//		DPRINT("SIRENS TCP detach hook\n");
+	DPRINT("SIRENS TCP detach hook\n");
 	o_tcp_usrreqs->pru_detach(so);
 }
 
 static int tcp_usr_connect_hook(struct socket *so, struct sockaddr *nam, struct thread *td)
 {
 	int error = 0;
-//		DPRINT("SIRENS TCP connect hook\n");
+		DPRINT("SIRENS TCP connect hook\n");
 	error = o_tcp_usrreqs->pru_connect(so, nam, td);
 	return error;
 }
@@ -2752,16 +2760,24 @@ static int tcp_usr_accept_hook(struct socket *so, struct sockaddr **nam)
 	unsigned long flags;
 	int i;
 
- //	   DPRINT("SIRENS TCP accept hook inp %08x\n", (uint32_t)inp);
+	   DPRINT("SIRENS TCP accept hook inp %08x\n", (uint32_t)inp);
 	error = o_tcp_usrreqs->pru_accept(so, nam);
 /* to find listen socket */
+#if __FreeBSD_version < 900000
 		linp = in_pcblookup_hash(&V_tcbinfo,
 			inp->inp_faddr, 0,
 			inp->inp_laddr, inp->inp_lport,
 			INPLOOKUP_WILDCARD,
 			NULL);
+#else
+		linp = in_pcblookup(&V_tcbinfo,
+			inp->inp_faddr, 0,
+			inp->inp_laddr, inp->inp_lport,
+			INPLOOKUP_WILDCARD | INPLOOKUP_WLOCKPCB,
+			NULL);
+#endif
 	if(linp){
-			DPRINT("lookup with wild card %08x\n", (uint32_t)linp);
+		DPRINT("lookup with wild card %08x\n", (uint32_t)linp);
 		lsrp = sock_to_SRSFEntry(linp->inp_socket);
 	}
 	if(!lsrp)
@@ -2826,7 +2842,7 @@ end:
 static int tcp_usr_listen_hook(struct socket *so, int backlog, struct thread *td)
 {
 	int error = 0;
-//		DPRINT("SIRENS TCP listen hook %08x %08x\n", (uint32_t)so, (uint32_t)sotoinpcb(so));
+	DPRINT("SIRENS TCP listen hook %08x %08x\n", (uint32_t)so, (uint32_t)sotoinpcb(so));
 	error = o_tcp_usrreqs->pru_listen(so, backlog, td);
 	return error;
 }
