@@ -1899,7 +1899,7 @@ ip_sirens_local_in(
 	if(sinp != NULL){
 		tp = intotcpcb(sinp);
 		sk = sinp->inp_socket;
-#if __FreeBSD_version < 900000
+#if !(__FreeBSD_version < 900000)
         	INP_RLOCK_ASSERT(sinp);
         	INP_RUNLOCK(sinp);
 #endif
@@ -2810,7 +2810,7 @@ static int tcp_usr_accept_hook(struct socket *so, struct sockaddr **nam)
 		DPRINT("lookup with wild card %08x\n", (uint32_t)linp);
 #endif
 		lsrp = sock_to_SRSFEntry(linp->inp_socket);
-#if __FreeBSD_version < 900000
+#if !(__FreeBSD_version < 900000)
         	INP_RLOCK_ASSERT(linp);
         	INP_RUNLOCK(linp);
 #endif
