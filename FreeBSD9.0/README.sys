@@ -1,0 +1,3 @@
+i-Path protocol stack for FreeBSD kernel has been rewritten as loadable kernel module.
+The kernel module is also merged into Linux kernel module. Please refer SIRENSLinux
+kernel module under linux tree.
