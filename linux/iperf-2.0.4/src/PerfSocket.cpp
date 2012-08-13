@@ -180,6 +180,8 @@ void postSetSocketOptions( thread_Settings *inSettings ) {
         	int rc = setsockopt( inSettings->mSock, IPPROTO_IP, IPSIRENS_IDX,
                              (char*) req, len );
 		WARN_errno( rc == SOCKET_ERROR, "setsockopt IP_SIRENS" );
+		if(rc == SOCKET_ERROR)
+			exit(1);
 	}
 #endif
     }

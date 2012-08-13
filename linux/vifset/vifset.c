@@ -15,6 +15,9 @@
 
 #include <net/if.h>
 
+#if defined(__FreeBSD__)
+#include <machine/param.h>
+#endif
 #if defined(__APPLE__) || defined(__FreeBSD__)
 #include <netinet/in_pcb.h>
 #endif /* defined(__APPLE__) || defined(__FreeBSD__) */
@@ -56,7 +59,7 @@ int vid_if_static(struct qtbl_e *, char *, int);
 int vid_if_snmpoid(struct qtbl_e *, char *, int);
 
 void usage(){
-	fprintf(stderr, "usage: vifset [-c config_file]\n");
+	fprintf(stderr, "usage: vifset [-n|-c config_file]\n");
 	exit(1);
 }
 
@@ -64,6 +67,7 @@ int
 main(int argc, char *argv[])
 {
 	int ch;
+	int config = 1;
 	extern char *optarg;
 	extern int optind, opterr;
 
@@ -72,8 +76,11 @@ main(int argc, char *argv[])
 	char config_file[64] = CONFIG_FILE;
 	int nif;
 
-	while((ch = getopt(argc, argv, "c:")) != -1){
+	while((ch = getopt(argc, argv, "nc:")) != -1){
 		switch(ch){
+		case 'n':
+			config = 0;
+			break;
 		case 'c':
 			strncpy(config_file, optarg, 64);
 			break;
@@ -82,8 +89,18 @@ main(int argc, char *argv[])
 			break;
 		}
 	}
-
 	fd = socket(PF_INET, SOCK_DGRAM, 0);
+	if(config == 0){
+		int i;
+		if(strncmp(CONFIG_FILE, config_file, strlen(CONFIG_FILE))){
+			usage();
+		}
+		if(setsockopt(fd, IPPROTO_IP, IPSIRENS_SRFIL, &i, sizeof(i)) < 0){
+			printf("failed in IPSIRENS_SRFIL\n");
+		}
+		return(0);
+	}
+
 	nif = qtbl_init(config_file, qtbl);
 	if(nif == 0){
 		printf("No valid interface is founded\n");
@@ -103,7 +120,7 @@ main(int argc, char *argv[])
 int qtbl_init(char *file, struct qtbl_t *qtbl)
 {
 	int i, j;
-	long t_long;
+	int t_long;
 	char *t_str;
 	int iif, nif = 0;
 	config_t cf;
@@ -205,6 +222,9 @@ int qtbl_init(char *file, struct qtbl_t *qtbl)
 			printf("failed in %s\n", qtbl[nif].ifname);
 			continue;
 		};
+		if(setsockopt(fd, IPPROTO_IP, IPSIRENS_SRFIL, &i, sizeof(i)) < 0){
+			printf("failed in IPSIRENS_SRFIL\n");
+		}
 	}
 #endif /* defined(__linux__) || defined (__FreeBSD__)*/
 		if(qtbl_if_set(tcfsp, &(qtbl[nif]), gsnmpoid, glocation) == 0)

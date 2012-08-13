@@ -147,6 +147,7 @@ SPECIAL_OSF1_EXTERN_C_STOP
     #include <sys/types.h>
     #include <net/if.h>
 #if defined(__FreeBSD__) || defined(__APPLE__)
+    #include <machine/param.h>
     #include <netinet/in_pcb.h>
 #endif
     #include <netinet/ip_sirens.h>

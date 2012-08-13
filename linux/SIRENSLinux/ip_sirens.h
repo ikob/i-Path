@@ -237,6 +237,7 @@ struct ipopt_sr	*ip_sirens_dooptions(struct mbuf *);
 #define IPSIRENS_IDX		97
 #define IPSIRENS_SDATA		98
 #define IPSIRENS_ADATA		99
+#define IPSIRENS_SRFIL		100
 #define IPSIRENS_IREQMAX	8
 #define IPSIRENS_DREQMAX	16
 struct sr_ireq{
