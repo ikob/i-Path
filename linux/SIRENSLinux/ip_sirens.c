@@ -2824,7 +2824,7 @@ static int tcp_usr_accept_hook(struct socket *so, struct sockaddr **nam)
 	int i;
 
 #ifdef SR_DEBUG
-	DPRINT("SIRENS TCP accept hook inp %08x\n", (uint32_t)inp);
+	DPRINT("SIRENS TCP accept hook inp %p\n", inp);
 #endif
 	error = o_tcp_usrreqs->pru_accept(so, nam);
 /* to find listen socket */
@@ -2843,7 +2843,7 @@ static int tcp_usr_accept_hook(struct socket *so, struct sockaddr **nam)
 #endif
 	if(linp){
 #ifdef SR_DEBUG
-		DPRINT("lookup with wild card %08x\n", (uint32_t)linp);
+		DPRINT("lookup with wild card %p\n", linp);
 #endif
 		lsrp = sock_to_SRSFEntry(linp->inp_socket);
 #if !(__FreeBSD_version < 900000)
@@ -2914,7 +2914,7 @@ static int tcp_usr_listen_hook(struct socket *so, int backlog, struct thread *td
 {
 	int error = 0;
 #ifdef SR_DEBUG
-	DPRINT("SIRENS TCP listen hook %08x %08x\n", (uint32_t)so, (uint32_t)sotoinpcb(so));
+	DPRINT("SIRENS TCP listen hook %p %p\n", so, sotoinpcb(so));
 #endif
 	error = o_tcp_usrreqs->pru_listen(so, backlog, td);
 	return error;
