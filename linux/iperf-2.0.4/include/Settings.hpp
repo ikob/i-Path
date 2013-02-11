@@ -178,6 +178,8 @@ typedef struct thread_Settings {
 	unsigned short numsirens;	// -Q
 	char sirens[8];
 	unsigned short sirensres;	// -E
+	char sirens_mode;
+	u_int32_t sr_data;	// -E
 #endif
 } thread_Settings;
 
@@ -216,10 +218,14 @@ typedef struct thread_Settings {
 #define FLAG_SINGLEUDP      0x00200000
 #define FLAG_CONGESTION     0x00400000
 #ifdef IPSIRENS
-#define FLAG_SIRENS     0x08000000
+#define FLAG_SIRENS         0x08000000
+#define FLAG_DYPOP          0x04000000
 #define isSIRENS(settings)      ((settings->flags & FLAG_SIRENS) != 0)
 #define setSIRENS(settings)     settings->flags |= FLAG_SIRENS
 #define unsetSIRENS(settings)  settings->flags &= ~FLAG_SIRENS
+#define isDYPOP(settings)      ((settings->flags & FLAG_DYPOP) != 0)
+#define setDYPOP(settings)     settings->flags |= FLAG_DYPOP
+#define unsetDYPOP(settings)  settings->flags &= ~FLAG_DYPOP
 #endif
 
 #define isBuflenSet(settings)      ((settings->flags & FLAG_BUFLENSET) != 0)

@@ -160,23 +160,36 @@ void SetSocketOptions( thread_Settings *inSettings ) {
 void postSetSocketOptions( thread_Settings *inSettings ) {
     if ( !isUDP( inSettings ) ) {
 #ifdef IPSIRENS
-        if ( isSIRENS( inSettings ) ) {
+        if ( isSIRENS( inSettings ) || isDYPOP( inSettings )) {
 		struct sr_ireq *req = (struct sr_ireq *)malloc(IPSIRENS_IREQSIZE(IPSIRENS_IREQMAX));
 		struct srreq_index *sri = (struct srreq_index *)(req + 1);
-		Socklen_t len = IPSIRENS_IREQSIZE(inSettings->numsirens);
-		req->sr_nindex = inSettings->numsirens;
-		if (inSettings->sirensres > 0)
-			req->sr_smax = inSettings->sirensres;
-		else
+		Socklen_t len;
+//		if (inSettings->sirensres > 0)
+//			req->sr_smax = inSettings->sirensres;
+//		else
 			req->sr_smax = 1;
-		for(int i = 0; i < inSettings->numsirens ; i++){
-			sri[i].mode = SIRENS_TTL;
-			sri[i].probe = inSettings->sirens[i];
-			sri[i].qttl_min = 0;
-			sri[i].qttl_max = 64;
-			sri[i].sttl_min = 0;
-			sri[i].sttl_max = 64;
+		if( isSIRENS( inSettings ) ){
+			for(int i = 0; i < inSettings->numsirens ; i++){
+				sri[i].mode = SIRENS_TTL;
+				sri[i].probe = inSettings->sirens[i];
+				sri[i].qttl_min = 0;
+				sri[i].qttl_max = 64;
+				sri[i].sttl_min = 0;
+				sri[i].sttl_max = 64;
+				sri[i].data = -1;
+			}
+		}else  if( isDYPOP( inSettings ) ){
+			sri[0].mode = SIRENS_EQ;
+			sri[0].probe = inSettings->sirens[0];
+			sri[0].qttl_min = 0;
+			sri[0].qttl_max = 0;
+			sri[0].sttl_min = 0;
+			sri[0].sttl_max = 0;
+			sri[0].data = htonl(inSettings->sr_data);
 		}
+		req->sr_nindex = inSettings->numsirens;
+		len = IPSIRENS_IREQSIZE(inSettings->numsirens);
+printf("nindex:%d len:%d\n", req->sr_nindex, len);
         	int rc = setsockopt( inSettings->mSock, IPPROTO_IP, IPSIRENS_IDX,
                              (char*) req, len );
 		WARN_errno( rc == SOCKET_ERROR, "setsockopt IP_SIRENS" );

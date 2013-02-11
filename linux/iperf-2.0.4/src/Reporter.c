@@ -280,7 +280,7 @@ ReportHeader* InitReport( thread_Settings *agent ) {
             data->connection.local = agent->local;
             data->connection.size_local = agent->size_local;
 #ifdef IPSIRENS
-	if(isSIRENS( agent)){
+	if(isSIRENS( agent) || isDYPOP( agent)){
 		data->agent = agent;
 	}else{
 		data->agent = NULL;
@@ -893,21 +893,21 @@ int reporter_condprintstats( ReporterData *stats, MultiHeader *multireport, int 
 			pr_datast = (struct sr_hopdata *)((char *)pdtres + sizeof(struct sr_dreq));
 
 			dreq->dir = 1;
-			dreq->mode = SIRENS_TTL;
+			dreq->mode = stats->agent->sirens_mode;
 			dreq->probe = stats->agent->sirens[j];
 			len = IPSIRENS_DREQSIZE(256);
 			rc = getsockopt( stats->agent->mSock, IPPROTO_IP, IPSIRENS_SDATA,
                              (char*) dreq, &len );
 
 			dtreq->dir = 1;
-			dtreq->mode = SIRENS_TTL;
+			dtreq->mode = stats->agent->sirens_mode;
 			dtreq->probe = stats->agent->sirens[j];
 			len = IPSIRENS_DTREQSIZE(256);
 			rc = getsockopt( stats->agent->mSock, IPPROTO_IP, IPSIRENS_STDATA,
                              (char*) dtreq, &len );
 
 			dres->dir = 2;
-			dres->mode = SIRENS_TTL;
+			dres->mode = stats->agent->sirens_mode;
 			dres->probe = stats->agent->sirens[j];
 			len = IPSIRENS_DREQSIZE(0);
 			rc = setsockopt( stats->agent->mSock, IPPROTO_IP, IPSIRENS_SDATAX,
@@ -917,7 +917,7 @@ int reporter_condprintstats( ReporterData *stats, MultiHeader *multireport, int 
                              (char*) sr_datas, &len );
 
 			dtres->dir = 2;
-			dtres->mode = SIRENS_TTL;
+			dtres->mode = stats->agent->sirens_mode;
 			dtres->probe = stats->agent->sirens[j];
 			len = IPSIRENS_DTREQSIZE(0);
 			rc = setsockopt( stats->agent->mSock, IPPROTO_IP, IPSIRENS_STDATAX,

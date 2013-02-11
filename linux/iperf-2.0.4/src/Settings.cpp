@@ -630,6 +630,10 @@ void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtS
 #ifdef IPSIRENS
 	case 'Q':
             setSIRENS( mExtSettings );
+	    if(isDYPOP( mExtSettings)){
+		fprintf( stderr, "Invalid option SIRENS and DYPOP\n");
+		exit(2);
+	    }
 	    {
 		char *ep;
 		int i, t;
@@ -656,10 +660,40 @@ void Settings_Interpret( char option, const char *optarg, thread_Settings *mExtS
 			exit(2);
 		}
 		mExtSettings->numsirens = i;
+		mExtSettings->sirens_mode = SIRENS_TTL;
 	    }
 	    break;
         case 'E':
-            mExtSettings->sirensres = atoi( optarg );
+	    if(isSIRENS( mExtSettings)){
+		fprintf( stderr, "Invalid option SIRENS and DYPOP\n");
+		exit(2);
+	    }
+            setDYPOP( mExtSettings );
+	    {
+		char *ep;
+		int i, t;
+		char *sep = ":";
+		char *param, *brkt;
+		char tmp[512];
+		strncpy(tmp, optarg, 512);
+		param = strtok_r(tmp, sep, &brkt);
+		if( param == NULL) {
+                    fprintf( stderr, "invalid SIRENS style: %s\n", optarg );
+                    exit(2);
+		}
+		t = strtod(param, &ep);
+		mExtSettings->sirens[0] = t;
+		param = strtok_r(NULL, sep, &brkt);
+		if( param == NULL) {
+                    fprintf( stderr, "invalid SIRENS style: %s\n", optarg );
+                    exit(2);
+		}
+		t = strtod(param, &ep);
+		mExtSettings->sr_data = t;
+printf("%d %d\n", mExtSettings->sirens[0], mExtSettings->sr_data);
+		mExtSettings->numsirens = 1;
+		mExtSettings->sirens_mode = SIRENS_EQ;
+	    }
             break;
 #endif
         case 'R':

@@ -78,6 +78,12 @@
 
 u_int sr_in = 0;
 u_int sr_out = 0;
+#ifdef SR_DEBUG
+u_int sr_gather_reqdrop = 0;
+u_int sr_gather_reqcnt = 0;
+u_int sr_gather_resdrop = 0;
+u_int sr_gather_rescnt = 0;
+#endif
 
 static int ip_sirens_attach( void);
 static int ip_sirens_detach( void);
@@ -170,6 +176,7 @@ struct SRSFEntry {
 		u_char smax_ttl;	/* ttl max range in res */
 		struct sr_hopdata sr_qdata[IPSIRENS_HOPNUM];	/* req data */
 		struct sr_hopdata sr_sdata[IPSIRENS_HOPNUM];	/* res data */
+		u_int32_t req_data;		/* initial req data */
 	} inp_sr[IPSIRENS_IREQMAX];		/* probe information */
 };
 
@@ -843,9 +850,16 @@ sr_gather_data(struct ipopt_sr *opt_sr, struct SRSFEntry *srp)
 
 	for (i = 0; i < srp->sr_nmax; i++) {
 		sr_info = &(srp->inp_sr[i]);
+#ifdef SR_DEBUG
+		sr_gather_reqcnt ++;
+#endif /* SR_DEBUG */
 		if (sr_info->mode != opt_sr->req_mode ||
-				sr_info->probe != opt_sr->req_probe)
+				sr_info->probe != opt_sr->req_probe){
+#ifdef SR_DEBUG
+			sr_gather_reqdrop ++;
+#endif /* SR_DEBUG */
 			continue;
+		}
 
 		hopdata = &(sr_info->sr_qdata[opt_sr->req_ttl]);
 		hopdata->tv.tv_sec = now.tv_sec;
@@ -866,9 +880,16 @@ sr_gather_data(struct ipopt_sr *opt_sr, struct SRSFEntry *srp)
 
 	for (j = 0; j < srp->sr_nmax; j++) {
 		sr_info = &(srp->inp_sr[j]);
+#ifdef SR_DEBUG
+		sr_gather_rescnt ++;
+#endif /* SR_DEBUG */
 		if (sr_info->mode != opt_sr->res_mode ||
-				sr_info->probe != opt_sr->res_probe)
+				sr_info->probe != opt_sr->res_probe){
+#ifdef SR_DEBUG
+			sr_gather_reqdrop ++;
+#endif /* SR_DEBUG */
 			continue;
+		}
 
 		for (i = 0; i < reslen; i++) {
 			if (opt_sr->res_ttl + i > IPSIRENS_HOPMAX)
@@ -879,8 +900,10 @@ sr_gather_data(struct ipopt_sr *opt_sr, struct SRSFEntry *srp)
 			hopdata->tv.tv_usec = now.tv_usec;
 			hopdata->val = resdata[i];
 #ifdef SR_DEBUG
+#if 0
 			if (hopdata->val.set == -1)
 				continue;
+#endif
 			DPRINT("%s: sdata: mode=%d probe=0x%x "
 				"ttl=%d val=%u\n", __FUNCTION__, sr_info->mode,
 				sr_info->probe, opt_sr->res_ttl+i,
@@ -913,7 +936,11 @@ sr_init_reqdata(struct ipopt_sr *opt_sr, struct SRSFEntry *srp)
 	opt_sr->req_mode = inp->mode;
 	opt_sr->req_probe = inp->probe;
 	opt_sr->req_ttl = qttl;
+#if 0
 	opt_sr->req_data.set = -1;
+#else
+	opt_sr->req_data.set = inp->req_data;
+#endif
 	/*
 	 * if !SIRENS_DIR_IN, request data is updated at
 	 * ip_sirens_post_routing().
@@ -946,32 +973,37 @@ sr_update_resdata(struct ipopt_sr *opt_sr, struct SRSFEntry *srp)
 		/* under MIN TTL, correct start position */
 		sttl = inp->smin_ttl;
 	}
-
-	opt_sr->res_mode = inp->mode;
-	opt_sr->res_probe = inp->probe;
-	opt_sr->res_ttl = sttl;
+	if(opt_sr->req_mode == SIRENS_EQ){
+		opt_sr->res_mode = inp->mode;
+		opt_sr->res_probe = inp->probe;
+		opt_sr->res_ttl = sttl;
+		resdata[0].set = -1;
+	} else {
+		opt_sr->res_mode = inp->mode;
+		opt_sr->res_probe = inp->probe;
+		opt_sr->res_ttl = sttl;
 
 #if defined(__linux__)
-	do_gettimeofday(&now);
+		do_gettimeofday(&now);
 #elif defined (__FreeBSD__)
-	microtime(&now);
+		microtime(&now);
 #endif /* defined(__linux__) defined(__FreeBSD__) */
-	expire.tv_sec = now.tv_sec - IPSIRENS_TIMEOUT;
-	expire.tv_usec = now.tv_usec;
+		expire.tv_sec = now.tv_sec - IPSIRENS_TIMEOUT;
+		expire.tv_usec = now.tv_usec;
 
 	/* stack onto responce data */
-	hopdata = &(inp->sr_qdata[sttl]);
-	reslen = IPOPTLENTORESLEN(opt_sr->len);
-	for (i = 0; i < reslen; i++) {
-		if (i + sttl > inp->smax_ttl || i + sttl > IPSIRENS_HOPMAX) {
-			resdata[i].set = -1;
+		hopdata = &(inp->sr_qdata[sttl]);
+		reslen = IPOPTLENTORESLEN(opt_sr->len);
+		for (i = 0; i < reslen; i++) {
+			if (i + sttl > inp->smax_ttl || i + sttl > IPSIRENS_HOPMAX) {
+				resdata[i].set = -1;
+			}
+			else if (sr_timeval_compare(&expire,  &(hopdata[i].tv)) < 0)
+				resdata[i] = hopdata[i].val;
+			else
+				resdata[i].set = -1;	/* invalid */
 		}
-		else if (sr_timeval_compare(&expire,  &(hopdata[i].tv)) < 0)
-			resdata[i] = hopdata[i].val;
-		else
-			resdata[i].set = -1;	/* invalid */
 	}
-
 	srp->sr_sttl = sttl + srp->sr_smax;	/* update last TTL */
 }
 
@@ -1175,6 +1207,9 @@ struct socket *so, struct sockopt *sopt
 	if(error)
 		goto end;
 #endif /* __linux__, __FreeBSD__ */
+#ifdef SR_DEBUG
+	DPRINT("%s: len = %d\n", __FUNCTION__, len);
+#endif
 
 	if (len != IPSIRENS_IREQSIZE(srireq->sr_nindex) ||
 			srireq->sr_nindex > IPSIRENS_IREQMAX || 
@@ -1193,6 +1228,9 @@ struct socket *so, struct sockopt *sopt
 	}
 
 	optlen = IPOPTSIRENSLEN(srireq->sr_smax);
+#ifdef SR_DEBUG
+	DPRINT("%s: optlen = %d, smax = %d\n", __FUNCTION__, optlen, srireq->sr_smax);
+#endif
 #if defined(__linux__)
 	opt = kzalloc(sizeof(struct ip_options) + optlen, GFP_ATOMIC);
 
@@ -1264,6 +1302,7 @@ struct socket *so, struct sockopt *sopt
 		sr_info->qmax_ttl = sri[i].qttl_max;
 		sr_info->smin_ttl = sri[i].sttl_min;
 		sr_info->smax_ttl = sri[i].sttl_max;
+		sr_info->req_data = sri[i].data;
 	}
 
 	if (alloc) {
@@ -2174,7 +2213,9 @@ struct socket *so, struct sockopt *sopt
 		return -EPERM;
 #endif
 
-DPRINT("cmd %d\n", cmd);
+#ifdef SR_DEBUG
+	DPRINT("cmd %d\n", cmd);
+#endif
 	switch (cmd) {
 #if defined(__FreeBSD__)
 	case IPSIRENS_SRFIL:
@@ -2759,7 +2800,9 @@ int tcp_ctlout_hook(struct socket *so, struct sockopt *sopt)
 int udp_ctlout_hook(struct socket *so, struct sockopt *sopt)
 {
 	int error = 0;
+#ifdef SR_DEBUG
 	printf(" udp_ctlout_hook");
+#endif
 	switch(sopt->sopt_name){
 	case IPSIRENS_SRFIL:
 	case IPSIRENS_SRVAR:
@@ -3158,5 +3201,11 @@ static moduledata_t ip_sirens_conf = {
 SYSCTL_NODE(_net_inet, OID_AUTO, sirens, CTLFLAG_RW, 0, "SIRENS");
 SYSCTL_INT(_net_inet_sirens, OID_AUTO, input, CTLFLAG_RW, &sr_in, 0, "SIRENS input count");
 SYSCTL_INT(_net_inet_sirens, OID_AUTO, output, CTLFLAG_RW, &sr_out, 0, "SIRENS output count");
+#ifdef SR_DEBUG
+SYSCTL_INT(_net_inet_sirens, OID_AUTO, gather_reqcnt, CTLFLAG_RW, &sr_gather_reqcnt, 0, "SIRENS gather count");
+SYSCTL_INT(_net_inet_sirens, OID_AUTO, gather_rescnt, CTLFLAG_RW, &sr_gather_reqcnt, 0, "SIRENS gather count");
+SYSCTL_INT(_net_inet_sirens, OID_AUTO, gather_reqdrop, CTLFLAG_RW, &sr_gather_reqdrop, 0, "SIRENS gather drop");
+SYSCTL_INT(_net_inet_sirens, OID_AUTO, gather_resdrop, CTLFLAG_RW, &sr_gather_reqdrop, 0, "SIRENS gather drop");
+#endif
 DECLARE_MODULE(ip_sirens, ip_sirens_conf, SI_SUB_DRIVERS, SI_ORDER_MIDDLE);
 #endif /* defined(__FreeBSD__) */

@@ -1,4 +1,5 @@
 CFLAGS += -DVIMAGE -DSR_DEBUG
+#CFLAGS += -DVIMAGE
 
 KMOD = ip_sirens
 

@@ -255,6 +255,7 @@ struct srreq_index
 	u_char qttl_max;
 	u_char sttl_min;
 	u_char sttl_max;
+	u_int32_t data;
 };
 #define IPSIRENS_IREQSIZE(i) (sizeof(struct sr_ireq) + i * sizeof(struct srreq_index))
 struct sr_dreq{
