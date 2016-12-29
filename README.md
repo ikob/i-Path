@@ -26,7 +26,7 @@ i-Path project is developing a protocol stack implementation to provide the visi
 [i-Path implementation is working on FreeBSD, Mac OS X, and Linux. Kernel APIs and sample applications are available](https://github.com/ikob/i-Path)
 
 ## Geographical trace snapshot of our i-Path testbed
-![Demo](https://github.com/ikob/i-Path/blob/master/geo-trace-jgn2-09-10-14.png)
+![Demo](i-Path/docs/geo-trace-jgn2-09-10-14.png)
 
 ## Papers
 * [D. Mochinaga, K. Kobayashi, R. Yamada, S. Goto, A. Shimoda, and I. Murase,"i-Path: Improving Path Visibility for the Future Internet” , 12th IEEE/IPSJ International Symposium on Applications and the Internet, July, 2012](http://ieeexplore.ieee.org/xpl/articleDetails.jsp?tp=&arnumber=6305274)
