@@ -14,13 +14,13 @@ i-Path project is developing a protocol stack implementation to provide the visi
 
 ## Project members
 + Waseda University
- + Shigeki Goto
- + Dai Mochinaga
- + Ichiro Murase
- + Akihiro Shimoda
+  - Shigeki Goto
+  - Dai Mochinaga
+  - Ichiro Murase
+  - Akihiro Shimoda
 
 + AIST
- + Katsushi Kobayashi (now moved to U-Tokyo.)
+  - Katsushi Kobayashi (now moved to U-Tokyo.)
  
 ## i-Path implementations
 [i-Path implementation is working on FreeBSD, Mac OS X, and Linux. Kernel APIs and sample applications are available](https://github.com/ikob/i-Path)
